@@ -1,0 +1,24 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.DS_Store
+
+# pnpm
+.pnpm-store/
+
+# changesets
+.changeset/*.md
+!.changeset/README.md
+
+# tsup 加载 ts 配置时生成的临时 bundle
+tsup.config.*.mjs
+
+# env
+.env
+.env.local
+
+# editors
+.idea/
+.vscode/*
+!.vscode/extensions.json
