@@ -1,7 +1,9 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "noEmit": true
+    "jsx": "preserve",
+    "noEmit": true,
+    "types": ["node"]
   },
   "include": ["src", "tsup.config.ts", "vitest.config.ts"]
 }

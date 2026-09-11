@@ -1,0 +1,24 @@
+{
+  "name": "@ys.knife.crud/demo",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Demo app exercising @ys.knife.crud/component-elementplus. Not published to npm.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@ys.knife.crud/component-elementplus": "workspace:*",
+    "element-plus": "^2.7.0",
+    "vue": "^3.5.13"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "typescript": "^5.9.2",
+    "vite": "^5.4.11",
+    "vue-tsc": "^2.2.0"
+  }
+}
