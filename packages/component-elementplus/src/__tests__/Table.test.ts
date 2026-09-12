@@ -1,0 +1,83 @@
+import { describe, it, expect } from "vitest";
+import { mount, flushPromises } from "@vue/test-utils";
+import Table from "../Table.vue";
+import type { Meta, MetaFunc } from "@ys.knife.crud/core";
+
+function makeColumn(propertyPath: string, displayName: string, displayOrder: number, showForDisplay = true) {
+  return {
+    propertyPath,
+    displayName,
+    description: null,
+    showForDisplay,
+    displayFormat: null,
+    isArray: false,
+    dataTypeName: "string",
+    displayOrder,
+    dataSource: null,
+    queryFilter: null,
+  };
+}
+
+const meta: Meta = {
+  displayName: "用户列表",
+  description: null,
+  columns: [
+    makeColumn("name", "姓名", 1),
+    makeColumn("id", "ID", 0),
+    makeColumn("secret", "隐藏列", 2, false),
+  ],
+};
+
+const metaFun: MetaFunc = () => Promise.resolve(meta);
+
+const rows = [
+  { id: 1, name: "Alice", secret: "x" },
+  { id: 2, name: "Bob", secret: "y" },
+];
+
+describe("Table", () => {
+  it("renders visible columns from metaFun, sorted by displayOrder", async () => {
+    const wrapper = mount(Table, {
+      props: { metaFun, data: rows },
+      global: {
+        directives: { loading: {} },
+        stubs: {
+          "el-table": { template: '<div class="el-table-stub"><slot /></div>', props: ["data", "rowKey"] },
+          "el-table-column": {
+            template: '<div class="col" :data-prop="prop">{{ label }}</div>',
+            props: ["prop", "label"],
+          },
+        },
+      },
+    });
+
+    await flushPromises();
+
+    const cols = wrapper.findAll(".col");
+    const labels = cols.map((c) => c.text());
+    const props = cols.map((c) => c.attributes("data-prop"));
+
+    // showForDisplay: false 的 "隐藏列" 被过滤，其余按 displayOrder 排序：ID(0) -> 姓名(1)
+    expect(labels).toEqual(["ID", "姓名"]);
+    expect(props).toEqual(["id", "name"]);
+    expect(wrapper.text()).not.toContain("隐藏列");
+  });
+
+  it("passes data to the underlying table", async () => {
+    const wrapper = mount(Table, {
+      props: { metaFun, data: rows },
+      global: {
+        directives: { loading: {} },
+        stubs: {
+          "el-table": { template: '<div class="el-table-stub"><slot /></div>', props: ["data", "rowKey"] },
+          "el-table-column": { template: '<div class="col">{{ label }}</div>', props: ["prop", "label"] },
+        },
+      },
+    });
+
+    await flushPromises();
+
+    const tableStub = wrapper.findComponent({ name: "el-table" });
+    expect(tableStub.props("data")).toEqual(rows);
+  });
+});

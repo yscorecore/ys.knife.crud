@@ -10,10 +10,12 @@ export * from "ys.knife.query.js";
 // Convenience named re-export of the most commonly used surface, in case callers
 // prefer `import { query, QueryBuilder, PageReq } from "@ys.knife.crud/core"` over
 // reaching for the underlying `ys.knife.query.js` dependency directly.
+//
+// Note: `verbatimModuleSyntax` is on, so pure types (interfaces) must be re-exported
+// with `export type`; classes/enums/functions keep the regular `export` form.
 export {
   query,
   QueryBuilder,
-  PageReq,
   Operator,
   OrderByType,
   AggType,
@@ -21,5 +23,14 @@ export {
   OrderByInfo,
   SelectInfo,
   AggInfo,
-  PagedList,
+
 } from "ys.knife.query.js";
+
+export type { PageReq, PagedList,PageFunc } from "ys.knife.query.js";
+
+// --- 本地 framework-agnostic 类型与工具 ---
+// meta.ts 混合导出（constMetaFunc 是值，Column/Meta/MetaFunc 是类型）→ 用 export *
+export * from "./meta";
+// 以下文件只有纯类型（interface/type）→ verbatimModuleSyntax 下必须用 export type *
+export type * from "./ui";
+export type * from "./page";

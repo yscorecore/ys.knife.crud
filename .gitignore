@@ -28,3 +28,10 @@ packages/utils/
 .idea/
 .vscode/*
 !.vscode/extensions.json
+# 调试/诊断临时文件（_ 前缀碎屑，勿提交）
+_*.txt
+_*.log
+_*.cjs
+_*.js
+_symlink_test/
+_tarballs/

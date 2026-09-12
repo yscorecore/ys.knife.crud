@@ -80,7 +80,7 @@ importers:
         specifier: ^3.0.2
         version: 3.2.7(@types/node@22.20.2)(happy-dom@15.11.7)
 
-  packages/demo:
+  packages/component-elementplus-demo:
     dependencies:
       '@ys.knife.crud/component-elementplus':
         specifier: workspace:*

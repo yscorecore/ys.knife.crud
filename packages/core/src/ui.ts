@@ -1,7 +1,7 @@
+import type { MetaFunc } from "./meta"
 
 export interface TableProps {
-    modelValue: string   // 必需
-    disabled: boolean    // 必需
+    metaFun: MetaFunc
 }
 
 export interface PaginationProps {

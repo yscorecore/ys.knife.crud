@@ -8,7 +8,7 @@ A typed CRUD toolkit for the web. Published as scoped npm packages from a pnpm +
 | --- | --- | --- | --- |
 | [`@ys.knife.crud/core`](./packages/core) | `packages/core` | published | Framework-agnostic CRUD contract, data-source interface and an in-memory implementation. |
 | [`@ys.knife.crud/component-elementplus`](./packages/component-elementplus) | `packages/component-elementplus` | published | Vue 3 + element-plus UI components built on top of `core`. Distributed as a Vue plugin + individual components. |
-| `@ys.knife.crud/demo` | `packages/demo` | **private, not published** | Vite-powered playground used to validate `component-elementplus` during development. |
+| `@ys.knife.crud/component-elementplus-demo` | `packages/component-elementplus-demo` | **private, not published** | Vite-powered playground used to validate `component-elementplus` during development. |
 
 ## Requirements
 
@@ -40,7 +40,7 @@ Run from the repo root:
 ### Running the demo
 
 ```bash
-pnpm --filter @ys.knife.crud/demo dev
+pnpm --filter @ys.knife.crud/component-elementplus-demo dev
 ```
 
 Then open <http://localhost:5173>. The demo depends on the workspace copy of `@ys.knife.crud/component-elementplus` and is marked `private` so it will never be published to npm.
@@ -51,7 +51,7 @@ Then open <http://localhost:5173>. The demo depends on the workspace copy of `@y
 2. `pnpm version-packages` — consumes pending changesets and bumps `package.json` versions.
 3. `pnpm release` — builds and runs `changeset publish` (requires `NODE_AUTH_TOKEN` set to a publish-capable npm token).
 
-`@ys.knife.crud/demo` is intentionally ignored by Changesets via `.changeset/config.json` and won't appear in release output even if a changeset is added for it.
+`@ys.knife.crud/component-elementplus-demo` is intentionally ignored by Changesets via `.changeset/config.json` and won't appear in release output even if a changeset is added for it.
 
 ## Repo layout
 
@@ -60,7 +60,7 @@ ys.knife.crud/
 ├── packages/
 │   ├── core/                    @ys.knife.crud/core
 │   ├── component-elementplus/   @ys.knife.crud/component-elementplus
-│   └── demo/                    @ys.knife.crud/demo (private)
+│   └── component-elementplus-demo/  @ys.knife.crud/component-elementplus-demo (private)
 ├── .changeset/
 ├── .github/workflows/ci.yml
 ├── eslint.config.js
