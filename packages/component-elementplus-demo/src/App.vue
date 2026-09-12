@@ -3,9 +3,9 @@ import { ref } from "vue";
 import HomePage from "./pages/HomePage.vue";
 import TableDemoPage from "./pages/TableDemoPage.vue";
 
-// 轻量导航：目前只有 home（导航页）与 table（Table Demo）两个页面。
+// 轻量导航：home（导航页）+ 四个 Table Demo 模式页。
 // 后续新增 demo 页时，扩展此 union 类型并在 HomePage 加一个按钮即可。
-type Page = "home" | "table";
+type Page = "home" | "table-empty" | "table-const" | "table-actions" | "table-list";
 
 const currentPage = ref<Page>("home");
 
@@ -16,7 +16,10 @@ function navigate(page: Page) {
 
 <template>
   <HomePage v-if="currentPage === 'home'" @navigate="navigate" />
-  <TableDemoPage v-else-if="currentPage === 'table'" @back="navigate('home')" />
+  <TableDemoPage v-else-if="currentPage === 'table-empty'" variant="empty" @back="navigate('home')" />
+  <TableDemoPage v-else-if="currentPage === 'table-const'" variant="const" @back="navigate('home')" />
+  <TableDemoPage v-else-if="currentPage === 'table-actions'" variant="actions" @back="navigate('home')" />
+  <TableDemoPage v-else-if="currentPage === 'table-list'" variant="list" @back="navigate('home')" />
 </template>
 
 <style>

@@ -3,7 +3,11 @@
   "compilerOptions": {
     "jsx": "preserve",
     "noEmit": true,
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    "baseUrl": ".",
+    "paths": {
+      "@ys.knife.crud/component-elementplus": ["../component-elementplus/src/index"]
+    }
   },
   "include": ["src", "vite.config.ts", "index.html"]
 }

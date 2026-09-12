@@ -1,7 +1,9 @@
 <script setup lang="ts">
-// 导航页：目前只有一个入口，点击按钮切换到 Table Demo 页面
+// 导航页：四个入口，分别对应 Table 组件的四种数据源演示模式
+type DemoPage = "table-empty" | "table-const" | "table-actions" | "table-list";
+
 defineEmits<{
-  (e: "navigate", page: "table"): void;
+  (e: "navigate", page: DemoPage): void;
 }>();
 </script>
 
@@ -18,8 +20,17 @@ defineEmits<{
       <p class="hint">选择一个 Demo 进入对应的演示页面。</p>
 
       <div class="nav-list">
-        <el-button type="primary" size="large" @click="$emit('navigate', 'table')">
-          查看 Table Demo
+        <el-button type="primary" size="large" @click="$emit('navigate', 'table-empty')">
+          空数据表格（emptyData）
+        </el-button>
+        <el-button type="primary" size="large" @click="$emit('navigate', 'table-const')">
+          固定数据表格（constData）
+        </el-button>
+        <el-button type="primary" size="large" @click="$emit('navigate', 'table-actions')">
+          带行操作的表格（constData + constActions）
+        </el-button>
+        <el-button type="primary" size="large" @click="$emit('navigate', 'table-list')">
+          异步列表表格（listData）
         </el-button>
       </div>
     </section>
@@ -48,6 +59,13 @@ defineEmits<{
 }
 .nav-list {
   margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+.nav-list .el-button + .el-button {
+  margin-left: 0;
 }
 code {
   background: #eef2f7;
