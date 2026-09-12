@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { constData, constMetaFunc, type Meta } from "@ys.knife.crud/core";
+import { constActions, constData, constMetaFunc, type Meta } from "@ys.knife.crud/core";
 import { Table } from "@ys.knife.crud/component-elementplus";
+import { ElMessage } from "element-plus";
 
 defineEmits<{
   (e: "back"): void;
@@ -78,12 +79,47 @@ const meta: Meta = {
 // 用 constMetaFunc 把固定元数据包装成 MetaFunc
 const metaFun = constMetaFunc(meta);
 
-// 用 constData 把固定数据包装成 PageFunc（模拟异步分页数据源）
-const dataFun = constData([
+interface UserRow {
+  id: number;
+  name: string;
+  email: string;
+  age: number;
+  secret: string;
+}
+
+// 数据放在 constData 闭包引用的同一数组里，删除 splice 后 Table reload 能看到最新数据
+const rows: UserRow[] = [
   { id: 1, name: "Alice", email: "alice@example.com", age: 28, secret: "x" },
   { id: 2, name: "Bob", email: "bob@example.com", age: 34, secret: "y" },
   { id: 3, name: "Carol", email: "carol@example.com", age: 25, secret: "z" },
-]);
+];
+
+// 用 constData 把固定数据包装成 PageFunc（模拟异步分页数据源）
+const dataFun = constData(rows);
+
+// 行操作：存在 rowActionsFunc 时，Table 会在每一行最后一列显示这些操作
+const rowActionsFunc = constActions<UserRow>(
+  {
+    name: "edit",
+    desc: "编辑",
+    execute: (item) => {
+      ElMessage.info(`编辑：${item.name}（${item.email}）`);
+      return Promise.resolve();
+    },
+  },
+  {
+    name: "delete",
+    desc: "删除",
+    // 演示 show：首行（Alice）受保护，不显示删除按钮
+    show: (item) => item.id !== 1,
+    execute: (item) => {
+      const i = rows.findIndex((r) => r.id === item.id);
+      if (i >= 0) rows.splice(i, 1);
+      ElMessage.success(`已删除：${item.name}`);
+      return Promise.resolve();
+    },
+  },
+);
 </script>
 
 <template>
@@ -92,12 +128,13 @@ const dataFun = constData([
 
     <h1>Table 组件</h1>
     <p class="hint">
-      由 <code>metaFun</code> + <code>dataFun</code> 驱动的表格：列定义（含显隐、顺序）来自
-      <code>constMetaFunc</code> 返回的元数据，行数据来自 <code>constData</code> 返回的
-      <code>PageFunc</code>，<code>secret</code> 列因 <code>showForDisplay: false</code> 被自动隐藏。
+      由 <code>metaFun</code> + <code>dataFun</code> + <code>rowActionsFunc</code> 驱动的表格：
+      列定义来自 <code>constMetaFunc</code>，行数据来自 <code>constData</code>，最后一列「操作」来自
+      <code>constActions</code>。<code>secret</code> 列因 <code>showForDisplay: false</code> 被隐藏；
+      首行因 <code>show</code> 条件不显示「删除」。
     </p>
 
-    <Table :meta-fun="metaFun" :data-fun="dataFun" />
+    <Table :meta-fun="metaFun" :data-fun="dataFun" :row-actions-func="rowActionsFunc" />
   </main>
 </template>
 

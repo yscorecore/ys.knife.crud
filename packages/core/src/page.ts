@@ -1,4 +1,4 @@
-import type { PageFunc } from "ys.knife.query.js";
+import type { PageFunc, PageReq } from "ys.knife.query.js";
 
 export type { PageFunc } from "ys.knife.query.js";
 
@@ -6,7 +6,7 @@ export type ListFunc<T> = (arg: Record<string, any>, signal?: AbortSignal) => Pr
 
 
 export function constData<T>(values: T[]): PageFunc<T> {
-  return () => Promise.resolve({
+  return (req:PageReq) => Promise.resolve({
     limit: values.length,
     offset: 0,
     totalCount: values.length,

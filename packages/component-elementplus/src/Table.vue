@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type PropType } from "vue";
-import type { Meta, PagedList, TableProps as CoreTableProps } from "@ys.knife.crud/core";
+import type { Action, Meta, PagedList, TableProps as CoreTableProps } from "@ys.knife.crud/core";
 
 /**
  * Table 组件的 props = core 的 TableProps（metaFun + dataFun），
@@ -18,6 +18,8 @@ import type { Meta, PagedList, TableProps as CoreTableProps } from "@ys.knife.cr
 const props = defineProps({
   metaFun: { type: Function as PropType<CoreTableProps["metaFun"]>, required: true },
   dataFun: { type: Function as PropType<CoreTableProps["dataFun"]>, required: true },
+  /** 可选。存在时在每一行最后一列显示可执行的操作 */
+  rowActionsFunc: { type: Function as PropType<NonNullable<CoreTableProps["rowActionsFunc"]>>, required: false },
   /** 首次请求的每页条数（分页 UI 暂未实现），默认 20 */
   pageSize: { type: Number, default: 20 },
   /** 外部加载态，会和组件内部加载态合并 */
@@ -28,8 +30,10 @@ const props = defineProps({
 
 const meta = ref<Meta | null>(null);
 const paged = ref<PagedList<unknown> | null>(null);
+const actions = ref<Action<unknown>[]>([]);
 const metaLoading = ref(false);
 const dataLoading = ref(false);
+const actionsLoading = ref(false);
 
 /** 按 showForDisplay 过滤、按 displayOrder 升序排序后的列 */
 const columns = computed(() => {
@@ -58,22 +62,53 @@ async function loadData(signal?: AbortSignal): Promise<void> {
   }
 }
 
-/** 重新加载元数据与数据 */
+async function loadActions(signal?: AbortSignal): Promise<void> {
+  if (!props.rowActionsFunc) {
+    actions.value = [];
+    return;
+  }
+  actionsLoading.value = true;
+  try {
+    actions.value = await props.rowActionsFunc(signal);
+  } finally {
+    actionsLoading.value = false;
+  }
+}
+
+/** 该行可见的操作（action.show 缺省视为可见） */
+function visibleActions(row: unknown): Action<unknown>[] {
+  return actions.value.filter((a) => a.show?.(row) ?? true);
+}
+
+/** 该操作对该行是否可用（action.enable 缺省视为可用） */
+function isEnabled(action: Action<unknown>, row: unknown): boolean {
+  return action.enable?.(row) ?? true;
+}
+
+/** 执行操作，完成后刷新数据（增删改类操作需要看到最新列表） */
+async function runAction(action: Action<unknown>, row: unknown): Promise<void> {
+  await action.execute(row);
+  await loadData();
+}
+
+/** 重新加载元数据、数据与行操作 */
 function reload(): void {
   loadMeta();
   loadData();
+  loadActions();
 }
 
 onMounted(reload);
 watch(() => props.metaFun, () => loadMeta());
 watch(() => props.dataFun, () => loadData());
+watch(() => props.rowActionsFunc, () => loadActions());
 
-defineExpose({ meta, paged, reload });
+defineExpose({ meta, paged, actions, reload });
 </script>
 
 <template>
   <el-table
-    v-loading="metaLoading || dataLoading || loading"
+    v-loading="metaLoading || dataLoading || actionsLoading || loading"
     :data="rows"
     :row-key="rowKey"
     border
@@ -85,5 +120,20 @@ defineExpose({ meta, paged, reload });
       :label="col.displayName"
       show-overflow-tooltip
     />
+    <!-- 存在行操作时追加最后一列 -->
+    <el-table-column v-if="actions.length > 0" label="操作" fixed="right">
+      <template #default="{ row }">
+        <el-button
+          v-for="action in visibleActions(row)"
+          :key="action.name"
+          link
+          type="primary"
+          :disabled="!isEnabled(action, row)"
+          @click="runAction(action, row)"
+        >
+          {{ action.desc }}
+        </el-button>
+      </template>
+    </el-table-column>
   </el-table>
 </template>
