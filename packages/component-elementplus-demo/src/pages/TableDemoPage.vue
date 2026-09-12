@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { constMetaFunc, type Meta } from "@ys.knife.crud/core";
+import { constData, constMetaFunc, type Meta } from "@ys.knife.crud/core";
 import { Table } from "@ys.knife.crud/component-elementplus";
 
 defineEmits<{
@@ -78,11 +78,12 @@ const meta: Meta = {
 // 用 constMetaFunc 把固定元数据包装成 MetaFunc
 const metaFun = constMetaFunc(meta);
 
-const rows = [
+// 用 constData 把固定数据包装成 PageFunc（模拟异步分页数据源）
+const dataFun = constData([
   { id: 1, name: "Alice", email: "alice@example.com", age: 28, secret: "x" },
   { id: 2, name: "Bob", email: "bob@example.com", age: 34, secret: "y" },
   { id: 3, name: "Carol", email: "carol@example.com", age: 25, secret: "z" },
-];
+]);
 </script>
 
 <template>
@@ -91,12 +92,12 @@ const rows = [
 
     <h1>Table 组件</h1>
     <p class="hint">
-      由 <code>metaFun</code> 驱动的表格：列定义（含显隐、顺序）来自
-      <code>constMetaFunc</code> 返回的元数据，<code>secret</code> 列因
-      <code>showForDisplay: false</code> 被自动隐藏。
+      由 <code>metaFun</code> + <code>dataFun</code> 驱动的表格：列定义（含显隐、顺序）来自
+      <code>constMetaFunc</code> 返回的元数据，行数据来自 <code>constData</code> 返回的
+      <code>PageFunc</code>，<code>secret</code> 列因 <code>showForDisplay: false</code> 被自动隐藏。
     </p>
 
-    <Table :meta-fun="metaFun" :data="rows" />
+    <Table :meta-fun="metaFun" :data-fun="dataFun" />
   </main>
 </template>
 

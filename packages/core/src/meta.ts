@@ -49,7 +49,7 @@ export function constConfig(config: ColumnConfigs): ConfigFunc {
 export function emptyConfig(): ConfigFunc {
   return constConfig({});
 }
-export function mergeConfigs(...configs:ConfigFunc[]):ConfigFunc{
+export function mergeConfigs(...configs: ConfigFunc[]): ConfigFunc {
   return async (signal?: AbortSignal): Promise<ColumnConfigs> => {
     // 提前检查，避免无谓的调用
     if (signal?.aborted) {

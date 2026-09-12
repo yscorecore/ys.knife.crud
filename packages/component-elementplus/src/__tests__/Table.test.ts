@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import Table from "../Table.vue";
-import type { Meta, MetaFunc } from "@ys.knife.crud/core";
+import { constData, type Meta, type MetaFunc, type PageFunc } from "@ys.knife.crud/core";
 
 function makeColumn(propertyPath: string, displayName: string, displayOrder: number, showForDisplay = true) {
   return {
@@ -35,21 +35,35 @@ const rows = [
   { id: 2, name: "Bob", secret: "y" },
 ];
 
+const dataFun: PageFunc<unknown> = constData(rows);
+
+const ElTableStub = {
+  name: "ElTable",
+  template: '<div class="el-table-stub"><slot /></div>',
+  props: ["data", "rowKey"],
+};
+
+const stubs = {
+  "el-table": ElTableStub,
+  "el-table-column": {
+    template: '<div class="col" :data-prop="prop">{{ label }}</div>',
+    props: ["prop", "label"],
+  },
+};
+
+function mountTable(props: Record<string, unknown> = {}) {
+  return mount(Table, {
+    props: { metaFun, dataFun, ...props },
+    global: {
+      directives: { loading: {} },
+      stubs,
+    },
+  });
+}
+
 describe("Table", () => {
   it("renders visible columns from metaFun, sorted by displayOrder", async () => {
-    const wrapper = mount(Table, {
-      props: { metaFun, data: rows },
-      global: {
-        directives: { loading: {} },
-        stubs: {
-          "el-table": { template: '<div class="el-table-stub"><slot /></div>', props: ["data", "rowKey"] },
-          "el-table-column": {
-            template: '<div class="col" :data-prop="prop">{{ label }}</div>',
-            props: ["prop", "label"],
-          },
-        },
-      },
-    });
+    const wrapper = mountTable();
 
     await flushPromises();
 
@@ -63,21 +77,34 @@ describe("Table", () => {
     expect(wrapper.text()).not.toContain("隐藏列");
   });
 
-  it("passes data to the underlying table", async () => {
-    const wrapper = mount(Table, {
-      props: { metaFun, data: rows },
-      global: {
-        directives: { loading: {} },
-        stubs: {
-          "el-table": { template: '<div class="el-table-stub"><slot /></div>', props: ["data", "rowKey"] },
-          "el-table-column": { template: '<div class="col">{{ label }}</div>', props: ["prop", "label"] },
-        },
-      },
-    });
+  it("loads rows via dataFun and passes them to the underlying table", async () => {
+    const wrapper = mountTable();
 
     await flushPromises();
 
     const tableStub = wrapper.findComponent({ name: "el-table" });
     expect(tableStub.props("data")).toEqual(rows);
+  });
+
+  it("calls dataFun with a paged request (limit/offset)", async () => {
+    const spy = vi.fn(constData(rows));
+    mountTable({ dataFun: spy });
+
+    await flushPromises();
+
+    expect(spy).toHaveBeenCalledTimes(1);
+    expect(spy.mock.calls[0]?.[0]).toMatchObject({ limit: 20, offset: 0 });
+  });
+
+  it("reloads data when dataFun changes", async () => {
+    const wrapper = mountTable();
+    await flushPromises();
+
+    const newRows = [{ id: 3, name: "Carol", secret: "z" }];
+    await wrapper.setProps({ dataFun: constData(newRows) });
+    await flushPromises();
+
+    const tableStub = wrapper.findComponent(ElTableStub);
+    expect(tableStub.props("data")).toEqual(newRows);
   });
 });

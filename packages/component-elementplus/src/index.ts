@@ -1,5 +1,6 @@
-export { default as HelloKnife } from "./HelloKnife.vue";
-export type { Props as HelloKnifeProps } from "./HelloKnife.vue";
+import Table from "./Table.vue";
 
-export { default as Table } from "./Table.vue";
-export type { Props as TableProps } from "./Table.vue";
+export { Table };
+
+// <script setup> 里的 interface 不是模块导出成员，用实例类型提取 props
+export type TableProps = InstanceType<typeof Table>["$props"];
