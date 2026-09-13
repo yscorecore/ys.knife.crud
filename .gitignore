@@ -35,3 +35,4 @@ _*.cjs
 _*.js
 _symlink_test/
 _tarballs/
+*.log

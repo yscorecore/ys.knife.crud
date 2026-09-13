@@ -42,3 +42,5 @@ export * from "./action";
 // customConfig.ts 混合导出（constConfig/emptyConfig/mergeConfigs/localStorage 助手是值，
 // CustomColumnConfig/CustomColumnConfigs/loadConfigFunc/saveCustomConfigFunc 是类型）→ 用 export *
 export * from "./customConfig";
+// export.ts 只有纯类型（ExportApi 接口 / ExportApiFunc 类型）→ 用 export type *
+export type * from "./export";

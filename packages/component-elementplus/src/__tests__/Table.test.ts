@@ -15,7 +15,9 @@ import {
 // FakeWorkbook 记录 addRow 写入的行内容与 writeBuffer 是否被调用，
 // FakeSheet.rows[0] 是表头行，其后为数据行。
 // 注意：mock 的是浏览器构建也有的 API（Workbook + xlsx.writeBuffer）——
-// 浏览器 bundle 不含 stream.xlsx.WorkbookWriter，组件若误用流式 API 这里也会跟着错
+// 浏览器 bundle 不含 stream.xlsx.WorkbookWriter，组件若误用流式 API 这里也会跟着错。
+// 另注意：exceljs 必须在本包 node_modules 中可解析（现为 devDependency 仅测试用），
+// 否则 vi.mock 注册不到真实模块 id，真实 exceljs 会被加载、FakeWorkbook 完全摸不到。
 const exceljsFake = vi.hoisted(() => {
   class FakeSheet {
     rows: unknown[][] = [];
@@ -822,5 +824,92 @@ describe("Table export excel", () => {
     expect(lastWriter().bufferWritten).toBe(false);
     expect(downloadFake.click).not.toHaveBeenCalled();
     expect(wrapper.text()).not.toContain("已写入");
+  });
+
+  it("routes export through a custom exportApiFunc when one is provided", async () => {
+    // 自定义导出实现：组件应只经 ExportApi 接口操作，不再触碰内置 ExcelJS 实现
+    const api = {
+      renderHeader: vi.fn((_sheets: unknown) => Promise.resolve()),
+      renderRows: vi.fn((_sheet: string, _data: unknown[][]) => Promise.resolve()),
+      cancel: vi.fn(() => Promise.resolve()),
+      download: vi.fn((_fileName: string) => Promise.resolve()),
+    };
+    const exportApiFunc = vi.fn(() => api);
+    const wrapper = mountTable({ showExportExcel: true, exportApiFunc });
+    await flushPromises();
+
+    await wrapper.find(".yk-table__export-btn").trigger("click");
+    await flushPromises();
+
+    // 每次导出调用工厂得到一个全新实例，随后按 表头 → 数据行 → 下载 的次序走接口
+    expect(exportApiFunc).toHaveBeenCalledTimes(1);
+    // Table 导出为单 sheet：key 为表名，value 为界面可见列（id, name 顺序）
+    const sheets = api.renderHeader.mock.calls[0]?.[0] as Record<string, { propertyPath: string }[]>;
+    expect(Object.keys(sheets)).toEqual(["用户列表"]);
+    expect(sheets["用户列表"]!.map((c) => c.propertyPath)).toEqual(["id", "name"]);
+    expect(api.renderRows).toHaveBeenCalledWith("用户列表", [
+      [1, "Alice"],
+      [2, "Bob"],
+    ]);
+    expect(api.download).toHaveBeenCalledWith(expect.stringMatching(/^用户列表_.*\.xlsx$/));
+    // 未走内置 ExcelJS 实现，也未触发浏览器下载
+    expect(exceljsFake.FakeWorkbook.instances).toHaveLength(0);
+    expect(downloadFake.click).not.toHaveBeenCalled();
+  });
+
+  it("lets a custom exportApiFunc handle cancel/keep for export-all", async () => {
+    const apis: {
+      renderHeader: ReturnType<typeof vi.fn>;
+      renderRows: ReturnType<typeof vi.fn>;
+      cancel: ReturnType<typeof vi.fn>;
+      download: ReturnType<typeof vi.fn>;
+    }[] = [];
+    const exportApiFunc = vi.fn(() => {
+      const api = {
+        renderHeader: vi.fn(() => Promise.resolve()),
+        renderRows: vi.fn((_sheet: string, _data: unknown[][]) => Promise.resolve()),
+        cancel: vi.fn(() => Promise.resolve()),
+        download: vi.fn((_fileName: string) => Promise.resolve()),
+      };
+      apis.push(api);
+      return api;
+    });
+
+    // 第二页在途的场景（同 setupPendingExport，但走自定义 exportApiFunc）
+    let resolvePage2!: (v: PagedResult) => void;
+    const spy = vi.fn((req: { limit?: number; offset?: number }) => {
+      const offset = req.offset ?? 0;
+      if (offset === 0) {
+        return Promise.resolve<PagedResult>({
+          limit: 10,
+          offset: 0,
+          totalCount: 25,
+          hasNext: true,
+          items: manyRows.slice(0, 10),
+        });
+      }
+      return new Promise<PagedResult>((resolve) => {
+        resolvePage2 = resolve;
+      });
+    });
+    const wrapper = mountTable({ showExportExcel: true, dataFun: spy, pageSize: 10, exportApiFunc });
+    await flushPromises();
+    await wrapper.find(".yk-table__export-btn").trigger("click");
+    await flushPromises();
+    await wrapper.find('[data-scope="all"]').trigger("click");
+    await flushPromises();
+
+    // 取消后让在途页返回 → 弹出保留/丢弃询问
+    await wrapper.find("button.export-cancel").trigger("click");
+    resolvePage2({ limit: 10, offset: 10, totalCount: 25, hasNext: true, items: manyRows.slice(10, 20) });
+    await flushPromises();
+    expect(wrapper.text()).toContain("已写入 20 条数据");
+
+    // 选「丢弃」：经 ExportApi.cancel 放弃，不调用 download
+    await wrapper.find("button.export-discard").trigger("click");
+    await flushPromises();
+    expect(apis[0]?.cancel).toHaveBeenCalledTimes(1);
+    expect(apis[0]?.download).not.toHaveBeenCalled();
+    expect(downloadFake.click).not.toHaveBeenCalled();
   });
 });

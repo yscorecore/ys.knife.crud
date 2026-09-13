@@ -3,6 +3,7 @@ import type { PageFunc } from "./page"
 import type { PagedList } from "ys.knife.query.js"
 import type { Action, RowActionsFunc } from "./action"
 import type { loadConfigFunc as loadCustomConfigFunc, saveCustomConfigFunc } from "./customConfig"
+import type { ExportApiFunc } from "./export"
 
 /** TableProps 是组件的「输入契约」：父组件通过 props 传入 */
 export interface TableProps {
@@ -15,7 +16,8 @@ export interface TableProps {
     loadCustomConfigFun: loadCustomConfigFunc,
     saveCustomConfigFun: saveCustomConfigFunc,
     showCustomConfig?: boolean,
-    showExportExcel?: boolean
+    showExportExcel?: boolean,
+    exportApiFunc: ExportApiFunc
 }
 
 /**

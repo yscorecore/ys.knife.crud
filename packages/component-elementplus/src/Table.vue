@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type PropType, type Ref } from "vue";
-import ExcelJS from "exceljs";
 import type {
   Action,
   CustomColumnConfigs,
+  ExportApi,
   Meta,
   PagedList,
   TableApi,
   TableProps as CoreTableProps,
 } from "@ys.knife.crud/core";
+import { createExcelJsExportApiFunc } from "@ys.knife.crud/export-exceljs";
 
 /**
  * Table 组件的 props = core 的 TableProps（metaFun + dataFun），
@@ -42,6 +43,10 @@ const props = defineProps({
   saveCustomConfigFun: { type: Function as PropType<NonNullable<CoreTableProps["saveCustomConfigFun"]>>, required: false },
   /** 为 true 时显示导出 Excel 入口，默认 false */
   showExportExcel: { type: Boolean, default: false },
+  /** 导出实现工厂：每次导出调用它得到一个全新的 ExportApi 实例，组件只经该接口写文件。
+   *  缺省使用内置 ExcelJS 实现（createExcelJsExportApiFunc）；
+   *  将来可替换为其它实现（CSV、服务端导出等），组件无需改动 */
+  exportApiFunc: { type: Function as PropType<NonNullable<CoreTableProps["exportApiFunc"]>>, required: false },
   /** 外部加载态，会和组件内部加载态合并 */
   loading: { type: Boolean, default: false },
   /** 行 key，默认 "id" */
@@ -252,8 +257,8 @@ const exportTotal = ref(0);
 /** 取消标记：每页返回后检查，兼容忽略 AbortSignal 的 dataFun */
 let exportCancelled = false;
 let exportAbort: AbortController | null = null;
-/** 取消后待处理的工作簿：用户选「保留部分文件」时 finalize 并下载 */
-let pendingExportBook: ExportBook | null = null;
+/** 取消后待处理的导出实例：用户选「保留部分文件」时 download，选「丢弃」时 cancel */
+let pendingExportApi: ExportApi | null = null;
 /** 取消后的「保留/丢弃」询问对话框 */
 const exportCancelledVisible = ref(false);
 /** 取消时已写入的数据行数（不含表头） */
@@ -275,16 +280,6 @@ function onExportClick(): void {
   exportDialogVisible.value = true;
 }
 
-/** 导出工作簿封装：每页数据回来立即 addRow 进工作簿（数据层面边读边写），
- *  最后 writeBuffer 一次成文件。
- *  注意：ExcelJS 浏览器构建（dist/exceljs.min.js）不含 stream.xlsx.WorkbookWriter
- *  （仅 Node 构建有），因此浏览器端只能用 Workbook + writeBuffer——
- *  行级增量写入保留，zip 仍整体在内存生成（浏览器下载本就要求 Blob 整体在内存） */
-interface ExportBook {
-  workbook: ExcelJS.Workbook;
-  sheet: ExcelJS.Worksheet;
-}
-
 /** px 列宽 → Excel 字符宽（近似换算）；未配置列宽时按列名长度给一个下限 */
 function pxToExcelWidth(width: string | undefined, displayName: string): number {
   const px = Number.parseInt(width ?? "", 10);
@@ -292,14 +287,20 @@ function pxToExcelWidth(width: string | undefined, displayName: string): number 
   return Math.max(10, displayName.length * 2);
 }
 
-/** 创建导出工作簿：先写表头（所见即所得——columns 已含 meta/customConfig 两层过滤与排序），
- *  之后每页数据回来立即 addRow 追加 */
-function createExportBook(): ExportBook {
-  const workbook = new ExcelJS.Workbook();
-  const sheet = workbook.addWorksheet((meta.value?.displayName || "数据").slice(0, 31));
-  sheet.columns = columns.value.map((c) => ({ width: pxToExcelWidth(columnWidth(c.propertyPath), c.displayName) }));
-  sheet.addRow(columns.value.map((c) => c.displayName));
-  return { workbook, sheet };
+/** 导出 sheet 标识：Table 导出为单 sheet，用表名作为 key（实现侧会做 Excel 非法字符清洗） */
+function exportSheetName(): string {
+  return meta.value?.displayName || "数据";
+}
+
+/** 创建一个全新的导出实例（一次导出对应一个 ExportApi）。
+ *  未显式传入 exportApiFunc 时用内置 ExcelJS 实现，
+ *  并把界面列宽（px→Excel 字符宽）一并带过去，保持所见即所得 */
+function newExportApi(): ExportApi {
+  if (props.exportApiFunc) return props.exportApiFunc();
+  const sheet = exportSheetName();
+  return createExcelJsExportApiFunc({
+    columnWidths: { [sheet]: columns.value.map((c) => pxToExcelWidth(columnWidth(c.propertyPath), c.displayName)) },
+  })();
 }
 
 /** 一行数据的导出值：严格按界面列顺序取 propertyPath */
@@ -307,21 +308,9 @@ function exportRowValues(row: Record<string, unknown>): unknown[] {
   return columns.value.map((c) => row[c.propertyPath] ?? null);
 }
 
-/** 收尾：writeBuffer 生成 xlsx 字节并触发浏览器下载 */
-async function finalizeAndDownload(book: ExportBook, filename: string): Promise<void> {
-  const buffer = await book.workbook.xlsx.writeBuffer();
-  const blob = new Blob([buffer], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-/** 按范围导出：选中/当前页直接写；所有数据走逐页拉取边拉边写 */
+/** 按范围导出：选中/当前页直接写；所有数据走逐页拉取边拉边写。
+ *  组件只经 ExportApi 接口操作（renderHeader → renderRows → download/cancel），
+ *  不关心底层是 ExcelJS 还是将来的其它实现 */
 async function doExport(scope: ExportScope): Promise<void> {
   exportDialogVisible.value = false;
   if (scope === "all") {
@@ -329,14 +318,14 @@ async function doExport(scope: ExportScope): Promise<void> {
     return;
   }
   const data = (scope === "selected" ? selectedRows.value : rows.value) as Record<string, unknown>[];
-  const book = createExportBook();
-  for (const row of data) {
-    book.sheet.addRow(exportRowValues(row));
-  }
-  await finalizeAndDownload(book, exportFileName());
+  const api = newExportApi();
+  const sheet = exportSheetName();
+  await api.renderHeader({ [sheet]: columns.value });
+  await api.renderRows(sheet, data.map(exportRowValues));
+  await api.download(exportFileName());
 }
 
-/** 导出所有：循环调 dataFun，每页回来立即写入工作簿（边读边写），带进度与取消；
+/** 导出所有：循环调 dataFun，每页回来立即 renderRows 写入（边读边写），带进度与取消；
  *  取消后弹窗询问是否保留已写入的部分文件 */
 async function exportAllStreaming(): Promise<void> {
   exporting.value = true;
@@ -344,15 +333,15 @@ async function exportAllStreaming(): Promise<void> {
   exportFetched.value = 0;
   exportTotal.value = total.value;
   exportAbort = new AbortController();
-  const book = createExportBook();
+  const api = newExportApi();
+  const sheet = exportSheetName();
+  await api.renderHeader({ [sheet]: columns.value });
   try {
     const limit = innerPageSize.value;
     let offset = 0;
     for (;;) {
       const res = await props.dataFun({ limit, offset }, exportAbort.signal);
-      for (const item of res.items as Record<string, unknown>[]) {
-        book.sheet.addRow(exportRowValues(item));
-      }
+      await api.renderRows(sheet, (res.items as Record<string, unknown>[]).map(exportRowValues));
       exportFetched.value += res.items.length;
       if (res.totalCount != null) exportTotal.value = res.totalCount;
       if (exportCancelled || !res.hasNext || res.items.length === 0) break;
@@ -365,12 +354,12 @@ async function exportAllStreaming(): Promise<void> {
     exportAbort = null;
   }
   if (!exportCancelled) {
-    await finalizeAndDownload(book, exportFileName());
+    await api.download(exportFileName());
     return;
   }
   // 已取消：询问是否保留已写入的部分文件
   exportCancelledRows.value = exportFetched.value;
-  pendingExportBook = book;
+  pendingExportApi = api;
   exportCancelledVisible.value = true;
 }
 
@@ -380,18 +369,20 @@ function cancelExport(): void {
   exportAbort?.abort();
 }
 
-/** 保留部分文件：finalize 已写入的行并下载（文件名加「部分」后缀） */
+/** 保留部分文件：download 已写入的行（文件名加「部分」后缀） */
 async function keepPartialExport(): Promise<void> {
   exportCancelledVisible.value = false;
-  const book = pendingExportBook;
-  pendingExportBook = null;
-  if (book) await finalizeAndDownload(book, exportFileName(true));
+  const api = pendingExportApi;
+  pendingExportApi = null;
+  if (api) await api.download(exportFileName(true));
 }
 
-/** 丢弃部分文件：直接放弃工作簿，不产出文件 */
-function discardPartialExport(): void {
+/** 丢弃部分文件：经 ExportApi.cancel 放弃已写入内容，不产出文件 */
+async function discardPartialExport(): Promise<void> {
   exportCancelledVisible.value = false;
-  pendingExportBook = null;
+  const api = pendingExportApi;
+  pendingExportApi = null;
+  if (api) await api.cancel();
 }
 
 /** 导出文件名：表名_时间戳.xlsx；部分文件加「部分」后缀 */
