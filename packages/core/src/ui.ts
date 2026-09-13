@@ -12,12 +12,10 @@ export interface TableProps {
     rowActionsFunc?: RowActionsFunc<unknown>
     /** 可选，默认 false。为 true 时表格第一列显示 checkbox（表头含全选/取消全选） */
     showCheckbox?: boolean,
-    /** 可选，默认 false。为 true 时显示列设置入口，用户可自定义列的显隐、顺序与宽度 */
+    loadCustomConfigFun: loadCustomConfigFunc,
+    saveCustomConfigFun: saveCustomConfigFunc,
     showCustomConfig?: boolean,
-    /** 可选。加载列自定义配置（showCustomConfig 为 true 时使用；返回 null 按空配置处理） */
-    loadCustomConfigFun?: loadCustomConfigFunc,
-    /** 可选。保存列自定义配置（showCustomConfig 为 true 时使用） */
-    saveCustomConfigFun?: saveCustomConfigFunc,
+    showExportExcel?: boolean
 }
 
 /**

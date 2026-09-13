@@ -27,7 +27,9 @@ import { ElMessage } from "element-plus";
 // - checkbox：表头 + 固定数据 + 勾选列（showCheckbox，表头 checkbox 全选/取消全选）
 // - custom：表头 + 固定数据 + 列设置（showCustomConfig，自定义列显隐/顺序/宽度，localStorage 持久化）
 // - combo：勾选列 + 列设置 + 分页组合（showCheckbox + showCustomConfig，验证两者互不干扰）
-type Variant = "empty" | "const" | "actions" | "list" | "paged" | "checkbox" | "custom" | "combo";
+// - export：勾选列 + 分页 + 导出 Excel（showExportExcel，演示三种导出范围与进度取消）
+// - custom-export：自定义列 + 导出 Excel（验证导出的列与列设置的显隐/顺序/宽度所见即所得）
+type Variant = "empty" | "const" | "actions" | "list" | "paged" | "checkbox" | "custom" | "combo" | "export" | "custom-export";
 
 const props = defineProps<{
   variant: Variant;
@@ -134,6 +136,28 @@ const manyRows: UserRow[] = Array.from({ length: 25 }, (_, i) => ({
   secret: `s${i + 1}`,
 }));
 
+// 导出演示用的 300 行大数据（pageSize=10 → 30 页）
+const exportRows: UserRow[] = Array.from({ length: 300 }, (_, i) => ({
+  id: i + 1,
+  name: `ExportUser${i + 1}`,
+  email: `export${i + 1}@example.com`,
+  age: 20 + (i % 40),
+  secret: `e${i + 1}`,
+}));
+
+/** 给数据源加网络延迟（并响应 AbortSignal 中断），用于演示「导出所有」的进度与取消 */
+function delayedData<T>(values: T[], delayMs: number): PageFunc<T> {
+  const inner = constData(values);
+  return (req, signal) =>
+    new Promise((resolve, reject) => {
+      const timer = setTimeout(() => resolve(inner(req)), delayMs);
+      signal?.addEventListener("abort", () => {
+        clearTimeout(timer);
+        reject(new DOMException("Aborted", "AbortError"));
+      });
+    });
+}
+
 // 按模式选择数据源：emptyData / constData / listData（listData 包装一个异步 ListFunc）
 const dataFun = computed<PageFunc<UserRow>>(() => {
   switch (props.variant) {
@@ -147,32 +171,46 @@ const dataFun = computed<PageFunc<UserRow>>(() => {
     case "paged":
     case "checkbox":
     case "combo":
+    case "export":
       return constData(manyRows);
+    case "custom-export":
+      // 大数据 + 每次请求 300ms 延迟：导出所有需 30 次请求（约 9 秒），进度条与取消清晰可见
+      return delayedData(exportRows, 300);
     default:
       return constData(rows);
   }
 });
 
-// 每页条数：paged / checkbox / combo 模式用 10（25 行 → 3 页），其余模式保持默认 20（数据不足一页，分页组件自动隐藏）
+// 每页条数：paged / checkbox / combo / export / custom-export 模式用 10（25 行 → 3 页），其余模式保持默认 20（数据不足一页，分页组件自动隐藏）
 const pageSize = computed(() =>
-  props.variant === "paged" || props.variant === "checkbox" || props.variant === "combo" ? 10 : 20,
+  ["paged", "checkbox", "combo", "export", "custom-export"].includes(props.variant) ? 10 : 20,
 );
 
-// 勾选列：checkbox / combo 模式开启
-const showCheckbox = computed(() => props.variant === "checkbox" || props.variant === "combo");
+// 勾选列：checkbox / combo / export 模式开启
+const showCheckbox = computed(() => ["checkbox", "combo", "export"].includes(props.variant));
 
-// 列设置：custom / combo 模式开启；配置持久化到 localStorage，刷新页面后仍生效。
-// combo 用独立 key，避免与 custom 模式互相覆盖配置。
+// 导出 Excel：export / custom-export 模式开启
+const showExportExcel = computed(() => ["export", "custom-export"].includes(props.variant));
+
+// 列设置：custom / combo / custom-export 模式开启；配置持久化到 localStorage，刷新页面后仍生效。
+// 各模式用独立 key，避免互相覆盖配置。
 const CUSTOM_CONFIG_KEY = "yk-crud-demo-table-columns";
 const COMBO_CONFIG_KEY = "yk-crud-demo-table-columns-combo";
-const configKey = computed(() => (props.variant === "combo" ? COMBO_CONFIG_KEY : CUSTOM_CONFIG_KEY));
-const showCustomConfig = computed(() => props.variant === "custom" || props.variant === "combo");
-const loadCustomConfigFun = computed<loadConfigFunc | undefined>(() =>
-  showCustomConfig.value ? loadLocalStorageConfig(configKey.value) : undefined,
-);
-const saveCustomConfigFun = computed<saveCustomConfigFunc | undefined>(() =>
-  showCustomConfig.value ? saveLocalStorageConfig(configKey.value) : undefined,
-);
+const CUSTOM_EXPORT_CONFIG_KEY = "yk-crud-demo-table-columns-custom-export";
+const CONFIG_KEYS: Partial<Record<Variant, string>> = {
+  custom: CUSTOM_CONFIG_KEY,
+  combo: COMBO_CONFIG_KEY,
+  "custom-export": CUSTOM_EXPORT_CONFIG_KEY,
+};
+const showCustomConfig = computed(() => props.variant in CONFIG_KEYS);
+const loadCustomConfigFun = computed<loadConfigFunc | undefined>(() => {
+  const key = CONFIG_KEYS[props.variant];
+  return key ? loadLocalStorageConfig(key) : undefined;
+});
+const saveCustomConfigFun = computed<saveCustomConfigFunc | undefined>(() => {
+  const key = CONFIG_KEYS[props.variant];
+  return key ? saveLocalStorageConfig(key) : undefined;
+});
 
 // checkbox 模式：通过 Table expose 的 selectedRows 查看当前选中行。
 // ref 直接用 core 的输出契约 TableApi 类型化，不依赖组件 SFC 的 InstanceType
@@ -257,6 +295,16 @@ const text = computed(() => {
         title: "可勾选 + 自定义列表格",
         hint: "showCheckbox 与 showCustomConfig 同时开启：第一列是 checkbox（跨页保留选中），右上「⚙ 列设置」调整数据列的显隐/顺序/宽度——勾选列固定在第一列，不参与列设置。25 行数据 + pageSize=10，配置独立持久化（与自定义列 demo 互不覆盖）。",
       };
+    case "export":
+      return {
+        title: "导出 Excel 表格",
+        hint: "showExportExcel 开启后右上出现「⬇ 导出 Excel」：可选导出选中 / 当前页 / 所有数据（只有一页或无勾选列时对应选项自动隐藏，仅剩一个选项时不弹框直接导出）。导出列与界面所见一致（显隐 + 顺序 + 列宽）；「导出所有」会循环请求数据并显示进度条，可中途取消。",
+      };
+    case "custom-export":
+      return {
+        title: "自定义列 + 导出 Excel",
+        hint: "showCustomConfig 与 showExportExcel 同时开启：先用「⚙ 列设置」调整列的显隐/顺序/宽度，再点「⬇ 导出 Excel」——导出的列与界面所见严格一致（隐藏列不导出、顺序一致、列宽映射）。300 行数据 + 每次请求 300ms 延迟（导出所有约需 9 秒），可清楚看到进度条并中途取消。",
+      };
   }
 });
 </script>
@@ -285,6 +333,7 @@ const text = computed(() => {
       :show-custom-config="showCustomConfig"
       :load-custom-config-fun="loadCustomConfigFun"
       :save-custom-config-fun="saveCustomConfigFun"
+      :show-export-excel="showExportExcel"
     />
   </main>
 </template>

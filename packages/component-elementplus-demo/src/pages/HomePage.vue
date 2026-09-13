@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// 导航页：八个入口，分别对应 Table 组件的八种演示模式
-type DemoPage = "table-empty" | "table-const" | "table-actions" | "table-list" | "table-paged" | "table-checkbox" | "table-custom" | "table-combo";
+// 导航页：十个入口，分别对应 Table 组件的十种演示模式
+type DemoPage = "table-empty" | "table-const" | "table-actions" | "table-list" | "table-paged" | "table-checkbox" | "table-custom" | "table-combo" | "table-export" | "table-custom-export";
 
 defineEmits<{
   (e: "navigate", page: DemoPage): void;
@@ -43,6 +43,12 @@ defineEmits<{
         </el-button>
         <el-button type="primary" size="large" @click="$emit('navigate', 'table-combo')">
           可勾选 + 自定义列表格（showCheckbox + showCustomConfig）
+        </el-button>
+        <el-button type="primary" size="large" @click="$emit('navigate', 'table-export')">
+          导出 Excel（showExportExcel）
+        </el-button>
+        <el-button type="primary" size="large" @click="$emit('navigate', 'table-custom-export')">
+          自定义列 + 导出 Excel（showCustomConfig + showExportExcel）
         </el-button>
       </div>
     </section>

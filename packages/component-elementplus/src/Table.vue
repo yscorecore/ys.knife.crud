@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type PropType, type Ref } from "vue";
+import ExcelJS from "exceljs";
 import type {
   Action,
   CustomColumnConfigs,
@@ -39,6 +40,8 @@ const props = defineProps({
   loadCustomConfigFun: { type: Function as PropType<NonNullable<CoreTableProps["loadCustomConfigFun"]>>, required: false },
   /** 保存列自定义配置（showCustomConfig 为 true 时使用） */
   saveCustomConfigFun: { type: Function as PropType<NonNullable<CoreTableProps["saveCustomConfigFun"]>>, required: false },
+  /** 为 true 时显示导出 Excel 入口，默认 false */
+  showExportExcel: { type: Boolean, default: false },
   /** 外部加载态，会和组件内部加载态合并 */
   loading: { type: Boolean, default: false },
   /** 行 key，默认 "id" */
@@ -213,6 +216,194 @@ async function saveConfigDialog(): Promise<void> {
   configDialogVisible.value = false;
 }
 
+/* ---------------- 导出 Excel ---------------- */
+
+type ExportScope = "selected" | "page" | "all";
+
+interface ExportOption {
+  value: ExportScope;
+  label: string;
+  /** 不可用时在对话框里禁用（如未选中任何行时的「导出选中」） */
+  disabled: boolean;
+}
+
+/** 导出选项：showCheckbox=false 不含「导出选中」；数据只有一页（分页组件不显示）不含「导出所有」 */
+const exportOptions = computed<ExportOption[]>(() => {
+  const opts: ExportOption[] = [];
+  if (props.showCheckbox) {
+    opts.push({
+      value: "selected",
+      label: `导出选中的数据（已选 ${selectedRows.value.length} 项）`,
+      disabled: selectedRows.value.length === 0,
+    });
+  }
+  opts.push({ value: "page", label: `导出当前页数据（${rows.value.length} 条）`, disabled: false });
+  if (showPagination.value) {
+    opts.push({ value: "all", label: "导出所有数据", disabled: false });
+  }
+  return opts;
+});
+
+const exportDialogVisible = ref(false);
+/** 「导出所有」进度状态 */
+const exporting = ref(false);
+const exportFetched = ref(0);
+const exportTotal = ref(0);
+/** 取消标记：每页返回后检查，兼容忽略 AbortSignal 的 dataFun */
+let exportCancelled = false;
+let exportAbort: AbortController | null = null;
+/** 取消后待处理的工作簿：用户选「保留部分文件」时 finalize 并下载 */
+let pendingExportBook: ExportBook | null = null;
+/** 取消后的「保留/丢弃」询问对话框 */
+const exportCancelledVisible = ref(false);
+/** 取消时已写入的数据行数（不含表头） */
+const exportCancelledRows = ref(0);
+
+/** 导出进度百分比：totalCount 未知时按已加载条数滚动到 99% 封顶 */
+const exportPercent = computed(() => {
+  if (exportTotal.value > 0) return Math.min(100, Math.round((exportFetched.value / exportTotal.value) * 100));
+  return exportFetched.value > 0 ? 99 : 0;
+});
+
+/** 点击导出入口：只剩一个可用选项时跳过对话框直接导出 */
+function onExportClick(): void {
+  const enabled = exportOptions.value.filter((o) => !o.disabled);
+  if (enabled.length === 1) {
+    doExport(enabled[0]!.value);
+    return;
+  }
+  exportDialogVisible.value = true;
+}
+
+/** 导出工作簿封装：每页数据回来立即 addRow 进工作簿（数据层面边读边写），
+ *  最后 writeBuffer 一次成文件。
+ *  注意：ExcelJS 浏览器构建（dist/exceljs.min.js）不含 stream.xlsx.WorkbookWriter
+ *  （仅 Node 构建有），因此浏览器端只能用 Workbook + writeBuffer——
+ *  行级增量写入保留，zip 仍整体在内存生成（浏览器下载本就要求 Blob 整体在内存） */
+interface ExportBook {
+  workbook: ExcelJS.Workbook;
+  sheet: ExcelJS.Worksheet;
+}
+
+/** px 列宽 → Excel 字符宽（近似换算）；未配置列宽时按列名长度给一个下限 */
+function pxToExcelWidth(width: string | undefined, displayName: string): number {
+  const px = Number.parseInt(width ?? "", 10);
+  if (Number.isFinite(px)) return Math.max(6, px / 7);
+  return Math.max(10, displayName.length * 2);
+}
+
+/** 创建导出工作簿：先写表头（所见即所得——columns 已含 meta/customConfig 两层过滤与排序），
+ *  之后每页数据回来立即 addRow 追加 */
+function createExportBook(): ExportBook {
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet((meta.value?.displayName || "数据").slice(0, 31));
+  sheet.columns = columns.value.map((c) => ({ width: pxToExcelWidth(columnWidth(c.propertyPath), c.displayName) }));
+  sheet.addRow(columns.value.map((c) => c.displayName));
+  return { workbook, sheet };
+}
+
+/** 一行数据的导出值：严格按界面列顺序取 propertyPath */
+function exportRowValues(row: Record<string, unknown>): unknown[] {
+  return columns.value.map((c) => row[c.propertyPath] ?? null);
+}
+
+/** 收尾：writeBuffer 生成 xlsx 字节并触发浏览器下载 */
+async function finalizeAndDownload(book: ExportBook, filename: string): Promise<void> {
+  const buffer = await book.workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+/** 按范围导出：选中/当前页直接写；所有数据走逐页拉取边拉边写 */
+async function doExport(scope: ExportScope): Promise<void> {
+  exportDialogVisible.value = false;
+  if (scope === "all") {
+    await exportAllStreaming();
+    return;
+  }
+  const data = (scope === "selected" ? selectedRows.value : rows.value) as Record<string, unknown>[];
+  const book = createExportBook();
+  for (const row of data) {
+    book.sheet.addRow(exportRowValues(row));
+  }
+  await finalizeAndDownload(book, exportFileName());
+}
+
+/** 导出所有：循环调 dataFun，每页回来立即写入工作簿（边读边写），带进度与取消；
+ *  取消后弹窗询问是否保留已写入的部分文件 */
+async function exportAllStreaming(): Promise<void> {
+  exporting.value = true;
+  exportCancelled = false;
+  exportFetched.value = 0;
+  exportTotal.value = total.value;
+  exportAbort = new AbortController();
+  const book = createExportBook();
+  try {
+    const limit = innerPageSize.value;
+    let offset = 0;
+    for (;;) {
+      const res = await props.dataFun({ limit, offset }, exportAbort.signal);
+      for (const item of res.items as Record<string, unknown>[]) {
+        book.sheet.addRow(exportRowValues(item));
+      }
+      exportFetched.value += res.items.length;
+      if (res.totalCount != null) exportTotal.value = res.totalCount;
+      if (exportCancelled || !res.hasNext || res.items.length === 0) break;
+      offset += limit;
+    }
+  } catch (e) {
+    if (!exportCancelled) throw e;
+  } finally {
+    exporting.value = false;
+    exportAbort = null;
+  }
+  if (!exportCancelled) {
+    await finalizeAndDownload(book, exportFileName());
+    return;
+  }
+  // 已取消：询问是否保留已写入的部分文件
+  exportCancelledRows.value = exportFetched.value;
+  pendingExportBook = book;
+  exportCancelledVisible.value = true;
+}
+
+/** 取消「导出所有」：中断后续请求；已写入的行进入「保留/丢弃」流程 */
+function cancelExport(): void {
+  exportCancelled = true;
+  exportAbort?.abort();
+}
+
+/** 保留部分文件：finalize 已写入的行并下载（文件名加「部分」后缀） */
+async function keepPartialExport(): Promise<void> {
+  exportCancelledVisible.value = false;
+  const book = pendingExportBook;
+  pendingExportBook = null;
+  if (book) await finalizeAndDownload(book, exportFileName(true));
+}
+
+/** 丢弃部分文件：直接放弃工作簿，不产出文件 */
+function discardPartialExport(): void {
+  exportCancelledVisible.value = false;
+  pendingExportBook = null;
+}
+
+/** 导出文件名：表名_时间戳.xlsx；部分文件加「部分」后缀 */
+function exportFileName(partial = false): string {
+  const now = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  return `${meta.value?.displayName || "导出数据"}_${stamp}${partial ? "_部分" : ""}.xlsx`;
+}
+
+/* ---------------- 行操作 ---------------- */
+
 async function loadActions(signal?: AbortSignal): Promise<void> {
   if (!props.rowActionsFunc) {
     actions.value = [];
@@ -295,17 +486,39 @@ defineExpose(exposed);
 
 <template>
   <div class="yk-table">
-    <!-- 跨页选中提示条：reserve-selection 下选中可能来自其他页，给用户一个总览与清空入口 -->
-    <div v-if="showCheckbox && selectedRows.length > 0" class="yk-table__selection-bar">
-      <span>已选 {{ selectedRows.length }} 项</span>
-      <el-button link type="primary" @click="clearSelection">清空</el-button>
-    </div>
-
-    <!-- 列设置入口（showCustomConfig 为 true 时显示） -->
-    <div v-if="showCustomConfig" class="yk-table__toolbar">
-      <el-button link type="primary" class="yk-table__config-btn" @click="openConfigDialog">
-        ⚙ 列设置
-      </el-button>
+    <!-- 顶部工具栏：左侧为跨页选中提示（有选中时显示），右侧为导出 / 列设置入口。
+         同一行节省纵向空间，任一条件满足即渲染 -->
+    <div
+      v-if="(showCheckbox && selectedRows.length > 0) || showCustomConfig || showExportExcel"
+      class="yk-table__toolbar"
+    >
+      <!-- 跨页选中提示：reserve-selection 下选中可能来自其他页，给用户一个总览与清空入口 -->
+      <div v-if="showCheckbox && selectedRows.length > 0" class="yk-table__selection-bar">
+        <span>已选 {{ selectedRows.length }} 项</span>
+        <el-button link type="primary" @click="clearSelection">清空</el-button>
+      </div>
+      <!-- 无选中提示时的占位，保证右侧按钮组始终靠右 -->
+      <span v-else />
+      <div class="yk-table__toolbar-actions">
+        <el-button
+          v-if="showExportExcel"
+          link
+          type="primary"
+          class="yk-table__export-btn"
+          @click="onExportClick"
+        >
+          ⬇ 导出 Excel
+        </el-button>
+        <el-button
+          v-if="showCustomConfig"
+          link
+          type="primary"
+          class="yk-table__config-btn"
+          @click="openConfigDialog"
+        >
+          ⚙ 列设置
+        </el-button>
+      </div>
     </div>
 
     <el-table
@@ -357,6 +570,50 @@ defineExpose(exposed);
       @size-change="onSizeChange"
     />
 
+    <!-- 导出选项对话框：有多个可用选项时才弹出（单个选项直接导出） -->
+    <el-dialog v-model="exportDialogVisible" title="导出 Excel" width="420px">
+      <div class="export-options">
+        <el-button
+          v-for="opt in exportOptions"
+          :key="opt.value"
+          class="export-option"
+          :data-scope="opt.value"
+          :disabled="opt.disabled"
+          @click="doExport(opt.value)"
+        >
+          {{ opt.label }}
+        </el-button>
+      </div>
+    </el-dialog>
+
+    <!-- 「导出所有」进度对话框：循环拉取数据期间显示，可中途取消 -->
+    <el-dialog
+      v-model="exporting"
+      title="正在导出"
+      width="420px"
+      :close-on-click-modal="false"
+      :show-close="false"
+    >
+      <el-progress :percentage="exportPercent" />
+      <p class="export-progress-text">
+        已加载 {{ exportFetched }}<template v-if="exportTotal > 0"> / {{ exportTotal }}</template> 条
+      </p>
+      <template #footer>
+        <el-button class="export-cancel" @click="cancelExport">取消</el-button>
+      </template>
+    </el-dialog>
+
+    <!-- 「导出所有」被取消后的询问：已写入的行可保留为部分文件，或整体丢弃 -->
+    <el-dialog v-model="exportCancelledVisible" title="导出已取消" width="420px">
+      <p class="export-cancelled-text">
+        已写入 {{ exportCancelledRows }} 条数据，是否保留已导出的部分文件？
+      </p>
+      <template #footer>
+        <el-button class="export-discard" @click="discardPartialExport">丢弃</el-button>
+        <el-button class="export-keep" type="primary" @click="keepPartialExport">保留部分文件</el-button>
+      </template>
+    </el-dialog>
+
     <!-- 列设置面板：勾选显隐、上移/下移调顺序、输入框调列宽 -->
     <el-dialog v-model="configDialogVisible" title="列设置" width="480px">
       <div v-for="(d, i) in draftColumns" :key="d.propertyPath" class="col-config-row">
@@ -376,22 +633,42 @@ defineExpose(exposed);
 </template>
 
 <style scoped>
+.yk-table__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
 .yk-table__selection-bar {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 8px;
-  padding: 6px 12px;
+  padding: 4px 12px;
   background: #ecf5ff;
   border: 1px solid #d9ecff;
   border-radius: 4px;
   font-size: 0.92em;
   color: #409eff;
 }
-.yk-table__toolbar {
+.yk-table__toolbar-actions {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 8px;
+  align-items: center;
+  gap: 12px;
+}
+.export-options {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+.export-options .export-option {
+  margin-left: 0;
+}
+.export-progress-text {
+  margin: 10px 0 0;
+  color: #666;
+  font-size: 0.92em;
+  text-align: center;
 }
 .col-config-row {
   display: flex;

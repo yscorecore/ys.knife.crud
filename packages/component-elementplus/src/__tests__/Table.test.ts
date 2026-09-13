@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import Table from "../Table.vue";
 import {
@@ -10,6 +10,50 @@ import {
   type PageFunc,
   type RowActionsFunc,
 } from "@ys.knife.crud/core";
+
+// exceljs 真实生成 zip 涉及大量内部状态，测试环境整体 mock：
+// FakeWorkbook 记录 addRow 写入的行内容与 writeBuffer 是否被调用，
+// FakeSheet.rows[0] 是表头行，其后为数据行。
+// 注意：mock 的是浏览器构建也有的 API（Workbook + xlsx.writeBuffer）——
+// 浏览器 bundle 不含 stream.xlsx.WorkbookWriter，组件若误用流式 API 这里也会跟着错
+const exceljsFake = vi.hoisted(() => {
+  class FakeSheet {
+    rows: unknown[][] = [];
+    columns: unknown = null;
+    addRow(values: unknown[]) {
+      this.rows.push(values);
+      return { values };
+    }
+  }
+  class FakeWorkbook {
+    static instances: FakeWorkbook[] = [];
+    sheets: FakeSheet[] = [];
+    bufferWritten = false;
+    xlsx = {
+      writeBuffer: () => {
+        this.bufferWritten = true;
+        return Promise.resolve(new Uint8Array([0x50, 0x4b]).buffer);
+      },
+    };
+    constructor() {
+      FakeWorkbook.instances.push(this);
+    }
+    addWorksheet(_name: string) {
+      const s = new FakeSheet();
+      this.sheets.push(s);
+      return s;
+    }
+  }
+  return { FakeWorkbook };
+});
+
+vi.mock("exceljs", () => ({
+  default: { Workbook: exceljsFake.FakeWorkbook },
+}));
+
+// 浏览器下载行为（URL.createObjectURL / a.click / a.download 赋值）统一打桩
+const downloadFake = vi.hoisted(() => ({ click: vi.fn() }));
+const downloadedNames: string[] = [];
 
 function makeColumn(propertyPath: string, displayName: string, displayOrder: number, showForDisplay = true) {
   return {
@@ -129,6 +173,13 @@ const ElPaginationStub = {
   emits: ["current-change", "size-change"],
 };
 
+// el-progress stub：暴露 percentage 为 data 属性
+const ElProgressStub = {
+  name: "ElProgress",
+  template: '<div class="el-progress-stub" :data-percentage="percentage"></div>',
+  props: ["percentage"],
+};
+
 const stubs = {
   "el-table": ElTableStub,
   "el-table-column": ElTableColumnStub,
@@ -137,6 +188,7 @@ const stubs = {
   "el-dialog": ElDialogStub,
   "el-checkbox": ElCheckboxStub,
   "el-input": ElInputStub,
+  "el-progress": ElProgressStub,
 };
 
 function mountTable(props: Record<string, unknown> = {}) {
@@ -530,5 +582,245 @@ describe("Table row actions", () => {
 
     expect(editExecute).toHaveBeenCalledTimes(1);
     expect(editExecute.mock.calls[0]?.[0]).toEqual(rows[0]);
+  });
+});
+
+describe("Table export excel", () => {
+  // 25 行数据，pageSize=10 时共 3 页（供多页场景使用）
+  const manyRows = Array.from({ length: 25 }, (_, i) => ({
+    id: i + 1,
+    name: `User${i + 1}`,
+    secret: `s${i + 1}`,
+  }));
+
+  // 表头按界面列序：ID(0) -> 姓名(1)，隐藏列 secret 不导出
+  const expectedHeader = ["ID", "姓名"];
+
+  /** 最近一次创建的工作簿写入器 */
+  function lastWriter() {
+    const inst = exceljsFake.FakeWorkbook.instances;
+    return inst[inst.length - 1]!;
+  }
+  /** 最近一次导出写入的全部行（rows[0] 为表头，其后为数据行） */
+  function lastRows(): unknown[][] {
+    return lastWriter().sheets[0]!.rows;
+  }
+
+  beforeEach(() => {
+    exceljsFake.FakeWorkbook.instances.length = 0;
+    downloadFake.click.mockClear();
+    downloadedNames.length = 0;
+    // 浏览器下载三件套打桩：objectURL、a.click、a.download 赋值
+    URL.createObjectURL = () => "blob:mock";
+    URL.revokeObjectURL = () => {};
+    HTMLAnchorElement.prototype.click = downloadFake.click as unknown as HTMLAnchorElement["click"];
+    Object.defineProperty(HTMLAnchorElement.prototype, "download", {
+      configurable: true,
+      set(v: string) {
+        downloadedNames.push(v);
+      },
+    });
+  });
+
+  it("does not show the export entry by default", async () => {
+    const wrapper = mountTable();
+    await flushPromises();
+
+    expect(wrapper.find(".yk-table__export-btn").exists()).toBe(false);
+  });
+
+  it("exports the current page directly without a dialog when it is the only option", async () => {
+    const wrapper = mountTable({ showExportExcel: true });
+    await flushPromises();
+
+    await wrapper.find(".yk-table__export-btn").trigger("click");
+    await flushPromises();
+
+    // 只有一个可用选项（导出当前页）：不弹对话框，直接写文件
+    expect(wrapper.find(".el-dialog-stub").exists()).toBe(false);
+    expect(lastRows()).toEqual([expectedHeader, [1, "Alice"], [2, "Bob"]]);
+    expect(lastWriter().bufferWritten).toBe(true);
+    expect(downloadFake.click).toHaveBeenCalledTimes(1);
+    expect(downloadedNames[0]).toMatch(/^用户列表_.*\.xlsx$/);
+  });
+
+  it("shows the options dialog and exports only the selected rows", async () => {
+    const wrapper = mountTable({ showExportExcel: true, showCheckbox: true });
+    await flushPromises();
+
+    // 未选中时「导出选中」禁用，可用选项只剩「导出当前页」→ 不弹框
+    await wrapper.find(".yk-table__export-btn").trigger("click");
+    await flushPromises();
+    expect(wrapper.find(".el-dialog-stub").exists()).toBe(false);
+    expect(downloadFake.click).toHaveBeenCalledTimes(1);
+
+    // 全选两行后再点导出：两个选项可用 → 弹出选择框
+    await wrapper.find("button.select-all").trigger("click");
+    await wrapper.find(".yk-table__export-btn").trigger("click");
+    await flushPromises();
+
+    const dialog = wrapper.find(".el-dialog-stub");
+    expect(dialog.exists()).toBe(true);
+    // 数据只有一页：不出现「导出所有数据」选项
+    expect(dialog.text()).toContain("导出选中的数据");
+    expect(dialog.text()).toContain("导出当前页数据");
+    expect(dialog.text()).not.toContain("导出所有数据");
+
+    // 选择「导出选中的数据」
+    await wrapper.find('[data-scope="selected"]').trigger("click");
+    await flushPromises();
+
+    expect(lastRows()).toEqual([expectedHeader, [1, "Alice"], [2, "Bob"]]);
+    expect(downloadFake.click).toHaveBeenCalledTimes(2);
+  });
+
+  it("exports visible columns only, honoring custom order (WYSIWYG)", async () => {
+    // 配置：姓名提到最前、ID 隐藏 → 导出只剩「姓名」一列
+    const loadCustomConfigFun = (): Promise<CustomColumnConfigs> =>
+      Promise.resolve({
+        name: { propertyPath: "name", visible: true, order: 0, width: "" },
+        id: { propertyPath: "id", visible: false, order: 1, width: "" },
+      });
+    const wrapper = mountTable({ showExportExcel: true, showCustomConfig: true, loadCustomConfigFun });
+    await flushPromises();
+
+    await wrapper.find(".yk-table__export-btn").trigger("click");
+    await flushPromises();
+
+    expect(lastRows()).toEqual([["姓名"], ["Alice"], ["Bob"]]);
+  });
+
+  it("exports all data by streaming each fetched page into the workbook", async () => {
+    const spy = vi.fn(constData(manyRows));
+    const wrapper = mountTable({ showExportExcel: true, dataFun: spy, pageSize: 10 });
+    await flushPromises();
+
+    // 多页 + 无 checkbox：选项为「当前页 / 所有」→ 弹框
+    await wrapper.find(".yk-table__export-btn").trigger("click");
+    await flushPromises();
+    const dialog = wrapper.find(".el-dialog-stub");
+    expect(dialog.text()).toContain("导出所有数据");
+    expect(dialog.text()).not.toContain("导出选中的数据");
+
+    await wrapper.find('[data-scope="all"]').trigger("click");
+    await flushPromises();
+
+    // 初始加载 1 次 + 导出循环 3 次（offset 0/10/20）
+    expect(spy).toHaveBeenCalledTimes(4);
+    expect(spy.mock.calls.slice(1).map((c) => c[0])).toEqual([
+      { limit: 10, offset: 0 },
+      { limit: 10, offset: 10 },
+      { limit: 10, offset: 20 },
+    ]);
+
+    // 表头 + 全部 25 行（边读边写进同一工作簿）
+    expect(lastRows()).toHaveLength(26);
+    expect(lastRows()[0]).toEqual(expectedHeader);
+    expect(lastRows()[25]).toEqual([25, "User25"]);
+    expect(lastWriter().bufferWritten).toBe(true);
+    expect(downloadFake.click).toHaveBeenCalledTimes(1);
+    // 导出完成后进度对话框关闭
+    expect(wrapper.find(".el-progress-stub").exists()).toBe(false);
+  });
+
+  interface PagedResult {
+    limit: number;
+    offset: number;
+    totalCount: number;
+    hasNext: boolean;
+    items: unknown[];
+  }
+
+  /** 构造「导出所有进行到第二页在途」的场景，返回挂起请求的 resolve 入口 */
+  async function setupPendingExport() {
+    // （new Promise 的执行器同步运行，点击导出后 resolvePage2 必然已被赋值，故用非空断言）
+    let resolvePage2!: (v: PagedResult) => void;
+    const spy = vi.fn((req: { limit?: number; offset?: number }) => {
+      const offset = req.offset ?? 0;
+      if (offset === 0) {
+        return Promise.resolve<PagedResult>({
+          limit: 10,
+          offset: 0,
+          totalCount: 25,
+          hasNext: true,
+          items: manyRows.slice(0, 10),
+        });
+      }
+      return new Promise<PagedResult>((resolve) => {
+        resolvePage2 = resolve;
+      });
+    });
+    const wrapper = mountTable({ showExportExcel: true, dataFun: spy, pageSize: 10 });
+    await flushPromises();
+
+    await wrapper.find(".yk-table__export-btn").trigger("click");
+    await flushPromises();
+    await wrapper.find('[data-scope="all"]').trigger("click");
+    await flushPromises();
+
+    const page2: PagedResult = {
+      limit: 10,
+      offset: 10,
+      totalCount: 25,
+      hasNext: true,
+      items: manyRows.slice(10, 20),
+    };
+    return {
+      wrapper,
+      spy,
+      /** 让在途的第二页请求返回（模拟取消后请求才到达） */
+      resolvePage2: () => resolvePage2(page2),
+    };
+  }
+
+  it("asks whether to keep the partial file when export-all is cancelled midway", async () => {
+    const { wrapper, spy, resolvePage2 } = await setupPendingExport();
+
+    // 第一页已写入（边读边写），第二页在途：进度对话框显示 10 / 25
+    expect(wrapper.find(".el-progress-stub").exists()).toBe(true);
+    expect(wrapper.text()).toContain("已加载 10 / 25 条");
+    expect(lastRows()).toHaveLength(11); // 表头 + 第 1 页 10 行
+
+    // 中途取消，随后让在途请求返回：第 2 页照常写入，随后循环终止、不再请求第 3 页
+    await wrapper.find("button.export-cancel").trigger("click");
+    resolvePage2();
+    await flushPromises();
+
+    expect(spy).toHaveBeenCalledTimes(3); // 初始 1 + 导出第 1 页 + 导出第 2 页
+    expect(wrapper.find(".el-progress-stub").exists()).toBe(false);
+    // 弹出「保留/丢弃」询问；已写入 20 条（取消时在途的第 2 页也完成了写入）
+    expect(wrapper.text()).toContain("已写入 20 条数据");
+    expect(downloadFake.click).not.toHaveBeenCalled();
+  });
+
+  it("keeps the partial file when the user chooses to keep it", async () => {
+    const { wrapper, resolvePage2 } = await setupPendingExport();
+    await wrapper.find("button.export-cancel").trigger("click");
+    resolvePage2();
+    await flushPromises();
+
+    await wrapper.find("button.export-keep").trigger("click");
+    await flushPromises();
+
+    // finalize 已写入的 20 行并下载，文件名带「部分」后缀
+    expect(lastRows()).toHaveLength(21); // 表头 + 20 行
+    expect(lastWriter().bufferWritten).toBe(true);
+    expect(downloadFake.click).toHaveBeenCalledTimes(1);
+    expect(downloadedNames[0]).toMatch(/_部分\.xlsx$/);
+    expect(wrapper.text()).not.toContain("已写入");
+  });
+
+  it("discards the partial file when the user chooses to discard it", async () => {
+    const { wrapper, resolvePage2 } = await setupPendingExport();
+    await wrapper.find("button.export-cancel").trigger("click");
+    resolvePage2();
+    await flushPromises();
+
+    await wrapper.find("button.export-discard").trigger("click");
+    await flushPromises();
+
+    expect(lastWriter().bufferWritten).toBe(false);
+    expect(downloadFake.click).not.toHaveBeenCalled();
+    expect(wrapper.text()).not.toContain("已写入");
   });
 });

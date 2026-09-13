@@ -41,7 +41,8 @@
     "vue": "^3.5.0"
   },
   "dependencies": {
-    "@ys.knife.crud/core": "workspace:*"
+    "@ys.knife.crud/core": "workspace:*",
+    "exceljs": "^4.4.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
