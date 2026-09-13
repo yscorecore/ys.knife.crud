@@ -39,3 +39,6 @@ export { constData, emptyData, listData } from "./page";
 export type { ListFunc } from "./page";
 // action.ts 混合导出（constActions/emptyActions 是值，Action/RowActionsFunc 是类型）→ 用 export *
 export * from "./action";
+// customConfig.ts 混合导出（constConfig/emptyConfig/mergeConfigs/localStorage 助手是值，
+// CustomColumnConfig/CustomColumnConfigs/loadConfigFunc/saveCustomConfigFunc 是类型）→ 用 export *
+export * from "./customConfig";
