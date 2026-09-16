@@ -32,9 +32,6 @@ importers:
       '@ys.knife.crud/core':
         specifier: workspace:*
         version: link:../core
-      '@ys.knife.crud/export-exceljs':
-        specifier: workspace:*
-        version: link:../export-exceljs
       element-plus:
         specifier: ^2.7.0
         version: 2.14.5(vue@3.5.42(typescript@5.9.3))
@@ -48,9 +45,6 @@ importers:
       '@vue/test-utils':
         specifier: ^2.4.6
         version: 2.5.0(@vue/compiler-dom@3.5.42)(@vue/server-renderer@3.5.42)(vue@3.5.42(typescript@5.9.3))
-      exceljs:
-        specifier: ^4.4.0
-        version: 4.4.0
       happy-dom:
         specifier: ^15.11.7
         version: 15.11.7
@@ -61,7 +55,7 @@ importers:
         specifier: ^5.9.2
         version: 5.9.3
       vite:
-        specifier: ^5.4.11
+        specifier: ^5.4.21
         version: 5.4.21(@types/node@22.20.2)
       vite-plugin-dts:
         specifier: ^5.1.0
@@ -84,6 +78,9 @@ importers:
       '@ys.knife.crud/core':
         specifier: workspace:*
         version: link:../core
+      '@ys.knife.crud/export-exceljs':
+        specifier: workspace:*
+        version: link:../export-exceljs
       element-plus:
         specifier: ^2.7.0
         version: 2.14.5(vue@3.5.42(typescript@5.9.3))

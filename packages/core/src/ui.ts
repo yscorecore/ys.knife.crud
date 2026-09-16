@@ -2,7 +2,7 @@ import type { Meta, MetaFunc } from "./meta"
 import type { PageFunc } from "./page"
 import type { PagedList } from "ys.knife.query.js"
 import type { Action, RowActionsFunc } from "./action"
-import type { loadConfigFunc as loadCustomConfigFunc, saveCustomConfigFunc } from "./customConfig"
+import type { loadCustomConfigFunc as loadCustomConfigFunc, saveCustomConfigFunc } from "./customConfig"
 import type { ExportApiFunc } from "./export"
 
 /** TableProps 是组件的「输入契约」：父组件通过 props 传入 */
@@ -17,7 +17,8 @@ export interface TableProps {
     saveCustomConfigFun: saveCustomConfigFunc,
     showCustomConfig?: boolean,
     showExportExcel?: boolean,
-    exportApiFunc: ExportApiFunc
+    /** 可选。导出实现工厂；缺省使用 core 的控制台假实现（createConsoleExportApiFunc，只打日志不产出文件） */
+    exportApiFunc?: ExportApiFunc
 }
 
 /**

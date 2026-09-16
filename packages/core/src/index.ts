@@ -40,7 +40,7 @@ export type { ListFunc } from "./page";
 // action.ts 混合导出（constActions/emptyActions 是值，Action/RowActionsFunc 是类型）→ 用 export *
 export * from "./action";
 // customConfig.ts 混合导出（constConfig/emptyConfig/mergeConfigs/localStorage 助手是值，
-// CustomColumnConfig/CustomConfigs/loadConfigFunc/saveCustomConfigFunc 是类型）→ 用 export *
+// CustomColumnConfig/CustomConfig/loadCustomConfigFunc/saveCustomConfigFunc 是类型）→ 用 export *
 export * from "./customConfig";
-// export.ts 只有纯类型（ExportApi 接口 / ExportApiFunc 类型）→ 用 export type *
-export type * from "./export";
+// export.ts 混合导出（createConsoleExportApiFunc 是值，ExportApi/ExportApiFunc 是类型）→ 用 export *
+export * from "./export";

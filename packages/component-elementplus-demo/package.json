@@ -13,6 +13,7 @@
   "dependencies": {
     "@ys.knife.crud/core": "workspace:*",
     "@ys.knife.crud/component-elementplus": "workspace:*",
+    "@ys.knife.crud/export-exceljs": "workspace:*",
     "element-plus": "^2.7.0",
     "vue": "^3.5.13"
   },

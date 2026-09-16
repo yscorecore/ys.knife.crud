@@ -1,15 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type PropType, type Ref } from "vue";
 import type {
-  Action,
-  ExportApi,
   Meta,
   PagedList,
   TableApi,
   TableProps as CoreTableProps,
 } from "@ys.knife.crud/core";
-import { createExcelJsExportApiFunc } from "@ys.knife.crud/export-exceljs";
 import { useCustomConfig } from "./useCustomConfig";
+import { useExportExcel } from "./useExportExcel";
+import { useRowActions } from "./useRowActions";
 
 /**
  * Table 组件的 props = core 的 TableProps（metaFun + dataFun），
@@ -55,10 +54,8 @@ const props = defineProps({
 
 const meta = ref<Meta | null>(null);
 const paged = ref<PagedList<unknown> | null>(null);
-const actions = ref<Action<unknown>[]>([]);
 const metaLoading = ref(false);
 const dataLoading = ref(false);
-const actionsLoading = ref(false);
 /** 当前页码（1 基），翻页时驱动 dataFun 的 offset */
 const currentPage = ref(1);
 /** 当前生效的每页条数：初始取 pageSize prop，用户可在分页组件里切换 */
@@ -145,208 +142,43 @@ function clearSelection(): void {
   tableEl.value?.clearSelection?.();
 }
 
-/* ---------------- 导出 Excel ---------------- */
+/* ---------------- 导出 Excel（逻辑见 useExportExcel.ts） ---------------- */
 
-type ExportScope = "selected" | "page" | "all";
-
-interface ExportOption {
-  value: ExportScope;
-  label: string;
-  /** 不可用时在对话框里禁用（如未选中任何行时的「导出选中」） */
-  disabled: boolean;
-}
-
-/** 导出选项：showCheckbox=false 不含「导出选中」；数据只有一页（分页组件不显示）不含「导出所有」 */
-const exportOptions = computed<ExportOption[]>(() => {
-  const opts: ExportOption[] = [];
-  if (props.showCheckbox) {
-    opts.push({
-      value: "selected",
-      label: `导出选中的数据（已选 ${selectedRows.value.length} 项）`,
-      disabled: selectedRows.value.length === 0,
-    });
-  }
-  opts.push({ value: "page", label: `导出当前页数据（${rows.value.length} 条）`, disabled: false });
-  if (showPagination.value) {
-    opts.push({ value: "all", label: "导出所有数据", disabled: false });
-  }
-  return opts;
+const {
+  exportOptions,
+  exportDialogVisible,
+  exporting,
+  exportFetched,
+  exportTotal,
+  exportPercent,
+  exportCancelledVisible,
+  exportCancelledRows,
+  onExportClick,
+  doExport,
+  cancelExport,
+  keepPartialExport,
+  discardPartialExport,
+} = useExportExcel({
+  props,
+  meta,
+  columns,
+  rows,
+  selectedRows,
+  total,
+  innerPageSize,
+  showPagination,
 });
 
-const exportDialogVisible = ref(false);
-/** 「导出所有」进度状态 */
-const exporting = ref(false);
-const exportFetched = ref(0);
-const exportTotal = ref(0);
-/** 取消标记：每页返回后检查，兼容忽略 AbortSignal 的 dataFun */
-let exportCancelled = false;
-let exportAbort: AbortController | null = null;
-/** 取消后待处理的导出实例：用户选「保留部分文件」时 download，选「丢弃」时 cancel */
-let pendingExportApi: ExportApi | null = null;
-/** 取消后的「保留/丢弃」询问对话框 */
-const exportCancelledVisible = ref(false);
-/** 取消时已写入的数据行数（不含表头） */
-const exportCancelledRows = ref(0);
+/* ---------------- 行操作（逻辑见 useRowActions.ts） ---------------- */
 
-/** 导出进度百分比：totalCount 未知时按已加载条数滚动到 99% 封顶 */
-const exportPercent = computed(() => {
-  if (exportTotal.value > 0) return Math.min(100, Math.round((exportFetched.value / exportTotal.value) * 100));
-  return exportFetched.value > 0 ? 99 : 0;
-});
-
-/** 点击导出入口：只剩一个可用选项时跳过对话框直接导出 */
-function onExportClick(): void {
-  const enabled = exportOptions.value.filter((o) => !o.disabled);
-  if (enabled.length === 1) {
-    doExport(enabled[0]!.value);
-    return;
-  }
-  exportDialogVisible.value = true;
-}
-
-/** px 列宽 → Excel 字符宽（近似换算）；未配置列宽时按列名长度给一个下限 */
-function pxToExcelWidth(width: string | undefined, displayName: string): number {
-  const px = Number.parseInt(width ?? "", 10);
-  if (Number.isFinite(px)) return Math.max(6, px / 7);
-  return Math.max(10, displayName.length * 2);
-}
-
-/** 导出 sheet 标识：Table 导出为单 sheet，用表名作为 key（实现侧会做 Excel 非法字符清洗） */
-function exportSheetName(): string {
-  return meta.value?.displayName || "数据";
-}
-
-/** 创建一个全新的导出实例（一次导出对应一个 ExportApi）。
- *  未显式传入 exportApiFunc 时用内置 ExcelJS 实现，
- *  并把界面列宽（px→Excel 字符宽）一并带过去，保持所见即所得 */
-function newExportApi(): ExportApi {
-  if (props.exportApiFunc) return props.exportApiFunc();
-  const sheet = exportSheetName();
-  return createExcelJsExportApiFunc({
-    columnWidths: { [sheet]: columns.value.map((c) => pxToExcelWidth(columnWidth(c.propertyPath), c.displayName)) },
-  })();
-}
-
-/** 一行数据的导出值：严格按界面列顺序取 propertyPath */
-function exportRowValues(row: Record<string, unknown>): unknown[] {
-  return columns.value.map((c) => row[c.propertyPath] ?? null);
-}
-
-/** 按范围导出：选中/当前页直接写；所有数据走逐页拉取边拉边写。
- *  组件只经 ExportApi 接口操作（renderHeader → renderRows → download/cancel），
- *  不关心底层是 ExcelJS 还是将来的其它实现 */
-async function doExport(scope: ExportScope): Promise<void> {
-  exportDialogVisible.value = false;
-  if (scope === "all") {
-    await exportAllStreaming();
-    return;
-  }
-  const data = (scope === "selected" ? selectedRows.value : rows.value) as Record<string, unknown>[];
-  const api = newExportApi();
-  const sheet = exportSheetName();
-  await api.renderHeader({ [sheet]: columns.value });
-  await api.renderRows(sheet, data.map(exportRowValues));
-  await api.download(exportFileName());
-}
-
-/** 导出所有：循环调 dataFun，每页回来立即 renderRows 写入（边读边写），带进度与取消；
- *  取消后弹窗询问是否保留已写入的部分文件 */
-async function exportAllStreaming(): Promise<void> {
-  exporting.value = true;
-  exportCancelled = false;
-  exportFetched.value = 0;
-  exportTotal.value = total.value;
-  exportAbort = new AbortController();
-  const api = newExportApi();
-  const sheet = exportSheetName();
-  await api.renderHeader({ [sheet]: columns.value });
-  try {
-    const limit = innerPageSize.value;
-    let offset = 0;
-    for (;;) {
-      const res = await props.dataFun({ limit, offset }, exportAbort.signal);
-      await api.renderRows(sheet, (res.items as Record<string, unknown>[]).map(exportRowValues));
-      exportFetched.value += res.items.length;
-      if (res.totalCount != null) exportTotal.value = res.totalCount;
-      if (exportCancelled || !res.hasNext || res.items.length === 0) break;
-      offset += limit;
-    }
-  } catch (e) {
-    if (!exportCancelled) throw e;
-  } finally {
-    exporting.value = false;
-    exportAbort = null;
-  }
-  if (!exportCancelled) {
-    await api.download(exportFileName());
-    return;
-  }
-  // 已取消：询问是否保留已写入的部分文件
-  exportCancelledRows.value = exportFetched.value;
-  pendingExportApi = api;
-  exportCancelledVisible.value = true;
-}
-
-/** 取消「导出所有」：中断后续请求；已写入的行进入「保留/丢弃」流程 */
-function cancelExport(): void {
-  exportCancelled = true;
-  exportAbort?.abort();
-}
-
-/** 保留部分文件：download 已写入的行（文件名加「部分」后缀） */
-async function keepPartialExport(): Promise<void> {
-  exportCancelledVisible.value = false;
-  const api = pendingExportApi;
-  pendingExportApi = null;
-  if (api) await api.download(exportFileName(true));
-}
-
-/** 丢弃部分文件：经 ExportApi.cancel 放弃已写入内容，不产出文件 */
-async function discardPartialExport(): Promise<void> {
-  exportCancelledVisible.value = false;
-  const api = pendingExportApi;
-  pendingExportApi = null;
-  if (api) await api.cancel();
-}
-
-/** 导出文件名：表名_时间戳.xlsx；部分文件加「部分」后缀 */
-function exportFileName(partial = false): string {
-  const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, "0");
-  const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-  return `${meta.value?.displayName || "导出数据"}_${stamp}${partial ? "_部分" : ""}.xlsx`;
-}
-
-/* ---------------- 行操作 ---------------- */
-
-async function loadActions(signal?: AbortSignal): Promise<void> {
-  if (!props.rowActionsFunc) {
-    actions.value = [];
-    return;
-  }
-  actionsLoading.value = true;
-  try {
-    actions.value = await props.rowActionsFunc(signal);
-  } finally {
-    actionsLoading.value = false;
-  }
-}
-
-/** 该行可见的操作（action.show 缺省视为可见） */
-function visibleActions(row: unknown): Action<unknown>[] {
-  return actions.value.filter((a) => a.show?.(row) ?? true);
-}
-
-/** 该操作对该行是否可用（action.enable 缺省视为可用） */
-function isEnabled(action: Action<unknown>, row: unknown): boolean {
-  return action.enable?.(row) ?? true;
-}
-
-/** 执行操作，完成后刷新数据（增删改类操作需要看到最新列表） */
-async function runAction(action: Action<unknown>, row: unknown): Promise<void> {
-  await action.execute(row);
-  await loadData();
-}
+const {
+  actions,
+  actionsLoading,
+  loadActions,
+  visibleActions,
+  isEnabled,
+  runAction,
+} = useRowActions(props, loadData);
 
 /** 重新加载元数据、数据、行操作与列自定义配置 */
 function reload(): void {

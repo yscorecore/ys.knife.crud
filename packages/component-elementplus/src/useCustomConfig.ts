@@ -1,8 +1,8 @@
 import { computed, ref, type Ref } from "vue";
 import type {
   CustomColumnConfig,
-  CustomConfigs,
-  loadConfigFunc,
+  CustomConfig,
+  loadCustomConfigFunc,
   saveCustomConfigFunc,
   Meta,
 } from "@ys.knife.crud/core";
@@ -18,7 +18,7 @@ interface DraftColumn {
 /** useCustomConfig 需要从组件 props 中访问的成员 */
 interface CustomConfigProps {
   readonly showCustomConfig: boolean;
-  readonly loadCustomConfigFun?: loadConfigFunc;
+  readonly loadCustomConfigFun?: loadCustomConfigFunc;
   readonly saveCustomConfigFun?: saveCustomConfigFunc;
 }
 
@@ -36,7 +36,7 @@ export function useCustomConfig(
   innerPageSize: Ref<number>,
 ) {
   /** 用户自定义配置（列的 visible/order/width，以及用户默认分页大小） */
-  const customConfigs = ref<CustomConfigs>({ columns: {} });
+  const customConfigs = ref<CustomConfig>({ columns: {} });
 
   /**
    * 最终显示的列，两层规则：
@@ -77,7 +77,7 @@ export function useCustomConfig(
 
   /** 持久化用户默认分页大小（保留已有列设置） */
   function savePageSize(size: number): void {
-    const configs: CustomConfigs = { pageSize: size, columns: customConfigs.value.columns };
+    const configs: CustomConfig = { pageSize: size, columns: customConfigs.value.columns };
     props.saveCustomConfigFun?.(configs);
     customConfigs.value = configs;
   }
@@ -115,7 +115,7 @@ export function useCustomConfig(
     draftColumns.value = arr;
   }
 
-  /** 保存列设置：写入 CustomConfigs.columns（order 取面板中的行序），持久化并立即生效 */
+  /** 保存列设置：写入 CustomConfig.columns（order 取面板中的行序），持久化并立即生效 */
   async function saveConfigDialog(): Promise<void> {
     const columns: Record<string, CustomColumnConfig> = {};
     draftColumns.value.forEach((d, i) => {
@@ -126,7 +126,7 @@ export function useCustomConfig(
         width: d.width,
       };
     });
-    const configs: CustomConfigs = { pageSize: innerPageSize.value, columns };
+    const configs: CustomConfig = { pageSize: innerPageSize.value, columns };
     await props.saveCustomConfigFun?.(configs);
     customConfigs.value = configs;
     configDialogVisible.value = false;

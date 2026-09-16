@@ -8,7 +8,7 @@ import {
   listData,
   loadLocalStorageConfig,
   saveLocalStorageConfig,
-  type loadConfigFunc,
+  type loadCustomConfigFunc,
   type Meta,
   type PageFunc,
   type RowActionsFunc,
@@ -16,6 +16,7 @@ import {
   type TableApi,
 } from "@ys.knife.crud/core";
 import { Table } from "@ys.knife.crud/component-elementplus";
+import { createExcelJsExportApiFunc } from "@ys.knife.crud/export-exceljs";
 import { ElMessage } from "element-plus";
 
 // 七种演示模式：
@@ -192,6 +193,10 @@ const showCheckbox = computed(() => ["checkbox", "combo", "export"].includes(pro
 // 导出 Excel：export / custom-export 模式开启
 const showExportExcel = computed(() => ["export", "custom-export"].includes(props.variant));
 
+// 真实导出实现（ExcelJS）：Table 缺省用 core 的控制台假实现（只打日志不产出文件），
+// demo 作为消费方显式注入真实实现，导出才会真的下载 xlsx 文件
+const exportApiFunc = createExcelJsExportApiFunc();
+
 // 列设置：custom / combo / custom-export 模式开启；配置持久化到 localStorage，刷新页面后仍生效。
 // 各模式用独立 key，避免互相覆盖配置。
 const CUSTOM_CONFIG_KEY = "yk-crud-demo-table-columns";
@@ -203,7 +208,7 @@ const CONFIG_KEYS: Partial<Record<Variant, string>> = {
   "custom-export": CUSTOM_EXPORT_CONFIG_KEY,
 };
 const showCustomConfig = computed(() => props.variant in CONFIG_KEYS);
-const loadCustomConfigFun = computed<loadConfigFunc | undefined>(() => {
+const loadCustomConfigFun = computed<loadCustomConfigFunc | undefined>(() => {
   const key = CONFIG_KEYS[props.variant];
   return key ? loadLocalStorageConfig(key) : undefined;
 });
@@ -334,6 +339,7 @@ const text = computed(() => {
       :load-custom-config-fun="loadCustomConfigFun"
       :save-custom-config-fun="saveCustomConfigFun"
       :show-export-excel="showExportExcel"
+      :export-api-func="exportApiFunc"
     />
   </main>
 </template>
