@@ -1,26 +1,16 @@
-import { computed, ref, type Ref } from "vue";
+import { computed, ref, watch, type Ref } from "vue";
 import type {
   CustomColumnConfig,
   CustomConfig,
+  DraftColumn,
   loadCustomConfigFunc,
   saveCustomConfigFunc,
   Meta,
+  CustomConfigProps,
 } from "@ys.knife.crud/core";
 
-/** 列设置面板里单个可编辑列的草稿 */
-interface DraftColumn {
-  propertyPath: string;
-  displayName: string;
-  visible: boolean;
-  width: string;
-}
-
 /** useCustomConfig 需要从组件 props 中访问的成员 */
-interface CustomConfigProps {
-  readonly showCustomConfig: boolean;
-  readonly loadCustomConfigFun?: loadCustomConfigFunc;
-  readonly saveCustomConfigFun?: saveCustomConfigFunc;
-}
+
 
 /**
  * 列自定义配置逻辑：管理列的显隐、顺序、宽度以及用户默认分页大小，
@@ -131,6 +121,9 @@ export function useCustomConfig(
     customConfigs.value = configs;
     configDialogVisible.value = false;
   }
+
+  // 外部 loadCustomConfigFun 变化时重新加载
+  watch(() => props.loadCustomConfigFun, () => loadCustomConfigs());
 
   return {
     customConfigs,

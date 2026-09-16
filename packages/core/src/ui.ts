@@ -5,17 +5,28 @@ import type { Action, RowActionsFunc } from "./action"
 import type { loadCustomConfigFunc as loadCustomConfigFunc, saveCustomConfigFunc } from "./customConfig"
 import type { ExportApiFunc } from "./export"
 
+/**
+ * 行操作 props
+ */
+export interface RowActionsProps {
+    readonly rowActionsFunc?: RowActionsFunc<unknown>;
+}
+/**
+ * 自定义列的配置 props
+ */
+export interface CustomConfigProps {
+    readonly showCustomConfig: boolean;
+    readonly loadCustomConfigFun?: loadCustomConfigFunc;
+    readonly saveCustomConfigFun?: saveCustomConfigFunc;
+}
+
 /** TableProps 是组件的「输入契约」：父组件通过 props 传入 */
-export interface TableProps {
+export interface TableProps extends RowActionsProps, CustomConfigProps {
     metaFun: MetaFunc
     dataFun: PageFunc<unknown>
-    /** 可选。存在时，表格在每一行最后一列显示可执行的操作 */
-    rowActionsFunc?: RowActionsFunc<unknown>
     /** 可选，默认 false。为 true 时表格第一列显示 checkbox（表头含全选/取消全选） */
     showCheckbox?: boolean,
-    loadCustomConfigFun: loadCustomConfigFunc,
-    saveCustomConfigFun: saveCustomConfigFunc,
-    showCustomConfig?: boolean,
+
     showExportExcel?: boolean,
     /** 可选。导出实现工厂；缺省使用 core 的控制台假实现（createConsoleExportApiFunc，只打日志不产出文件） */
     exportApiFunc?: ExportApiFunc
@@ -49,18 +60,34 @@ export interface TableApi {
     clearSelection(): void
 }
 
-// export interface PaginationProps {
-//     pageIndex: number,
-//     pageSize: number,
-//     pageSizes: number[],
-//     next: () => void
-// }
-// //搜索项
-// export interface FilterItemProps {
 
-// }
-// //搜索面板
-// export interface FilterPanelProps {
-//     reset: () => void,
-//     search: () => void,
-// }
+
+/**
+ * 列设置面板里单个可编辑列的草稿（运行时结构）：
+ * 由 UI 层生成（基于 meta + CustomConfig），用户编辑后再回写 CustomConfig。
+ * 与 CustomColumnConfig 的区别：width 缺省时为空字符串（而非可选），
+ * visible 缺省视为 true，order 由数组下标决定。
+ */
+export interface DraftColumn {
+    propertyPath: string,
+    displayName: string,
+    visible: boolean,
+    width: string,
+}
+
+/**
+ * 导出范围：选中 / 当前页 / 所有。
+ * UI 层用此类型标识导出对话框里的三个范围按钮，
+ * 导出逻辑（useExportExcel）据此分派：selected/page 直接写，all 走逐页流式。
+ */
+export type ExportScope = "selected" | "page" | "all"
+
+/**
+ * 导出选项（UI 层 useExportExcel 计算得出，驱动导出对话框按钮组）。
+ * disabled 为 true 时按钮置灰（如未选中任何行时的「导出选中」）。
+ */
+export interface ExportOption {
+    value: ExportScope,
+    label: string,
+    disabled: boolean,
+}

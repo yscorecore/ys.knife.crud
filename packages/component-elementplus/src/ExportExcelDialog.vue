@@ -1,16 +1,6 @@
-<script setup lang="ts" generic="T extends ExportScope">
+<script setup lang="ts">
 import { type PropType } from "vue";
-
-/** 导出范围：选中 / 当前页 / 所有 */
-export type ExportScope = "selected" | "page" | "all";
-
-/** 导出选项（外层 useExportExcel 计算得出） */
-export interface ExportOption {
-  value: ExportScope;
-  label: string;
-  /** 不可用时在对话框里禁用（如未选中任何行时的「导出选中」） */
-  disabled: boolean;
-}
+import type { ExportOption, ExportScope } from "@ys.knife.crud/core";
 
 /**
  * 导出 Excel 对话框组：包含三个相关弹窗

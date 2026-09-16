@@ -1,13 +1,6 @@
 <script setup lang="ts">
 import { type PropType } from "vue";
-
-/** 列设置面板里单个可编辑列的草稿（与 useCustomConfig.DraftColumn 一致） */
-export interface DraftColumn {
-  propertyPath: string;
-  displayName: string;
-  visible: boolean;
-  width: string;
-}
+import type { DraftColumn } from "@ys.knife.crud/core";
 
 /**
  * 列设置对话框：勾选显隐、上移/下移调顺序、输入框调列宽。

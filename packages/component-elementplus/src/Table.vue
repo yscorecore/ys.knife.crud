@@ -9,8 +9,11 @@ import type {
 import { useCustomConfig } from "./useCustomConfig";
 import { useExportExcel } from "./useExportExcel";
 import { useRowActions } from "./useRowActions";
+import { useSelectedRows } from "./useSelectedRows";
 import ExportExcelDialog from "./ExportExcelDialog.vue";
 import ColumnConfigDialog from "./ColumnConfigDialog.vue";
+import RowActionsCell from "./RowActionsCell.vue";
+import SelectionBar from "./SelectionBar.vue";
 
 /**
  * Table 组件的 props = core 的 TableProps（metaFun + dataFun），
@@ -62,11 +65,15 @@ const dataLoading = ref(false);
 const currentPage = ref(1);
 /** 当前生效的每页条数：初始取 pageSize prop，用户可在分页组件里切换 */
 const innerPageSize = ref(props.pageSize);
-/** checkbox 列当前选中的行（showCheckbox 为 true 时由 el-table 的 selection-change 维护；
- *  配合 selection 列的 reserve-selection，翻页后选中按 rowKey 跨页保留，此处为跨页累计值） */
-const selectedRows = ref<unknown[]>([]);
 /** el-table 实例引用（用于 clearSelection 等方法） */
 const tableEl = ref<{ clearSelection?: () => void } | null>(null);
+
+/** 行选择逻辑（选中行维护、清空全部选中） */
+const {
+  selectedRows,
+  onSelectionChange,
+  clearSelection,
+} = useSelectedRows(tableEl);
 
 /** 列自定义配置（显隐/顺序/宽度 + 用户默认分页大小）与列设置面板逻辑 */
 const {
@@ -134,16 +141,6 @@ function onSizeChange(size: number): void {
   savePageSize(size);
 }
 
-/** el-table 勾选变化（含表头全选/取消全选）时同步选中行 */
-function onSelectionChange(selection: unknown[]): void {
-  selectedRows.value = selection;
-}
-
-/** 清空全部选中（含其他页的选中）；el-table 会触发 selection-change 同步 selectedRows */
-function clearSelection(): void {
-  tableEl.value?.clearSelection?.();
-}
-
 /* ---------------- 导出 Excel（逻辑见 useExportExcel.ts） ---------------- */
 
 const {
@@ -177,10 +174,7 @@ const {
   actions,
   actionsLoading,
   loadActions,
-  visibleActions,
-  isEnabled,
-  runAction,
-} = useRowActions(props, loadData);
+} = useRowActions(props);
 
 /** 重新加载元数据、数据、行操作与列自定义配置 */
 function reload(): void {
@@ -203,8 +197,6 @@ watch(() => props.dataFun, () => {
   currentPage.value = 1;
   loadData();
 });
-watch(() => props.rowActionsFunc, () => loadActions());
-watch(() => props.loadCustomConfigFun, () => loadCustomConfigs());
 
 /**
  * core 的 TableApi 是「父组件视角」的输出契约（状态为解包后的值），
@@ -242,10 +234,11 @@ defineExpose(exposed);
       class="yk-table__toolbar"
     >
       <!-- 跨页选中提示：reserve-selection 下选中可能来自其他页，给用户一个总览与清空入口 -->
-      <div v-if="showCheckbox && selectedRows.length > 0" class="yk-table__selection-bar">
-        <span>已选 {{ selectedRows.length }} 项</span>
-        <el-button link type="primary" @click="clearSelection">清空</el-button>
-      </div>
+      <SelectionBar
+        v-if="showCheckbox"
+        :count="selectedRows.length"
+        @clear="clearSelection"
+      />
       <!-- 无选中提示时的占位，保证右侧按钮组始终靠右 -->
       <span v-else />
       <div class="yk-table__toolbar-actions">
@@ -292,16 +285,10 @@ defineExpose(exposed);
       <!-- 存在行操作时追加最后一列 -->
       <el-table-column v-if="actions.length > 0" label="操作" fixed="right">
         <template #default="{ row }">
-          <el-button
-            v-for="action in visibleActions(row)"
-            :key="action.name"
-            link
-            type="primary"
-            :disabled="!isEnabled(action, row)"
-            @click="runAction(action, row)"
-          >
-            {{ action.desc }}
-          </el-button>
+          <RowActionsCell
+            :row="row"
+            :actions="actions"
+          />
         </template>
       </el-table-column>
     </el-table>
@@ -351,17 +338,6 @@ defineExpose(exposed);
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
-}
-.yk-table__selection-bar {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 12px;
-  background: #ecf5ff;
-  border: 1px solid #d9ecff;
-  border-radius: 4px;
-  font-size: 0.92em;
-  color: #409eff;
 }
 .yk-table__toolbar-actions {
   display: flex;

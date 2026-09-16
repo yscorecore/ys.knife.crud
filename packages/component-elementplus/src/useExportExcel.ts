@@ -4,6 +4,8 @@ import {
   type Column,
   type ExportApi,
   type ExportApiFunc,
+  type ExportOption,
+  type ExportScope,
   type Meta,
   type PageFunc,
 } from "@ys.knife.crud/core";
@@ -32,15 +34,6 @@ interface UseExportExcelOptions {
   innerPageSize: Ref<number>;
   /** 分页组件是否显示（决定「导出所有」选项是否出现） */
   showPagination: ComputedRef<boolean>;
-}
-
-type ExportScope = "selected" | "page" | "all";
-
-interface ExportOption {
-  value: ExportScope;
-  label: string;
-  /** 不可用时在对话框里禁用（如未选中任何行时的「导出选中」） */
-  disabled: boolean;
 }
 
 /**
