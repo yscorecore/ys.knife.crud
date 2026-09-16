@@ -2,7 +2,6 @@
 import { computed, onMounted, ref, watch, type PropType, type Ref } from "vue";
 import type {
   Action,
-  CustomColumnConfigs,
   ExportApi,
   Meta,
   PagedList,
@@ -10,6 +9,7 @@ import type {
   TableProps as CoreTableProps,
 } from "@ys.knife.crud/core";
 import { createExcelJsExportApiFunc } from "@ys.knife.crud/export-exceljs";
+import { useCustomConfig } from "./useCustomConfig";
 
 /**
  * Table 组件的 props = core 的 TableProps（metaFun + dataFun），
@@ -37,9 +37,9 @@ const props = defineProps({
   showCheckbox: { type: Boolean, default: false },
   /** 为 true 时显示「列设置」入口，用户可自定义列的显隐、顺序与宽度，默认 false */
   showCustomConfig: { type: Boolean, default: false },
-  /** 加载列自定义配置（showCustomConfig 为 true 时使用；返回 null 按空配置处理） */
+  /** 加载自定义配置（含列设置与用户默认分页大小；返回 null 按空配置处理） */
   loadCustomConfigFun: { type: Function as PropType<NonNullable<CoreTableProps["loadCustomConfigFun"]>>, required: false },
-  /** 保存列自定义配置（showCustomConfig 为 true 时使用） */
+  /** 保存自定义配置（含列设置与用户默认分页大小） */
   saveCustomConfigFun: { type: Function as PropType<NonNullable<CoreTableProps["saveCustomConfigFun"]>>, required: false },
   /** 为 true 时显示导出 Excel 入口，默认 false */
   showExportExcel: { type: Boolean, default: false },
@@ -68,31 +68,19 @@ const innerPageSize = ref(props.pageSize);
 const selectedRows = ref<unknown[]>([]);
 /** el-table 实例引用（用于 clearSelection 等方法） */
 const tableEl = ref<{ clearSelection?: () => void } | null>(null);
-/** 用户自定义列配置（visible/order/width，key 为 propertyPath） */
-const customConfigs = ref<CustomColumnConfigs>({});
 
-/**
- * 最终显示的列，两层规则：
- * 1. 先看 meta：showForDisplay=true 的列才进入候选（也是列设置面板里可编辑的列）
- * 2. showCustomConfig 开启时再应用 CustomConfig：visible=false 隐藏、order 调整顺序
- */
-const columns = computed(() => {
-  const displayable = (meta.value?.columns ?? []).filter((c) => c.showForDisplay);
-  const sorted = [...displayable].sort((a, b) => a.displayOrder - b.displayOrder);
-  if (!props.showCustomConfig) return sorted;
-
-  const cfg = customConfigs.value;
-  const merged = sorted.map((col, idx) => ({ col, cfg: cfg[col.propertyPath], idx }));
-  const visibleCols = merged.filter((x) => x.cfg?.visible ?? true);
-  visibleCols.sort((a, b) => (a.cfg?.order ?? a.idx) - (b.cfg?.order ?? b.idx));
-  return visibleCols.map((x) => x.col);
-});
-
-/** 列宽：仅 showCustomConfig 开启且配置了宽度时生效 */
-function columnWidth(propertyPath: string): string | undefined {
-  if (!props.showCustomConfig) return undefined;
-  return customConfigs.value[propertyPath]?.width || undefined;
-}
+/** 列自定义配置（显隐/顺序/宽度 + 用户默认分页大小）与列设置面板逻辑 */
+const {
+  columns,
+  columnWidth,
+  loadCustomConfigs,
+  savePageSize,
+  configDialogVisible,
+  draftColumns,
+  openConfigDialog,
+  moveDraft,
+  saveConfigDialog,
+} = useCustomConfig(props, meta, innerPageSize);
 
 /** 当前页行数据，来自 dataFun 返回的 PagedList.items */
 const rows = computed(() => (paged.value?.items ?? []) as Record<string, unknown>[]);
@@ -138,11 +126,13 @@ function onPageChange(page: number): void {
   loadData();
 }
 
-/** 切换每页条数：回到第一页并按新 limit 重新请求 */
+/** 切换每页条数：回到第一页并按新 limit 重新请求，同时持久化用户选择 */
 function onSizeChange(size: number): void {
   innerPageSize.value = size;
   currentPage.value = 1;
   loadData();
+  // 持久化用户默认分页大小（保留已有列设置）
+  savePageSize(size);
 }
 
 /** el-table 勾选变化（含表头全选/取消全选）时同步选中行 */
@@ -153,72 +143,6 @@ function onSelectionChange(selection: unknown[]): void {
 /** 清空全部选中（含其他页的选中）；el-table 会触发 selection-change 同步 selectedRows */
 function clearSelection(): void {
   tableEl.value?.clearSelection?.();
-}
-
-/** 加载用户自定义列配置（loadCustomConfigFun 返回 null 按空配置处理） */
-async function loadCustomConfigs(signal?: AbortSignal): Promise<void> {
-  if (!props.showCustomConfig || !props.loadCustomConfigFun) {
-    customConfigs.value = {};
-    return;
-  }
-  customConfigs.value = (await props.loadCustomConfigFun(signal)) ?? {};
-}
-
-/** 列设置面板里单个可编辑列的草稿 */
-interface DraftColumn {
-  propertyPath: string;
-  displayName: string;
-  visible: boolean;
-  width: string;
-}
-
-const configDialogVisible = ref(false);
-const draftColumns = ref<DraftColumn[]>([]);
-
-/**
- * 打开列设置面板。候选列 = meta 中 showForDisplay=true 的列
- * （含当前被 CustomConfig 隐藏的，方便用户重新开启；meta 层隐藏的列不出现）。
- * 列表顺序取 CustomConfig.order（缺省回落到 displayOrder 顺序）。
- */
-function openConfigDialog(): void {
-  const displayable = (meta.value?.columns ?? []).filter((c) => c.showForDisplay);
-  const sorted = [...displayable].sort((a, b) => a.displayOrder - b.displayOrder);
-  const cfg = customConfigs.value;
-  const merged = sorted.map((col, idx) => ({ col, cfg: cfg[col.propertyPath], idx }));
-  merged.sort((a, b) => (a.cfg?.order ?? a.idx) - (b.cfg?.order ?? b.idx));
-  draftColumns.value = merged.map(({ col, cfg: c }) => ({
-    propertyPath: col.propertyPath,
-    displayName: col.displayName,
-    visible: c?.visible ?? true,
-    width: c?.width ?? "",
-  }));
-  configDialogVisible.value = true;
-}
-
-/** 调整草稿中某列的顺序（上移/下移） */
-function moveDraft(index: number, delta: number): void {
-  const target = index + delta;
-  if (target < 0 || target >= draftColumns.value.length) return;
-  const arr = [...draftColumns.value];
-  const [item] = arr.splice(index, 1);
-  arr.splice(target, 0, item!);
-  draftColumns.value = arr;
-}
-
-/** 保存列设置：写入 CustomColumnConfigs（order 取面板中的行序），持久化并立即生效 */
-async function saveConfigDialog(): Promise<void> {
-  const configs: CustomColumnConfigs = {};
-  draftColumns.value.forEach((d, i) => {
-    configs[d.propertyPath] = {
-      propertyPath: d.propertyPath,
-      visible: d.visible,
-      order: i,
-      width: d.width,
-    };
-  });
-  await props.saveCustomConfigFun?.(configs);
-  customConfigs.value = configs;
-  configDialogVisible.value = false;
 }
 
 /* ---------------- 导出 Excel ---------------- */
@@ -446,7 +370,7 @@ watch(() => props.dataFun, () => {
   loadData();
 });
 watch(() => props.rowActionsFunc, () => loadActions());
-watch(() => [props.showCustomConfig, props.loadCustomConfigFun], () => loadCustomConfigs());
+watch(() => props.loadCustomConfigFun, () => loadCustomConfigs());
 
 /**
  * core 的 TableApi 是「父组件视角」的输出契约（状态为解包后的值），

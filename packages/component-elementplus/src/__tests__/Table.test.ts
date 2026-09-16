@@ -4,7 +4,7 @@ import Table from "../Table.vue";
 import {
   constData,
   type Action,
-  type CustomColumnConfigs,
+  type CustomConfigs,
   type Meta,
   type MetaFunc,
   type PageFunc,
@@ -437,8 +437,8 @@ describe("Table custom column config", () => {
   });
 
   it("hides columns whose config visible is false", async () => {
-    const loadCustomConfigFun = (): Promise<CustomColumnConfigs> =>
-      Promise.resolve({ name: cfgOf({ propertyPath: "name", visible: false }) });
+    const loadCustomConfigFun = (): Promise<CustomConfigs> =>
+      Promise.resolve({ columns: { name: cfgOf({ propertyPath: "name", visible: false }) } });
     const wrapper = mountTable({ showCustomConfig: true, loadCustomConfigFun });
 
     await flushPromises();
@@ -448,11 +448,13 @@ describe("Table custom column config", () => {
   });
 
   it("applies order and width from the loaded config", async () => {
-    const loadCustomConfigFun = (): Promise<CustomColumnConfigs> =>
+    const loadCustomConfigFun = (): Promise<CustomConfigs> =>
       Promise.resolve({
-        // meta 里 displayOrder 是 id(0) < name(1)，配置把 name 提到最前并设宽
-        name: cfgOf({ propertyPath: "name", order: 0, width: "120" }),
-        id: cfgOf({ propertyPath: "id", order: 1 }),
+        columns: {
+          // meta 里 displayOrder 是 id(0) < name(1)，配置把 name 提到最前并设宽
+          name: cfgOf({ propertyPath: "name", order: 0, width: "120" }),
+          id: cfgOf({ propertyPath: "id", order: 1 }),
+        },
       });
     const wrapper = mountTable({ showCustomConfig: true, loadCustomConfigFun });
 
@@ -464,7 +466,7 @@ describe("Table custom column config", () => {
   });
 
   it("edits columns in the dialog and persists via saveCustomConfigFun", async () => {
-    const saveSpy = vi.fn((_config: CustomColumnConfigs) => Promise.resolve());
+    const saveSpy = vi.fn((_config: CustomConfigs) => Promise.resolve());
     // 加载返回 null（尚未保存过）→ 按空配置处理
     const wrapper = mountTable({
       showCustomConfig: true,
@@ -493,11 +495,11 @@ describe("Table custom column config", () => {
 
     // saveCustomConfigFun 收到完整配置：姓名 visible=false，order 为面板行序
     expect(saveSpy).toHaveBeenCalledTimes(1);
-    const saved = saveSpy.mock.calls[0]?.[0] as CustomColumnConfigs;
-    expect(saved["name"]?.visible).toBe(false);
-    expect(saved["id"]?.visible).toBe(true);
-    expect(saved["id"]?.order).toBe(0);
-    expect(saved["name"]?.order).toBe(1);
+    const saved = saveSpy.mock.calls[0]?.[0] as CustomConfigs;
+    expect(saved.columns["name"]?.visible).toBe(false);
+    expect(saved.columns["id"]?.visible).toBe(true);
+    expect(saved.columns["id"]?.order).toBe(0);
+    expect(saved.columns["name"]?.order).toBe(1);
 
     // 保存后立即生效：姓名列消失，面板关闭
     expect(wrapper.findAll(".col").map((c) => c.attributes("data-prop"))).toEqual(["id"]);
@@ -505,7 +507,7 @@ describe("Table custom column config", () => {
   });
 
   it("reorders columns via the move buttons in the dialog", async () => {
-    const saveSpy = vi.fn((_config: CustomColumnConfigs) => Promise.resolve());
+    const saveSpy = vi.fn((_config: CustomConfigs) => Promise.resolve());
     const wrapper = mountTable({
       showCustomConfig: true,
       loadCustomConfigFun: () => Promise.resolve(null),
@@ -678,10 +680,12 @@ describe("Table export excel", () => {
 
   it("exports visible columns only, honoring custom order (WYSIWYG)", async () => {
     // 配置：姓名提到最前、ID 隐藏 → 导出只剩「姓名」一列
-    const loadCustomConfigFun = (): Promise<CustomColumnConfigs> =>
+    const loadCustomConfigFun = (): Promise<CustomConfigs> =>
       Promise.resolve({
-        name: { propertyPath: "name", visible: true, order: 0, width: "" },
-        id: { propertyPath: "id", visible: false, order: 1, width: "" },
+        columns: {
+          name: { propertyPath: "name", visible: true, order: 0, width: "" },
+          id: { propertyPath: "id", visible: false, order: 1, width: "" },
+        },
       });
     const wrapper = mountTable({ showExportExcel: true, showCustomConfig: true, loadCustomConfigFun });
     await flushPromises();

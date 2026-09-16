@@ -11,6 +11,7 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
+    "@ys.knife.crud/core": "workspace:*",
     "@ys.knife.crud/component-elementplus": "workspace:*",
     "element-plus": "^2.7.0",
     "vue": "^3.5.13"
