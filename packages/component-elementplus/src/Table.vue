@@ -9,6 +9,8 @@ import type {
 import { useCustomConfig } from "./useCustomConfig";
 import { useExportExcel } from "./useExportExcel";
 import { useRowActions } from "./useRowActions";
+import ExportExcelDialog from "./ExportExcelDialog.vue";
+import ColumnConfigDialog from "./ColumnConfigDialog.vue";
 
 /**
  * Table 组件的 props = core 的 TableProps（metaFun + dataFun），
@@ -317,65 +319,29 @@ defineExpose(exposed);
       @size-change="onSizeChange"
     />
 
-    <!-- 导出选项对话框：有多个可用选项时才弹出（单个选项直接导出） -->
-    <el-dialog v-model="exportDialogVisible" title="导出 Excel" width="420px">
-      <div class="export-options">
-        <el-button
-          v-for="opt in exportOptions"
-          :key="opt.value"
-          class="export-option"
-          :data-scope="opt.value"
-          :disabled="opt.disabled"
-          @click="doExport(opt.value)"
-        >
-          {{ opt.label }}
-        </el-button>
-      </div>
-    </el-dialog>
+    <!-- 导出 Excel 对话框组（范围选择 / 进度 / 取消询问） -->
+    <ExportExcelDialog
+      v-model:options-visible="exportDialogVisible"
+      :options="exportOptions"
+      v-model:progress-visible="exporting"
+      :fetched="exportFetched"
+      :total="exportTotal"
+      :percent="exportPercent"
+      v-model:cancelled-visible="exportCancelledVisible"
+      :cancelled-rows="exportCancelledRows"
+      @export="doExport"
+      @cancel="cancelExport"
+      @keep="keepPartialExport"
+      @discard="discardPartialExport"
+    />
 
-    <!-- 「导出所有」进度对话框：循环拉取数据期间显示，可中途取消 -->
-    <el-dialog
-      v-model="exporting"
-      title="正在导出"
-      width="420px"
-      :close-on-click-modal="false"
-      :show-close="false"
-    >
-      <el-progress :percentage="exportPercent" />
-      <p class="export-progress-text">
-        已加载 {{ exportFetched }}<template v-if="exportTotal > 0"> / {{ exportTotal }}</template> 条
-      </p>
-      <template #footer>
-        <el-button class="export-cancel" @click="cancelExport">取消</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 「导出所有」被取消后的询问：已写入的行可保留为部分文件，或整体丢弃 -->
-    <el-dialog v-model="exportCancelledVisible" title="导出已取消" width="420px">
-      <p class="export-cancelled-text">
-        已写入 {{ exportCancelledRows }} 条数据，是否保留已导出的部分文件？
-      </p>
-      <template #footer>
-        <el-button class="export-discard" @click="discardPartialExport">丢弃</el-button>
-        <el-button class="export-keep" type="primary" @click="keepPartialExport">保留部分文件</el-button>
-      </template>
-    </el-dialog>
-
-    <!-- 列设置面板：勾选显隐、上移/下移调顺序、输入框调列宽 -->
-    <el-dialog v-model="configDialogVisible" title="列设置" width="480px">
-      <div v-for="(d, i) in draftColumns" :key="d.propertyPath" class="col-config-row">
-        <el-checkbox v-model="d.visible" class="col-config-name">{{ d.displayName }}</el-checkbox>
-        <el-input v-model="d.width" class="col-config-width" placeholder="宽度(如 120)" size="small" />
-        <el-button link type="primary" :disabled="i === 0" @click="moveDraft(i, -1)">上移</el-button>
-        <el-button link type="primary" :disabled="i === draftColumns.length - 1" @click="moveDraft(i, 1)">
-          下移
-        </el-button>
-      </div>
-      <template #footer>
-        <el-button @click="configDialogVisible = false">取消</el-button>
-        <el-button type="primary" class="col-config-save" @click="saveConfigDialog">保存</el-button>
-      </template>
-    </el-dialog>
+    <!-- 列设置对话框 -->
+    <ColumnConfigDialog
+      v-model:visible="configDialogVisible"
+      v-model:draft-columns="draftColumns"
+      @move="moveDraft"
+      @save="saveConfigDialog"
+    />
   </div>
 </template>
 
@@ -401,35 +367,6 @@ defineExpose(exposed);
   display: flex;
   align-items: center;
   gap: 12px;
-}
-.export-options {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 10px;
-}
-.export-options .export-option {
-  margin-left: 0;
-}
-.export-progress-text {
-  margin: 10px 0 0;
-  color: #666;
-  font-size: 0.92em;
-  text-align: center;
-}
-.col-config-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-  border-bottom: 1px solid #f0f0f0;
-}
-.col-config-name {
-  flex: 1;
-  margin-right: 0;
-}
-.col-config-width {
-  width: 120px;
 }
 .yk-table__pagination {
   margin-top: 12px;
