@@ -85,6 +85,7 @@ const {
   draftColumns,
   openConfigDialog,
   moveDraft,
+  resetDraft,
   saveConfigDialog,
 } = useCustomConfig(props, meta, innerPageSize);
 
@@ -327,6 +328,7 @@ defineExpose(exposed);
       v-model:visible="configDialogVisible"
       v-model:draft-columns="draftColumns"
       @move="moveDraft"
+      @reset="resetDraft"
       @save="saveConfigDialog"
     />
   </div>

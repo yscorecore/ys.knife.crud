@@ -76,23 +76,44 @@ export function useCustomConfig(
   const draftColumns = ref<DraftColumn[]>([]);
 
   /**
-   * 打开列设置面板。候选列 = meta 中 showForDisplay=true 的列
+   * 生成草稿：候选列 = meta 中 showForDisplay=true 的列
    * （含当前被 CustomConfig 隐藏的，方便用户重新开启；meta 层隐藏的列不出现）。
    * 列表顺序取 CustomConfig.order（缺省回落到 displayOrder 顺序）。
    */
-  function openConfigDialog(): void {
+  function generateDraftColumns(): DraftColumn[] {
     const displayable = (meta.value?.columns ?? []).filter((c) => c.showForDisplay);
     const sorted = [...displayable].sort((a, b) => a.displayOrder - b.displayOrder);
     const cfg = customConfigs.value.columns;
     const merged = sorted.map((col, idx) => ({ col, cfg: cfg[col.propertyPath], idx }));
     merged.sort((a, b) => (a.cfg?.order ?? a.idx) - (b.cfg?.order ?? b.idx));
-    draftColumns.value = merged.map(({ col, cfg: c }) => ({
+    return merged.map(({ col, cfg: c }) => ({
       propertyPath: col.propertyPath,
       displayName: col.displayName,
       visible: c?.visible ?? true,
       width: c?.width ?? "",
     }));
+  }
+
+  /** 打开列设置面板 */
+  function openConfigDialog(): void {
+    draftColumns.value = generateDraftColumns();
     configDialogVisible.value = true;
+  }
+
+  /**
+   * 重置草稿：恢复到「默认状态」——全部可见、按 displayOrder 排序、清空宽度。
+   * 与 generateDraftColumns 的区别：忽略 CustomConfig 的 order/visible/width，
+   * 直接用 meta 的 displayOrder 顺序与默认值。
+   */
+  function resetDraft(): void {
+    const displayable = (meta.value?.columns ?? []).filter((c) => c.showForDisplay);
+    const sorted = [...displayable].sort((a, b) => a.displayOrder - b.displayOrder);
+    draftColumns.value = sorted.map((col) => ({
+      propertyPath: col.propertyPath,
+      displayName: col.displayName,
+      visible: true,
+      width: "",
+    }));
   }
 
   /** 调整草稿中某列的顺序（上移/下移） */
@@ -135,6 +156,7 @@ export function useCustomConfig(
     draftColumns,
     openConfigDialog,
     moveDraft,
+    resetDraft,
     saveConfigDialog,
   };
 }

@@ -22,6 +22,8 @@ const emit = defineEmits<{
   (e: "update:draftColumns", v: DraftColumn[]): void;
   /** 调整草稿中某列的顺序（上移/下移） */
   (e: "move", index: number, delta: number): void;
+  /** 重置草稿（恢复到默认状态：全部可见、按 displayOrder 排序、清空宽度） */
+  (e: "reset"): void;
   /** 保存列设置 */
   (e: "save"): void;
 }>();
@@ -48,6 +50,7 @@ const emit = defineEmits<{
       </el-button>
     </div>
     <template #footer>
+      <el-button @click="emit('reset')">重置</el-button>
       <el-button @click="emit('update:visible', false)">取消</el-button>
       <el-button type="primary" class="col-config-save" @click="emit('save')">保存</el-button>
     </template>
