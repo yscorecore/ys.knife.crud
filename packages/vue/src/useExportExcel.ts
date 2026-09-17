@@ -1,4 +1,4 @@
-import { computed, ref, type ComputedRef, type Ref } from "vue";
+import { computed, ref, type Ref } from "vue";
 import {
   createConsoleExportApiFunc,
   type Column,
@@ -23,17 +23,17 @@ interface UseExportExcelOptions {
   /** 列元数据（表名用于 sheet 标识与导出文件名） */
   meta: Ref<Meta | null>;
   /** 当前界面显示的列（已含 meta/customConfig 两层过滤与排序，导出与其所见即所得） */
-  columns: ComputedRef<Column[]>;
+  columns: Ref<Column[]>;
   /** 当前页行数据 */
-  rows: ComputedRef<Record<string, unknown>[]>;
+  rows: Ref<Record<string, unknown>[]>;
   /** checkbox 列当前选中的行（跨页累计） */
   selectedRows: Ref<unknown[]>;
   /** 数据总条数 */
-  total: ComputedRef<number>;
-  /** 当前生效的每页条数（导出所有时分页拉取的步长） */
-  innerPageSize: Ref<number>;
+  total: Ref<number>;
+  /** 导出所有时分页拉取的步长（独立于界面分页大小，避免用大页尺寸拖慢导出） */
+  exportPageSize: Ref<number>;
   /** 分页组件是否显示（决定「导出所有」选项是否出现） */
-  showPagination: ComputedRef<boolean>;
+  showPagination: Ref<boolean>;
 }
 
 /**
@@ -52,7 +52,7 @@ export function useExportExcel({
   rows,
   selectedRows,
   total,
-  innerPageSize,
+  exportPageSize,
   showPagination,
 }: UseExportExcelOptions) {
   /** 导出选项：showCheckbox=false 不含「导出选中」；数据只有一页（分页组件不显示）不含「导出所有」 */
@@ -147,7 +147,7 @@ export function useExportExcel({
     const sheet = exportSheetName();
     await api.renderHeader({ [sheet]: columns.value });
     try {
-      const limit = innerPageSize.value;
+      const limit = exportPageSize.value;
       let offset = 0;
       for (;;) {
         const res = await props.dataFun({ limit, offset }, exportAbort.signal);

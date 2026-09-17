@@ -1,15 +1,13 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type PropType, type Ref } from "vue";
 import type {
+  Action,
   Meta,
   PagedList,
   TableApi,
   TableProps as CoreTableProps,
 } from "@ys.knife.crud/core";
-import { useCustomConfig } from "./useCustomConfig";
-import { useExportExcel } from "./useExportExcel";
-import { useRowActions } from "./useRowActions";
-import { useSelectedRows } from "./useSelectedRows";
+import { useCustomConfig, useSelectedRows } from "@ys.knife.crud/vue";
 import ExportExcelDialog from "./ExportExcelDialog.vue";
 import ColumnConfigDialog from "./ColumnConfigDialog.vue";
 import RowActionsCell from "./RowActionsCell.vue";
@@ -47,6 +45,8 @@ const props = defineProps({
   saveCustomConfigFun: { type: Function as PropType<NonNullable<CoreTableProps["saveCustomConfigFun"]>>, required: false },
   /** 为 true 时显示导出 Excel 入口，默认 false */
   showExportExcel: { type: Boolean, default: false },
+  /** 导出「所有数据」时每次分页拉取的条数，默认 1000（独立于界面分页大小） */
+  exportPageSize: { type: Number, default: 1000 },
   /** 导出实现工厂：每次导出调用它得到一个全新的 ExportApi 实例，组件只经该接口写文件。
    *  缺省使用内置 ExcelJS 实现（createExcelJsExportApiFunc）；
    *  将来可替换为其它实现（CSV、服务端导出等），组件无需改动 */
@@ -68,14 +68,16 @@ const innerPageSize = ref(props.pageSize);
 /** el-table 实例引用（用于 clearSelection 等方法） */
 const tableEl = ref<{ clearSelection?: () => void } | null>(null);
 
-/** 行选择逻辑（选中行维护、清空全部选中） */
+/* ---------------- 行选择（选中行维护、清空全部选中） ---------------- */
+
 const {
   selectedRows,
   onSelectionChange,
   clearSelection,
 } = useSelectedRows(tableEl);
 
-/** 列自定义配置（显隐/顺序/宽度 + 用户默认分页大小）与列设置面板逻辑 */
+/* ---------------- 列自定义配置（显隐/顺序/宽度 + 用户默认分页大小） ---------------- */
+
 const {
   columns,
   columnWidth,
@@ -88,6 +90,20 @@ const {
   resetDraft,
   saveConfigDialog,
 } = useCustomConfig(props, meta, innerPageSize);
+
+/* ---------------- 行操作（由 RowActionsCell 自管） ---------------- */
+
+/** 行操作列实例引用（经 defineExpose 暴露 actions/actionsLoading/loadActions） */
+const rowActionsRef = ref<{
+  actions: Action<unknown>[];
+  actionsLoading: boolean;
+  loadActions: (signal?: AbortSignal) => Promise<void>;
+} | null>(null);
+
+const actions = computed(() => rowActionsRef.value?.actions ?? []);
+const actionsLoading = computed(() => rowActionsRef.value?.actionsLoading ?? false);
+
+/* ---------------- 数据（派生状态与加载） ---------------- */
 
 /** 当前页行数据，来自 dataFun 返回的 PagedList.items */
 const rows = computed(() => (paged.value?.items ?? []) as Record<string, unknown>[]);
@@ -142,46 +158,18 @@ function onSizeChange(size: number): void {
   savePageSize(size);
 }
 
-/* ---------------- 导出 Excel（逻辑见 useExportExcel.ts） ---------------- */
+/* ---------------- 导出 Excel（逻辑由 ExportExcelDialog 自管） ---------------- */
 
-const {
-  exportOptions,
-  exportDialogVisible,
-  exporting,
-  exportFetched,
-  exportTotal,
-  exportPercent,
-  exportCancelledVisible,
-  exportCancelledRows,
-  onExportClick,
-  doExport,
-  cancelExport,
-  keepPartialExport,
-  discardPartialExport,
-} = useExportExcel({
-  props,
-  meta,
-  columns,
-  rows,
-  selectedRows,
-  total,
-  innerPageSize,
-  showPagination,
-});
+/** 导出对话框实例引用（按钮经 ref 调 trigger() 触发导出入口） */
+const exportDialogRef = ref<{ trigger: () => void } | null>(null);
 
-/* ---------------- 行操作（逻辑见 useRowActions.ts） ---------------- */
-
-const {
-  actions,
-  actionsLoading,
-  loadActions,
-} = useRowActions(props);
+/* ---------------- 生命周期 & 暴露 API ---------------- */
 
 /** 重新加载元数据、数据、行操作与列自定义配置 */
 function reload(): void {
   loadMeta();
   loadData();
-  loadActions();
+  rowActionsRef.value?.loadActions();
   loadCustomConfigs();
 }
 
@@ -248,7 +236,7 @@ defineExpose(exposed);
           link
           type="primary"
           class="yk-table__export-btn"
-          @click="onExportClick"
+          @click="exportDialogRef?.trigger()"
         >
           ⬇ 导出 Excel
         </el-button>
@@ -283,15 +271,12 @@ defineExpose(exposed);
         :width="columnWidth(col.propertyPath)"
         show-overflow-tooltip
       />
-      <!-- 存在行操作时追加最后一列 -->
-      <el-table-column v-if="actions.length > 0" label="操作" fixed="right">
-        <template #default="{ row }">
-          <RowActionsCell
-            :row="row"
-            :actions="actions"
-          />
-        </template>
-      </el-table-column>
+      <!-- 行操作列：内部自管 actions 加载与渲染 -->
+      <RowActionsCell
+        v-if="props.rowActionsFunc"
+        ref="rowActionsRef"
+        :row-actions-func="props.rowActionsFunc"
+      />
     </el-table>
 
     <!-- 数据超过一页时自动显示的分页组件；sizes 支持用户切换每页条数 -->
@@ -307,20 +292,20 @@ defineExpose(exposed);
       @size-change="onSizeChange"
     />
 
-    <!-- 导出 Excel 对话框组（范围选择 / 进度 / 取消询问） -->
+    <!-- 导出 Excel 对话框组（范围选择 / 进度 / 取消询问）—— 内部自管 useExportExcel -->
     <ExportExcelDialog
-      v-model:options-visible="exportDialogVisible"
-      :options="exportOptions"
-      v-model:progress-visible="exporting"
-      :fetched="exportFetched"
-      :total="exportTotal"
-      :percent="exportPercent"
-      v-model:cancelled-visible="exportCancelledVisible"
-      :cancelled-rows="exportCancelledRows"
-      @export="doExport"
-      @cancel="cancelExport"
-      @keep="keepPartialExport"
-      @discard="discardPartialExport"
+      v-if="showExportExcel"
+      ref="exportDialogRef"
+      :data-fun="props.dataFun"
+      :show-checkbox="props.showCheckbox"
+      :export-api-func="props.exportApiFunc"
+      :meta="meta"
+      :columns="columns"
+      :rows="rows"
+      :selected-rows="selectedRows"
+      :total="total"
+      :export-page-size="props.exportPageSize"
+      :show-pagination="showPagination"
     />
 
     <!-- 列设置对话框 -->

@@ -7,7 +7,9 @@ A typed CRUD toolkit for the web. Published as scoped npm packages from a pnpm +
 | Name | Path | Status | Description |
 | --- | --- | --- | --- |
 | [`@ys.knife.crud/core`](./packages/core) | `packages/core` | published | Framework-agnostic CRUD contract, data-source interface and an in-memory implementation. |
-| [`@ys.knife.crud/component-elementplus`](./packages/component-elementplus) | `packages/component-elementplus` | published | Vue 3 + element-plus UI components built on top of `core`. Distributed as a Vue plugin + individual components. |
+| [`@ys.knife.crud/vue`](./packages/vue) | `packages/vue` | published | UI-library-agnostic Vue 3 composables (column config, excel export, row actions, row selection) built on `core`. |
+| [`@ys.knife.crud/export-exceljs`](./packages/export-exceljs) | `packages/export-exceljs` | published | ExcelJS implementation of the `ExportApi` contract from `core`. |
+| [`@ys.knife.crud/component-elementplus`](./packages/component-elementplus) | `packages/component-elementplus` | published | Vue 3 + element-plus UI components built on top of `core` and `@ys.knife.crud/vue`. Distributed as a Vue plugin + individual components. |
 | `@ys.knife.crud/component-elementplus-demo` | `packages/component-elementplus-demo` | **private, not published** | Vite-powered playground used to validate `component-elementplus` during development. |
 
 ## Requirements
@@ -59,6 +61,8 @@ Then open <http://localhost:5173>. The demo depends on the workspace copy of `@y
 ys.knife.crud/
 ├── packages/
 │   ├── core/                    @ys.knife.crud/core
+│   ├── vue/                     @ys.knife.crud/vue
+│   ├── export-exceljs/          @ys.knife.crud/export-exceljs
 │   ├── component-elementplus/   @ys.knife.crud/component-elementplus
 │   └── component-elementplus-demo/  @ys.knife.crud/component-elementplus-demo (private)
 ├── .changeset/

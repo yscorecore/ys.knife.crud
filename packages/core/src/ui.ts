@@ -19,17 +19,21 @@ export interface CustomConfigProps {
     readonly loadCustomConfigFun?: loadCustomConfigFunc;
     readonly saveCustomConfigFun?: saveCustomConfigFunc;
 }
+export interface ExportExcelProps {
+    readonly showExportExcel: boolean;
+    /** 可选。导出实现工厂；缺省使用 core 的控制台假实现（createConsoleExportApiFunc，只打日志不产出文件） */
+    readonly exportApiFunc?: ExportApiFunc;
+    readonly exportPageSize?: number;
+
+}
+
 
 /** TableProps 是组件的「输入契约」：父组件通过 props 传入 */
-export interface TableProps extends RowActionsProps, CustomConfigProps {
+export interface TableProps extends RowActionsProps, CustomConfigProps, ExportExcelProps {
     metaFun: MetaFunc
     dataFun: PageFunc<unknown>
     /** 可选，默认 false。为 true 时表格第一列显示 checkbox（表头含全选/取消全选） */
     showCheckbox?: boolean,
-
-    showExportExcel?: boolean,
-    /** 可选。导出实现工厂；缺省使用 core 的控制台假实现（createConsoleExportApiFunc，只打日志不产出文件） */
-    exportApiFunc?: ExportApiFunc
 }
 
 /**

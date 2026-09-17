@@ -1,6 +1,5 @@
 import { ref, watch } from "vue";
-import type { Action, RowActionsFunc } from "@ys.knife.crud/core";
-import type { RowActionsProps } from "@ys.knife.crud/core";
+import type { Action, RowActionsProps } from "@ys.knife.crud/core";
 
 /**
  * 该行可见的操作（action.show 缺省视为可见）。

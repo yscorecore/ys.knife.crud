@@ -3,8 +3,6 @@ import type {
   CustomColumnConfig,
   CustomConfig,
   DraftColumn,
-  loadCustomConfigFunc,
-  saveCustomConfigFunc,
   Meta,
   CustomConfigProps,
 } from "@ys.knife.crud/core";

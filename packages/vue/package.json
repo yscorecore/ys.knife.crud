@@ -1,7 +1,7 @@
 {
-  "name": "@ys.knife.crud/component-elementplus",
+  "name": "@ys.knife.crud/vue",
   "version": "0.1.0",
-  "description": "Vue 3 + element-plus UI components for ys.knife.crud",
+  "description": "Vue 3 composables for ys.knife.crud (column config, excel export, row actions, row selection) — UI-library agnostic",
   "type": "module",
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
@@ -20,41 +20,35 @@
   "keywords": [
     "crud",
     "vue3",
-    "element-plus",
-    "component-library"
+    "composables",
+    "table"
   ],
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/yscorecore/ys.knife.crud.git",
-    "directory": "packages/component-elementplus"
+    "directory": "packages/vue"
   },
   "scripts": {
-    "build": "vite build",
+    "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "vue-tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "clean": "rimraf dist"
   },
-  "peerDependencies": {
-    "element-plus": "^2.7.0",
-    "vue": "^3.5.0"
-  },
   "dependencies": {
-    "@ys.knife.crud/core": "workspace:*",
-    "@ys.knife.crud/vue": "workspace:*"
+    "@ys.knife.crud/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "vue": "^3.5.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
-    "@vitejs/plugin-vue": "^5.2.1",
-    "@vue/test-utils": "^2.4.6",
     "happy-dom": "^15.11.7",
     "rimraf": "^6.0.1",
+    "tsup": "^8.3.6",
     "typescript": "^5.9.2",
-    "vite": "^5.4.21",
-    "vite-plugin-dts": "^5.1.0",
     "vitest": "^3.0.2",
-    "vue": "^3.5.13",
-    "vue-tsc": "^2.2.0"
+    "vue": "^3.5.13"
   }
 }

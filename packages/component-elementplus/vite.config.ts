@@ -19,7 +19,7 @@ export default defineConfig({
     },
     rollupOptions: {
       // Vue 与 element-plus 由消费方安装，避免被打包进库
-      external: ["vue", "element-plus", "@ys.knife.crud/core"],
+      external: ["vue", "element-plus", "@ys.knife.crud/core", "@ys.knife.crud/vue"],
     },
     sourcemap: true,
   },
