@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type PropType, type Ref } from "vue";
 import type {
-  Action,
   Meta,
   PagedList,
   TableApi,
   TableProps as CoreTableProps,
 } from "@ys.knife.crud/core";
-import { useCustomConfig, useSelectedRows } from "@ys.knife.crud/vue";
+import { useCustomConfig } from "@ys.knife.crud/vue";
 import ExportExcelDialog from "./ExportExcelDialog.vue";
 import ColumnConfigDialog from "./ColumnConfigDialog.vue";
-import RowActionsCell from "./RowActionsCell.vue";
+import RowActionsColumn from "./RowActionsColumn.vue";
+import SelectionColumn from "./SelectionColumn.vue";
 import SelectionBar from "./SelectionBar.vue";
 
 /**
@@ -65,16 +65,21 @@ const dataLoading = ref(false);
 const currentPage = ref(1);
 /** 当前生效的每页条数：初始取 pageSize prop，用户可在分页组件里切换 */
 const innerPageSize = ref(props.pageSize);
-/** el-table 实例引用（用于 clearSelection 等方法） */
-const tableEl = ref<{ clearSelection?: () => void } | null>(null);
 
-/* ---------------- 行选择（选中行维护、清空全部选中） ---------------- */
+/* ---------------- 行选择（由 SelectionColumn 自管） ---------------- */
 
-const {
-  selectedRows,
-  onSelectionChange,
-  clearSelection,
-} = useSelectedRows(tableEl);
+/** 勾选列实例引用（经 defineExpose 暴露 selectedRows/clearSelection） */
+const selectionRef = ref<{
+  selectedRows: unknown[];
+  clearSelection: () => void;
+} | null>(null);
+
+const selectedRows = computed(() => selectionRef.value?.selectedRows ?? []);
+
+/** 清空全部选中（含其他页），供工具栏 SelectionBar 与 TableApi 调用 */
+function clearSelection(): void {
+  selectionRef.value?.clearSelection();
+}
 
 /* ---------------- 列自定义配置（显隐/顺序/宽度 + 用户默认分页大小） ---------------- */
 
@@ -91,16 +96,14 @@ const {
   saveConfigDialog,
 } = useCustomConfig(props, meta, innerPageSize);
 
-/* ---------------- 行操作（由 RowActionsCell 自管） ---------------- */
+/* ---------------- 行操作（由 RowActionsColumn 自管） ---------------- */
 
-/** 行操作列实例引用（经 defineExpose 暴露 actions/actionsLoading/loadActions） */
+/** 行操作列实例引用（经 defineExpose 暴露 actionsLoading/loadActions） */
 const rowActionsRef = ref<{
-  actions: Action<unknown>[];
   actionsLoading: boolean;
   loadActions: (signal?: AbortSignal) => Promise<void>;
 } | null>(null);
 
-const actions = computed(() => rowActionsRef.value?.actions ?? []);
 const actionsLoading = computed(() => rowActionsRef.value?.actionsLoading ?? false);
 
 /* ---------------- 数据（派生状态与加载） ---------------- */
@@ -204,7 +207,6 @@ type ExposedShape = {
 const exposed = {
   meta,
   paged,
-  actions,
   currentPage,
   selectedRows,
   clearSelection,
@@ -253,16 +255,16 @@ defineExpose(exposed);
     </div>
 
     <el-table
-      ref="tableEl"
       v-loading="metaLoading || dataLoading || actionsLoading || loading"
       :data="rows"
       :row-key="rowKey"
       border
-      @selection-change="onSelectionChange"
     >
-      <!-- showCheckbox 为 true 时的勾选列：表头 checkbox 全选/取消全选当前页；
-           reserve-selection 使翻页后选中按 rowKey 跨页保留 -->
-      <el-table-column v-if="showCheckbox" type="selection" width="48" reserve-selection />
+      <!-- 勾选列：内部自管选中状态（跨页累计）与清空 -->
+      <SelectionColumn
+        v-if="showCheckbox"
+        ref="selectionRef"
+      />
       <el-table-column
         v-for="col in columns"
         :key="col.propertyPath"
@@ -272,7 +274,7 @@ defineExpose(exposed);
         show-overflow-tooltip
       />
       <!-- 行操作列：内部自管 actions 加载与渲染 -->
-      <RowActionsCell
+      <RowActionsColumn
         v-if="props.rowActionsFunc"
         ref="rowActionsRef"
         :row-actions-func="props.rowActionsFunc"

@@ -52,8 +52,6 @@ export interface TableApi {
     readonly meta: Meta | null
     /** 当前页数据（dataFun 加载结果，未加载完成时为 null） */
     readonly paged: PagedList<unknown> | null
-    /** 行操作列表（rowActionsFunc 加载结果） */
-    readonly actions: Action<unknown>[]
     /** 当前页码（1 基） */
     readonly currentPage: number
     /** checkbox 列当前选中的行（跨页累计，reserve-selection） */
