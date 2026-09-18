@@ -40,7 +40,20 @@ export function useDefault(props: DefaultProps) {
     () => (paged.value?.items ?? []) as Record<string, unknown>[],
   );
 
-  /** 总条数：优先 totalCount，缺失时按当前页 items 估算（hasNext 表示至少还有一页） */
+  /**
+   * 总条数是否已知：dataFun 返回的 totalCount 有值时为 true。
+   * 两种模式：
+   * - 已知（totalKnown=true）：分页显示「共 N 条」，导出进度条为真实百分比；
+   * - 未知（totalCount 为 null/undefined）：分页靠 hasNext 翻页（不展示总数），
+   *   导出进度条走 indeterminate 动画，只显示已加载条数。
+   */
+  const totalKnown = computed(() => paged.value?.totalCount != null);
+
+  /**
+   * 总条数：已知时取 totalCount；未知时按当前页估算——
+   * hasNext 时在「已加载数」外多给一页 ghost 页，使 el-pagination 的
+   * 「下一页」按钮可点；未知模式下 UI 不应展示该数字（仅用于驱动分页状态）。
+   */
   const total = computed(() => {
     const p = paged.value;
     if (!p) return 0;
@@ -69,6 +82,7 @@ export function useDefault(props: DefaultProps) {
     dataLoading,
     currentPage,
     total,
+    totalKnown,
     loadMeta,
   };
 }

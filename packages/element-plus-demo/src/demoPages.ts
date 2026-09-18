@@ -4,6 +4,7 @@ import ConstTablePage from "./pages/table/ConstTablePage.vue";
 import ActionsTablePage from "./pages/table/ActionsTablePage.vue";
 import ListTablePage from "./pages/table/ListTablePage.vue";
 import PagedTablePage from "./pages/table/PagedTablePage.vue";
+import UnknownTotalTablePage from "./pages/table/UnknownTotalTablePage.vue";
 import CheckboxTablePage from "./pages/table/CheckboxTablePage.vue";
 import CustomTablePage from "./pages/table/CustomTablePage.vue";
 import ComboTablePage from "./pages/table/ComboTablePage.vue";
@@ -25,7 +26,7 @@ export interface DemoPageDef {
 }
 
 export const demoPages = [
-  { id: "table-empty", label: "空数据表格（emptyData）", component: EmptyTablePage },
+  { id: "table-empty", label: "空数据表格（emptyData + #empty 插槽）", component: EmptyTablePage },
   { id: "table-const", label: "固定数据表格（constData）", component: ConstTablePage },
   {
     id: "table-actions",
@@ -34,6 +35,11 @@ export const demoPages = [
   },
   { id: "table-list", label: "异步列表表格（listData）", component: ListTablePage },
   { id: "table-paged", label: "分页表格（25 行数据自动分页）", component: PagedTablePage },
+  {
+    id: "table-unknown-total",
+    label: "未知总条数（totalCount=null + indeterminate 导出进度）",
+    component: UnknownTotalTablePage,
+  },
   {
     id: "table-checkbox",
     label: "可勾选表格（showCheckbox + 分页）",

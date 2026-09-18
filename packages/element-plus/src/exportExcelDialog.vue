@@ -31,8 +31,6 @@ const props = defineProps<{
   currentRows: Record<string, unknown>[];
   /** checkbox 列当前选中的行（跨页累计） */
   selectedRows: unknown[];
-  /** 数据总条数 */
-  total: number;
   /** 导出所有时分页拉取的步长（独立于界面分页大小） */
   exportPageSize: number;
   /** 是否还有下一页（决定「导出所有」选项是否出现） */
@@ -45,6 +43,7 @@ const {
   exporting,
   exportFetched,
   exportTotal,
+  exportTotalKnown,
   exportPercent,
   exportCancelledVisible,
   exportCancelledRows,
@@ -59,7 +58,6 @@ const {
   columns: toRef(props, "columns"),
   currentRows: toRef(props, "currentRows"),
   selectedRows: toRef(props, "selectedRows"),
-  total: toRef(props, "total"),
   exportPageSize: toRef(props, "exportPageSize"),
   hasMorePage: toRef(props, "hasMorePage"),
 });
@@ -96,9 +94,13 @@ defineExpose({ openExportDialog: onExportClick });
     :close-on-click-modal="false"
     :show-close="false"
   >
-    <el-progress :percentage="exportPercent" />
+    <!-- 总条数已知：真实百分比进度条（含百分比文本）；未知：indeterminate 流动动画，
+         不显示百分比，具体进度以「已加载 N 条」为准 -->
+    <el-progress :percentage="exportPercent" :indeterminate="!exportTotalKnown"
+      :show-text="exportTotalKnown" :duration="!exportTotalKnown ? 3 : undefined" />
     <p class="export-progress-text">
-      已加载 {{ exportFetched }}<template v-if="exportTotal > 0"> / {{ exportTotal }}</template> 条
+      已加载 {{ exportFetched }}<template v-if="exportTotalKnown"> / {{ exportTotal }}</template> 条<template
+        v-if="!exportTotalKnown">（总条数未知）</template>
     </p>
     <template #footer>
       <el-button class="export-cancel" @click="cancelExport">取消</el-button>

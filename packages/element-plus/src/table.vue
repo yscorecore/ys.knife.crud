@@ -67,7 +67,7 @@ const emit = defineEmits<{
 
 /* ---------------- 默认状态（useDefault） ----------------
  * useDefault 内聚与 innerPageSize 无关的部分：meta/paged/rows/两类 loading/
- * currentPage/total/loadMeta + metaFun 变化监听。依赖 innerPageSize 的
+ * currentPage/total/totalKnown/loadMeta + metaFun 变化监听。依赖 innerPageSize 的
  * loadData/showPagination + pageSize/dataFun 变化监听留在本组件——innerPageSize
  * 是视图层解析（列设置对话框 defaultPageSize ?? props.pageSize），不耦合到 agnostic composable。 */
 const {
@@ -78,6 +78,7 @@ const {
   dataLoading,
   currentPage,
   total,
+  totalKnown,
   loadMeta,
 } = useDefault(props);
 
@@ -149,6 +150,8 @@ async function loadData(signal?: AbortSignal): Promise<void> {
  * 数据超过一页（或已知还有下一页）时自动显示分页组件。
  * 阈值取「当前每页条数」与「可选条数最小值」的较小者：
  * 用户把每页调大（如 100）后即使一页装得下，分页组件也不消失，还能再调回来。
+ * totalCount 未知时 total 为估算值（当前页已加载数 + hasNext 的 ghost 页），
+ * 同样满足「有数据/有下一页 → 显示」的语义。
  */
 const showPagination = computed(() => {
   const threshold = Math.min(innerPageSize.value, ...props.pageSizes);
@@ -257,6 +260,11 @@ defineExpose(exposed);
 
     <el-table ref="tableEl" v-loading="metaLoading || dataLoading || actionsLoading || customConfigLoading" :data="rows"
       :row-key="rowKey" border @selection-change="onSelectionChange">
+      <!-- 空数据提示：使用者经 #empty 插槽自定义；仅在使用者提供了插槽时才声明，
+           否则保留 el-table 默认的「暂无数据」空态 -->
+      <template v-if="$slots.empty" #empty>
+        <slot name="empty" />
+      </template>
       <!-- 勾选列：reserve-selection 使翻页后选中按 rowKey 跨页保留；表头 checkbox 全选/取消全选当前页 -->
       <el-table-column v-if="showCheckbox" type="selection" width="48" reserve-selection />
       <el-table-column v-for="col in columns" :key="col.propertyPath" :prop="col.propertyPath" :label="col.displayName"
@@ -265,16 +273,22 @@ defineExpose(exposed);
       <RowActionsColumn v-if="props.rowActionsFunc" ref="rowActionsRef" :row-actions-func="props.rowActionsFunc" />
     </el-table>
 
-    <!-- 数据超过一页时自动显示的分页组件；sizes 支持用户切换每页条数 -->
-    <el-pagination v-if="showPagination" class="yk-table__pagination" layout="total, sizes, prev, pager, next"
+    <!-- 数据超过一页时自动显示的分页组件；sizes 支持用户切换每页条数。
+         两种模式：totalCount 已知 → layout 含 total，显示「共 N 条」；
+         未知 → 隐藏「共 N 条」，total 绑定 hasNext 推导的估算值，
+         仅驱动页码与上一页/下一页按钮状态（有下一页时可点） -->
+    <el-pagination v-if="showPagination" class="yk-table__pagination"
+      :layout="totalKnown ? 'total, sizes, prev, pager, next' : 'sizes, prev, pager, next'"
       :total="total" :page-sizes="pageSizes" :page-size="innerPageSize" :current-page="currentPage"
       @current-change="onPageChange" @size-change="onSizeChange" />
 
     <!-- 导出 Excel 对话框组（范围选择 / 进度 / 取消询问）—— 内部自管 useExportExcel。
-         props 按相关性分组：数据管道 → 列定义 → 当前页快照 → 选择 -->
+         props 按相关性分组：数据管道 → 列定义 → 当前页快照 → 选择。
+         不传 total：导出总条数由 dataFun 响应中的 totalCount 探测，
+         未知时对话框进度条走 indeterminate 动画 -->
     <ExportExcelDialog v-if="showExportExcel" ref="exportDialogRef" :current-rows="rows" :selected-rows="selectedRows"
       :data-fun="props.dataFun" :export-page-size="props.exportPageSize" :exportor-func="props.exportorFunc"
-      :table-name="meta?.displayName ?? '数据'" :columns="columns" :total="total" :has-more-page="showPagination"
+      :table-name="meta?.displayName ?? '数据'" :columns="columns" :has-more-page="showPagination"
       :export-selected="props.showCheckbox" />
 
     <!-- 列设置对话框（内部自管 useCustomConfig；始终挂载，columns 也来自它——

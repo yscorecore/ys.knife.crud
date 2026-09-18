@@ -27,8 +27,6 @@ interface UseExportExcelOptions {
   currentRows: Ref<Record<string, unknown>[]>;
   /** checkbox 列当前选中的行（跨页累计） */
   selectedRows: Ref<unknown[]>;
-  /** 数据总条数 */
-  total: Ref<number>;
   /** 导出所有时分页拉取的步长（独立于界面分页大小，避免用大页尺寸拖慢导出） */
   exportPageSize: Ref<number>;
   /** 是否还有下一页（决定「导出所有」选项是否出现） */
@@ -50,7 +48,6 @@ export function useExportExcel({
   columns,
   currentRows,
   selectedRows,
-  total,
   exportPageSize,
   hasMorePage,
 }: UseExportExcelOptions) {
@@ -75,7 +72,14 @@ export function useExportExcel({
   /** 「导出所有」进度状态 */
   const exporting = ref(false);
   const exportFetched = ref(0);
-  const exportTotal = ref(0);
+  /**
+   * 导出目标总条数：null 表示未知（两种模式）。
+   * 初始为 null——totalCount 不再从表格传入，而是在「导出所有」过程中
+   * 从每页响应探测：任一响应携带 totalCount 即切换为已知模式。
+   */
+  const exportTotal = ref<number | null>(null);
+  /** 总条数是否已知：未知时进度条走 indeterminate 动画，不显示百分比与分母 */
+  const exportTotalKnown = computed(() => exportTotal.value != null);
   /** 取消标记：每页返回后检查，兼容忽略 AbortSignal 的 dataFun */
   let exportCancelled = false;
   let exportAbort: AbortController | null = null;
@@ -86,10 +90,13 @@ export function useExportExcel({
   /** 取消时已写入的数据行数（不含表头） */
   const exportCancelledRows = ref(0);
 
-  /** 导出进度百分比：totalCount 未知时按已加载条数滚动到 99% 封顶 */
+  /** 导出进度百分比：总条数未知时返回值仅作为 indeterminate 动画的条宽（固定 50%），
+   *  不表达真实进度；已知时为 fetched/total（total=0 视为 100%） */
   const exportPercent = computed(() => {
-    if (exportTotal.value > 0) return Math.min(100, Math.round((exportFetched.value / exportTotal.value) * 100));
-    return exportFetched.value > 0 ? 99 : 0;
+    const t = exportTotal.value;
+    if (t == null) return 50;
+    if (t === 0) return 100;
+    return Math.min(100, Math.round((exportFetched.value / t) * 100));
   });
 
   /** 点击导出入口：只剩一个可用选项时跳过对话框直接导出 */
@@ -140,7 +147,7 @@ export function useExportExcel({
     exporting.value = true;
     exportCancelled = false;
     exportFetched.value = 0;
-    exportTotal.value = total.value;
+    exportTotal.value = null;
     exportAbort = new AbortController();
     const api = newExportApi();
     const sheet = exportSheetName();
@@ -208,6 +215,7 @@ export function useExportExcel({
     exporting,
     exportFetched,
     exportTotal,
+    exportTotalKnown,
     exportPercent,
     exportCancelledVisible,
     exportCancelledRows,
