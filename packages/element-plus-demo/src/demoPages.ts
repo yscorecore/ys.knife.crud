@@ -15,6 +15,7 @@ import DataLoadedTablePage from "./pages/table/DataLoadedTablePage.vue";
 import ColumnWidthTablePage from "./pages/table/ColumnWidthTablePage.vue";
 import ColumnRenderTablePage from "./pages/table/ColumnRenderTablePage.vue";
 import CsvExportTablePage from "./pages/table/CsvExportTablePage.vue";
+import ExternalControlTablePage from "./pages/table/ExternalControlTablePage.vue";
 import ExternalEntryButtonsTablePage from "./pages/table/ExternalEntryButtonsTablePage.vue";
 
 /**
@@ -86,6 +87,11 @@ export const demoPages = [
     id: "table-csv-export",
     label: "自定义导出实现（exportorFunc → CSV）",
     component: CsvExportTablePage,
+  },
+  {
+    id: "table-external-control",
+    label: "外部 prop 驱动（pageSize 变化 + 切换数据源）",
+    component: ExternalControlTablePage,
   },
   {
     id: "table-external-entry-buttons",
