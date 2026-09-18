@@ -282,8 +282,14 @@ defineExpose(exposed);
       </template>
       <!-- 勾选列：reserve-selection 使翻页后选中按 rowKey 跨页保留；表头 checkbox 全选/取消全选当前页 -->
       <el-table-column v-if="showCheckbox" type="selection" width="48" reserve-selection />
+      <!-- 数据列：col.render 存在时优先用自定义渲染（返回字符串/VNode 均可，
+           经函数式组件呈现），否则走默认的 propertyPath 取值显示 -->
       <el-table-column v-for="col in columns" :key="col.propertyPath" :prop="col.propertyPath" :label="col.displayName"
-        :width="col.width" show-overflow-tooltip />
+        :width="col.width" show-overflow-tooltip>
+        <template v-if="col.render" #default="{ row }">
+          <component :is="() => col.render!(row, (row as Record<string, unknown>)[col.propertyPath])" />
+        </template>
+      </el-table-column>
       <!-- 行操作列：内部自管 actions 加载与渲染 -->
       <RowActionsColumn v-if="props.rowActionsFunc" ref="rowActionsRef" :row-actions-func="props.rowActionsFunc" />
     </el-table>

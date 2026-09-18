@@ -13,6 +13,7 @@ import ExportTablePage from "./pages/table/ExportTablePage.vue";
 import CustomExportTablePage from "./pages/table/CustomExportTablePage.vue";
 import DataLoadedTablePage from "./pages/table/DataLoadedTablePage.vue";
 import ColumnWidthTablePage from "./pages/table/ColumnWidthTablePage.vue";
+import ColumnRenderTablePage from "./pages/table/ColumnRenderTablePage.vue";
 
 /**
  * Demo 页面注册表：导航按钮与 App 动态渲染共用的唯一数据源。
@@ -73,6 +74,11 @@ export const demoPages = [
     id: "table-column-width",
     label: "列宽拖动（header-dragend + 防抖保存）",
     component: ColumnWidthTablePage,
+  },
+  {
+    id: "table-column-render",
+    label: "自定义列渲染（column render 优先）",
+    component: ColumnRenderTablePage,
   },
 ] as const satisfies readonly DemoPageDef[];
 

@@ -14,6 +14,13 @@ export interface Column {
   dataSource?: unknown | null;
   queryFilter?: unknown | null;
   /**
+   * 可选。自定义单元格渲染：存在时优先于默认的「按 propertyPath 取值显示」。
+   * 返回字符串按文本渲染，返回 VNode 按节点渲染（由 UI 层呈现）。
+   * 参数 row 为当前行数据、value 为按 propertyPath 取到的默认值。
+   * 仅影响表格显示；导出仍按 propertyPath 取原始值。
+   */
+  render?: (row: unknown, value: unknown) => unknown;
+  /**
    * 列宽（px 字符串，如 "120"）：由 UI 层基于自定义配置写入，
    * 表格组件据此设置 el-table-column 的 width。
    * meta 原始列不带 width（undefined），由 useCustomConfig 在合并
