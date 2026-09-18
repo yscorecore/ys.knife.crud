@@ -111,6 +111,40 @@ export function useCustomConfig(
     customConfigs.value = configs;
   }
 
+  /* ---------------- 列宽拖拽（header-dragend） ---------------- */
+
+  /** 拖动列宽的防抖保存时长（ms）：连续拖多列/多次时合并为一次保存调用 */
+  const WIDTH_SAVE_DEBOUNCE_MS = 500;
+
+  /** 防抖定时器（每个表格实例独立） */
+  let widthSaveTimer: ReturnType<typeof setTimeout> | undefined;
+
+  /** 防抖保存当前 customConfigs：只落最后一次，避免频繁调用保存接口 */
+  function scheduleWidthSave(): void {
+    if (widthSaveTimer !== undefined) clearTimeout(widthSaveTimer);
+    widthSaveTimer = setTimeout(() => {
+      widthSaveTimer = undefined;
+      void props.saveCustomConfigFun?.(customConfigs.value);
+    }, WIDTH_SAVE_DEBOUNCE_MS);
+  }
+
+  /**
+   * 拖动列宽结束（el-table header-dragend）时调用：立即写回 customConfigs
+   * （columns computed 重算，表格保持拖动后的宽度），再防抖持久化。
+   * 未拖过的列按需创建配置项，visible/order 留空走缺省语义。
+   */
+  function updateColumnWidth(propertyPath: string, width: number): void {
+    const prev = customConfigs.value.columns[propertyPath];
+    customConfigs.value = {
+      ...customConfigs.value,
+      columns: {
+        ...customConfigs.value.columns,
+        [propertyPath]: { ...prev, propertyPath, width: String(Math.round(width)) },
+      },
+    };
+    scheduleWidthSave();
+  }
+
   /* ---------------- 列设置面板操作 ---------------- */
 
   /**
@@ -197,6 +231,7 @@ export function useCustomConfig(
     // 函数
     loadCustomConfigs,
     updateDefaultPageSize,
+    updateColumnWidth,
     openConfigDialog,
     moveDraft,
     resetDraft,

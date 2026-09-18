@@ -114,6 +114,8 @@ const configDialogRef = ref<{
   customConfigLoading: boolean;
   /** 打开列设置面板（工具栏「⚙ 列设置」按钮） */
   openDialog: () => void;
+  /** 拖动列宽结束（header-dragend）时写回配置并防抖持久化 */
+  updateColumnWidth: (propertyPath: string, width: number) => void;
 } | null>(null);
 
 /** 最终显示列（已含 meta/customConfig 两层过滤与排序，customConfig 的 width 也写在 col.width 上），对话框挂载前为空 */
@@ -174,6 +176,15 @@ function onSizeChange(size: number): void {
   configDialogRef.value?.updateDefaultPageSize(size);
   currentPage.value = 1;
   loadData();
+}
+
+/**
+ * 列宽拖拽结束（el-table header-dragend）：把新宽度写进自定义配置
+ * （表格立即生效）并防抖持久化到列设置。勾选列/行操作列没有 property，跳过。
+ */
+function onColumnResize(newWidth: number, _oldWidth: number, column: { property?: string }): void {
+  if (!column.property) return;
+  configDialogRef.value?.updateColumnWidth(column.property, newWidth);
 }
 
 /* ---------------- 生命周期 ---------------- */
@@ -263,7 +274,7 @@ defineExpose(exposed);
     </div>
 
     <el-table ref="tableEl" v-loading="metaLoading || dataLoading || actionsLoading || customConfigLoading" :data="rows"
-      :row-key="rowKey" border @selection-change="onSelectionChange">
+      :row-key="rowKey" border @selection-change="onSelectionChange" @header-dragend="onColumnResize">
       <!-- 空数据提示：使用者经 #empty 插槽自定义；仅在使用者提供了插槽时才声明，
            否则保留 el-table 默认的「暂无数据」空态 -->
       <template v-if="$slots.empty" #empty>

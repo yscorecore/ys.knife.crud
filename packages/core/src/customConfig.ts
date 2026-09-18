@@ -1,9 +1,12 @@
 
 export interface CustomColumnConfig {
     propertyPath: string,
-    visible: boolean,
-    order: number,
-    width: string,
+    /** 可选。缺省视为 true（显示该列） */
+    visible?: boolean,
+    /** 可选。缺省按 displayOrder 顺序回落 */
+    order?: number,
+    /** 可选。缺省/空字符串视为未设置（不指定列宽） */
+    width?: string,
 }
 
 export interface CustomConfig {

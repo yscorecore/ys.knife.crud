@@ -13,6 +13,7 @@ import { useCustomConfig } from "@ys.knife.crud/vue";
  * - defaultPageSize：当前用户默认分页大小（加载到保存值时回写此 ref，
  *   父组件据此把用户保存的默认分页大小应用回 Table）
  * - updateDefaultPageSize：用户切换每页条数时持久化为默认值
+ * - updateColumnWidth：拖动列宽结束（header-dragend）时写回配置并防抖持久化
  * - loadCustomConfigs：reload 时重新加载配置
  * - customConfigLoading：自定义配置加载态（loadCustomConfigs 进行中为 true）
  * - openDialog：打开列设置面板（工具栏「⚙ 列设置」按钮）
@@ -59,6 +60,7 @@ const {
   // 函数
   loadCustomConfigs,
   updateDefaultPageSize,
+  updateColumnWidth,
   openConfigDialog,
   moveDraft,
   resetDraft,
@@ -75,6 +77,7 @@ defineExpose({
   customConfigLoading,
   // 函数
   updateDefaultPageSize,
+  updateColumnWidth,
   loadCustomConfigs,
   openDialog: openConfigDialog,
 });
