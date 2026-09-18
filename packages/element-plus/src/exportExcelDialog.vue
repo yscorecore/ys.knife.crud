@@ -4,7 +4,7 @@ import { useExportExcel } from "@ys.knife.crud/vue";
 import type {
   Column,
   ExportApiFunc as ExportorFunc,
-  PageFunc,
+  NewPageFunc,
 } from "@ys.knife.crud/core";
 
 /**
@@ -18,7 +18,7 @@ import type {
  */
 const props = defineProps<{
   /** 分页数据源（导出所有时逐页拉取） */
-  dataFun: PageFunc<unknown>;
+  dataFun: NewPageFunc<unknown>;
   /** 父级是否启用勾选列——决定「导出选中」选项是否出现 */
   exportSelected: boolean;
   /** 导出实现工厂；缺省使用 core 的控制台假实现 */

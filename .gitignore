@@ -17,9 +17,6 @@ tsup.config.*.mjs
 # pnpm 安装失败时残留的临时 lockfile 副本（sandbox safe-delete 拦截导致）
 pnpm-lock.yaml.*
 
-# 沙箱 EPERM 残留的空 utils 目录（deep-clone.ts 0 字节），用户系统终端 rm -rf 即可清理
-packages/utils/
-
 # env
 .env
 .env.local

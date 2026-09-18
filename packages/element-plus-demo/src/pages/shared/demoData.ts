@@ -2,7 +2,7 @@ import {
   constData,
   constMetaFunc,
   type Meta,
-  type PageFunc,
+  type NewPageFunc,
 } from "@ys.knife.crud/core";
 
 /** 演示表格使用的行结构 */
@@ -123,11 +123,11 @@ export const exportRows: UserRow[] = Array.from({ length: 300 }, (_, i) => ({
  * 给数据源加网络延迟（并响应 AbortSignal 中断），用于演示「导出所有」的进度与取消。
  * 切片语义直接复用 constData，避免与分页契约漂移。
  */
-export function delayedData<T>(values: T[], delayMs: number): PageFunc<T> {
+export function delayedData<T>(values: T[], delayMs: number): NewPageFunc<T> {
   const inner = constData(values);
-  return (req, signal) =>
+  return (limit, offset, signal) =>
     new Promise((resolve, reject) => {
-      const timer = setTimeout(() => resolve(inner(req)), delayMs);
+      const timer = setTimeout(() => resolve(inner(limit, offset)), delayMs);
       signal?.addEventListener("abort", () => {
         clearTimeout(timer);
         reject(new DOMException("Aborted", "AbortError"));

@@ -6,12 +6,12 @@ import {
   type ExportApiFunc,
   type ExportOption,
   type ExportScope,
-  type PageFunc,
+  type NewPageFunc,
 } from "@ys.knife.crud/core";
 
 /** useExportExcel 需要从组件 props 中访问的成员 */
 interface ExportProps {
-  readonly dataFun: PageFunc<unknown>;
+  readonly dataFun: NewPageFunc<unknown>;
   readonly exportSelected: boolean;
   readonly exportorFunc?: ExportApiFunc;
 }
@@ -149,7 +149,7 @@ export function useExportExcel({
       const limit = exportPageSize.value;
       let offset = 0;
       for (;;) {
-        const res = await props.dataFun({ limit, offset }, exportAbort.signal);
+        const res = await props.dataFun(limit, offset, exportAbort.signal);
         await api.renderRows(sheet, (res.items as Record<string, unknown>[]).map(exportRowValues));
         exportFetched.value += res.items.length;
         if (res.totalCount != null) exportTotal.value = res.totalCount;

@@ -93,7 +93,7 @@ import { useExportExcel } from "@ys.knife.crud/vue";
 
 // Inside a self-managing dialog component (e.g. exportExcelDialog.vue)
 const props = defineProps<{
-  dataFun: PageFunc<unknown>;
+  dataFun: NewPageFunc<unknown>;
   showCheckbox: boolean;
   exportorFunc?: ExportApiFunc;
   meta: Meta | null;

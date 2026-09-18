@@ -24,7 +24,7 @@ defineOptions({ name: "YsTable" });
  * 注意：这里刻意用「运行时 props 声明 + PropType」，而不是
  * `defineProps<Props extends CoreTableProps>()` 类型语法。
  * 原因：SFC 编译器把类型转成运行时 props 声明时，对跨包 re-export 的类型
- * （如 core 从 ys.knife.query.js 转出的 PageFunc）解析失败时会静默丢弃
+ * （如 core 间接引用 ys.knife.query.js 的 PagedList）解析失败时会静默丢弃
  * 该 prop 成员，导致父组件传入的 dataFun 变成 fallthrough attribute，
  * 组件内 props.dataFun 为 undefined。运行时声明不依赖类型静态分析，无此问题。
  */
@@ -56,6 +56,14 @@ const props = defineProps({
   /** 行 key，默认 "id" */
   rowKey: { type: String, default: "id" },
 });
+
+/** 单次加载完成后的结果（PagedList）；组件对外事件基于此类型 */
+type PagedResult = Awaited<ReturnType<CoreTableProps["dataFun"]>>;
+
+/** 对外事件：data-loaded 在每次 dataFun 成功返回后触发，携带本次加载的分页结果 */
+const emit = defineEmits<{
+  (e: "data-loaded", paged: PagedResult): void;
+}>();
 
 /* ---------------- 默认状态（useDefault） ----------------
  * useDefault 内聚与 innerPageSize 无关的部分：meta/paged/rows/两类 loading/
@@ -128,7 +136,10 @@ async function loadData(signal?: AbortSignal): Promise<void> {
   dataLoading.value = true;
   try {
     const offset = (currentPage.value - 1) * innerPageSize.value;
-    paged.value = await props.dataFun({ limit: innerPageSize.value, offset }, signal);
+    const result = await props.dataFun(innerPageSize.value, offset, signal);
+    paged.value = result;
+    // 请求成功才通知外部；取消（AbortError）/异常时 await 直接抛出，不会走到这里
+    emit("data-loaded", result);
   } finally {
     dataLoading.value = false;
   }

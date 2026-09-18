@@ -1,5 +1,5 @@
 import type { Meta, MetaFunc } from "./meta"
-import type { PageFunc } from "./page"
+import type { NewPageFunc } from "./page"
 import type { PagedList } from "ys.knife.query.js"
 import type { RowActionsFunc } from "./action"
 import type { loadCustomConfigFunc as loadCustomConfigFunc, saveCustomConfigFunc } from "./customConfig"
@@ -31,7 +31,7 @@ export interface ExportExcelProps {
 }
 export interface DefaultProps {
     readonly metaFun: MetaFunc
-    readonly dataFun: PageFunc<unknown>,
+    readonly dataFun: NewPageFunc<unknown>,
     readonly pageSize: number,
     readonly pageSizes: number[],
 }

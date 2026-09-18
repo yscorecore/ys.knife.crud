@@ -1,9 +1,9 @@
 <script setup lang="ts">
-// 导航页：十个入口，分别对应 Table 组件的十种演示模式
-type DemoPage = "table-empty" | "table-const" | "table-actions" | "table-list" | "table-paged" | "table-checkbox" | "table-custom" | "table-combo" | "table-export" | "table-custom-export";
+// 导航页：入口由 demoPages 注册表数据驱动渲染
+import { demoPages, type DemoPageId } from "../demoPages";
 
 defineEmits<{
-  (e: "navigate", page: DemoPage): void;
+  (e: "navigate", page: DemoPageId): void;
 }>();
 </script>
 
@@ -20,35 +20,14 @@ defineEmits<{
       <p class="hint">选择一个 Demo 进入对应的演示页面。</p>
 
       <div class="nav-list">
-        <el-button type="primary" size="large" @click="$emit('navigate', 'table-empty')">
-          空数据表格（emptyData）
-        </el-button>
-        <el-button type="primary" size="large" @click="$emit('navigate', 'table-const')">
-          固定数据表格（constData）
-        </el-button>
-        <el-button type="primary" size="large" @click="$emit('navigate', 'table-actions')">
-          带行操作的表格（constData + constActions）
-        </el-button>
-        <el-button type="primary" size="large" @click="$emit('navigate', 'table-list')">
-          异步列表表格（listData）
-        </el-button>
-        <el-button type="primary" size="large" @click="$emit('navigate', 'table-paged')">
-          分页表格（25 行数据自动分页）
-        </el-button>
-        <el-button type="primary" size="large" @click="$emit('navigate', 'table-checkbox')">
-          可勾选表格（showCheckbox + 分页）
-        </el-button>
-        <el-button type="primary" size="large" @click="$emit('navigate', 'table-custom')">
-          自定义列表格（showCustomConfig）
-        </el-button>
-        <el-button type="primary" size="large" @click="$emit('navigate', 'table-combo')">
-          可勾选 + 自定义列表格（showCheckbox + showCustomConfig）
-        </el-button>
-        <el-button type="primary" size="large" @click="$emit('navigate', 'table-export')">
-          导出 Excel（showExportExcel）
-        </el-button>
-        <el-button type="primary" size="large" @click="$emit('navigate', 'table-custom-export')">
-          自定义列 + 导出 Excel（showCustomConfig + showExportExcel）
+        <el-button
+          v-for="page in demoPages"
+          :key="page.id"
+          type="primary"
+          size="large"
+          @click="$emit('navigate', page.id)"
+        >
+          {{ page.label }}
         </el-button>
       </div>
     </section>

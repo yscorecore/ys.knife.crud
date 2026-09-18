@@ -33,10 +33,10 @@ export type { PageReq, PagedList,PageFunc } from "ys.knife.query.js";
 export * from "./meta";
 // ui.ts 只有纯类型（interface/type）→ verbatimModuleSyntax 下必须用 export type *
 export type * from "./ui";
-// page.ts 混合：constData/emptyData/listData 是值（用 export），ListFunc 是纯类型（用 export type）。
-// 注意 PageFunc 已在上方直接从 ys.knife.query.js re-export，这里不再重复导出以免冲突。
+// page.ts 混合：constData/emptyData/listData 是值（用 export），ListFunc/NewPageFunc 是纯类型（用 export type）。
+// 注意旧的 PageFunc 已在上方直接从 ys.knife.query.js re-export，这里不再重复导出以免冲突。
 export { constData, emptyData, listData } from "./page";
-export type { ListFunc } from "./page";
+export type { ListFunc, NewPageFunc } from "./page";
 // action.ts 混合导出（constActions/emptyActions 是值，Action/RowActionsFunc 是类型）→ 用 export *
 export * from "./action";
 // customConfig.ts 混合导出（constConfig/emptyConfig/mergeConfigs/localStorage 助手是值，
