@@ -14,6 +14,7 @@ import CustomExportTablePage from "./pages/table/CustomExportTablePage.vue";
 import DataLoadedTablePage from "./pages/table/DataLoadedTablePage.vue";
 import ColumnWidthTablePage from "./pages/table/ColumnWidthTablePage.vue";
 import ColumnRenderTablePage from "./pages/table/ColumnRenderTablePage.vue";
+import CsvExportTablePage from "./pages/table/CsvExportTablePage.vue";
 import ExternalEntryButtonsTablePage from "./pages/table/ExternalEntryButtonsTablePage.vue";
 
 /**
@@ -80,6 +81,11 @@ export const demoPages = [
     id: "table-column-render",
     label: "自定义列渲染（column render 优先）",
     component: ColumnRenderTablePage,
+  },
+  {
+    id: "table-csv-export",
+    label: "自定义导出实现（exportorFunc → CSV）",
+    component: CsvExportTablePage,
   },
   {
     id: "table-external-entry-buttons",
