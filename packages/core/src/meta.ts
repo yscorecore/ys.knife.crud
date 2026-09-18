@@ -1,14 +1,18 @@
 export interface Column {
+  /** 唯一必填：行数据的取值路径，也是自定义配置/导出寻址的 key */
   propertyPath: string;
-  displayName: string;
-  description: string | null;
-  showForDisplay: boolean;
-  displayFormat: string | null;
-  isArray: boolean;
-  dataTypeName: string;
-  displayOrder: number;
-  dataSource: unknown | null;
-  queryFilter: unknown | null;
+  /** 显示名；缺省时 UI 层回落到 propertyPath */
+  displayName?: string;
+  description?: string | null;
+  /** 是否在表格中显示；缺省视为 true */
+  showForDisplay?: boolean;
+  displayFormat?: string | null;
+  isArray?: boolean;
+  dataTypeName?: string;
+  /** 显示顺序权重；缺省按 columns 数组中的顺序 */
+  displayOrder?: number;
+  dataSource?: unknown | null;
+  queryFilter?: unknown | null;
   /**
    * 列宽（px 字符串，如 "120"）：由 UI 层基于自定义配置写入，
    * 表格组件据此设置 el-table-column 的 width。

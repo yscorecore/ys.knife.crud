@@ -1,11 +1,25 @@
 import { computed, ref, watch, type Ref } from "vue";
 import type {
+  Column,
   CustomColumnConfig,
   CustomConfig,
   DraftColumn,
   Meta,
   CustomConfigProps,
 } from "@ys.knife.crud/core";
+
+/**
+ * 取「参与显示」的列并按 displayOrder 排序。
+ * Column 多数字段可省略（见 core/meta.ts）：showForDisplay 缺省视为 true，
+ * displayOrder 缺省按数组顺序回落，排序对同权重保持稳定。
+ */
+function displayableColumns(columns: Column[]): Column[] {
+  return columns
+    .map((col, idx) => ({ col, idx }))
+    .filter(({ col }) => col.showForDisplay ?? true)
+    .sort((a, b) => (a.col.displayOrder ?? a.idx) - (b.col.displayOrder ?? b.idx))
+    .map(({ col }) => col);
+}
 
 /**
  * 列自定义配置逻辑：管理列的显隐、顺序、宽度以及用户默认分页大小，
@@ -49,8 +63,7 @@ export function useCustomConfig(
    *    width 写到返回列对象上（表格组件直接读 col.width 设置列宽，不再单独查表）
    */
   const columns = computed(() => {
-    const displayable = (meta.value?.columns ?? []).filter((c) => c.showForDisplay);
-    const sorted = [...displayable].sort((a, b) => a.displayOrder - b.displayOrder);
+    const sorted = displayableColumns(meta.value?.columns ?? []);
     if (!props.showCustomConfig) return sorted;
 
     const cfg = customConfigs.value.columns;
@@ -59,6 +72,8 @@ export function useCustomConfig(
     visibleCols.sort((a, b) => (a.cfg?.order ?? a.idx) - (b.cfg?.order ?? b.idx));
     return visibleCols.map(({ col, cfg: c }) => ({
       ...col,
+      // displayName 缺省回落到 propertyPath（Column 允许只填 propertyPath）
+      displayName: col.displayName ?? col.propertyPath,
       // 空字符串视为未设置（与原 columnWidth() 行为一致：返回 undefined）
       width: c?.width || undefined,
     }));
@@ -104,14 +119,13 @@ export function useCustomConfig(
    * 列表顺序取 CustomConfig.order（缺省回落到 displayOrder 顺序）。
    */
   function generateDraftColumns(): DraftColumn[] {
-    const displayable = (meta.value?.columns ?? []).filter((c) => c.showForDisplay);
-    const sorted = [...displayable].sort((a, b) => a.displayOrder - b.displayOrder);
+    const sorted = displayableColumns(meta.value?.columns ?? []);
     const cfg = customConfigs.value.columns;
     const merged = sorted.map((col, idx) => ({ col, cfg: cfg[col.propertyPath], idx }));
     merged.sort((a, b) => (a.cfg?.order ?? a.idx) - (b.cfg?.order ?? b.idx));
     return merged.map(({ col, cfg: c }) => ({
       propertyPath: col.propertyPath,
-      displayName: col.displayName,
+      displayName: col.displayName ?? col.propertyPath,
       visible: c?.visible ?? true,
       width: c?.width ?? "",
     }));
@@ -129,11 +143,10 @@ export function useCustomConfig(
    * 直接用 meta 的 displayOrder 顺序与默认值。
    */
   function resetDraft(): void {
-    const displayable = (meta.value?.columns ?? []).filter((c) => c.showForDisplay);
-    const sorted = [...displayable].sort((a, b) => a.displayOrder - b.displayOrder);
+    const sorted = displayableColumns(meta.value?.columns ?? []);
     draftColumns.value = sorted.map((col) => ({
       propertyPath: col.propertyPath,
-      displayName: col.displayName,
+      displayName: col.displayName ?? col.propertyPath,
       visible: true,
       width: "",
     }));
