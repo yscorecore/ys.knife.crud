@@ -241,8 +241,10 @@ defineExpose(exposed);
 <template>
   <div class="yk-table">
     <!-- 顶部工具栏：左侧为跨页选中提示（有选中时显示），右侧为导出 / 列设置入口。
-         同一行节省纵向空间，任一条件满足即渲染 -->
-    <div v-if="(showCheckbox && selectedRows.length > 0) || showCustomConfig || showExportExcel"
+         同一行节省纵向空间。启用任一能力即常驻渲染并保持固定行高——
+         仅勾选的表格里，选中提示的出现/消失不再增减这一行的高度，
+         表头不会上下抖动（与导出/列设置入口常驻时的表现对齐） -->
+    <div v-if="showCheckbox || showCustomConfig || showExportExcel"
       class="yk-table__toolbar">
       <!-- 跨页选中提示：reserve-selection 下选中可能来自其他页，给用户一个总览与清空入口。
            无选中时 SelectionBar 不渲染任何元素，右侧按钮组靠 margin-left:auto 自行贴右，
@@ -308,7 +310,10 @@ defineExpose(exposed);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  /* 固定行高（el-button 默认高度）：无选中且无入口按钮时也保留这一行，
+     选中提示出现/消失时表头不再上下移动 */
+  min-height: var(--el-component-size, 32px);
+  margin-bottom: 2px;
 }
 
 .yk-table__toolbar-actions {
