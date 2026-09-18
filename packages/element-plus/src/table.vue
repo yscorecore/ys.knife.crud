@@ -39,13 +39,15 @@ const props = defineProps({
   pageSizes: { type: Array as PropType<number[]>, default: () => [10, 20, 50, 100] },
   /** 为 true 时第一列显示 checkbox（表头含全选/取消全选），默认 false */
   showCheckbox: { type: Boolean, default: false },
-  /** 为 true 时显示「列设置」入口，用户可自定义列的显隐、顺序与宽度，默认 false */
+  /** 为 true 时启用列设置能力（挂载列设置面板与持久化流程），默认 false。
+   *  组件不内置入口按钮：由外部自行渲染按钮，经 expose 的 openConfigDialog() 触发 */
   showCustomConfig: { type: Boolean, default: false },
   /** 加载自定义配置（含列设置与用户默认分页大小；返回 null 按空配置处理） */
   loadCustomConfigFun: { type: Function as PropType<NonNullable<CoreTableProps["loadCustomConfigFun"]>>, required: false },
   /** 保存自定义配置（含列设置与用户默认分页大小） */
   saveCustomConfigFun: { type: Function as PropType<NonNullable<CoreTableProps["saveCustomConfigFun"]>>, required: false },
-  /** 为 true 时显示导出 Excel 入口，默认 false */
+  /** 为 true 时启用导出 Excel 能力（挂载导出对话框与流程），默认 false。
+   *  组件不内置入口按钮：由外部自行渲染按钮，经 expose 的 openExportDialog() 触发 */
   showExportExcel: { type: Boolean, default: false },
   /** 导出「所有数据」时每次分页拉取的条数，默认 1000（独立于界面分页大小） */
   exportPageSize: { type: Number, default: 1000 },
@@ -237,6 +239,16 @@ function clearSelection(): void {
   tableEl.value?.clearSelection?.();
 }
 
+/** 打开列设置面板——委托 ColumnConfigDialog；供外部自定义按钮触发（showEntryButtons=false 场景） */
+function openConfigDialog(): void {
+  configDialogRef.value?.openDialog();
+}
+
+/** 打开导出 Excel 对话框——委托 ExportExcelDialog；供外部自定义按钮触发（showEntryButtons=false 场景） */
+function openExportDialog(): void {
+  exportDialogRef.value?.openExportDialog();
+}
+
 const exposed = {
   meta,
   paged,
@@ -244,6 +256,8 @@ const exposed = {
   selectedRows,
   reload,
   clearSelection,
+  openConfigDialog,
+  openExportDialog,
 } satisfies ExposedShape;
 
 defineExpose(exposed);
@@ -251,26 +265,12 @@ defineExpose(exposed);
 
 <template>
   <div class="yk-table">
-    <!-- 顶部工具栏：左侧为跨页选中提示（有选中时显示），右侧为导出 / 列设置入口。
-         同一行节省纵向空间。启用任一能力即常驻渲染并保持固定行高——
-         仅勾选的表格里，选中提示的出现/消失不再增减这一行的高度，
-         表头不会上下抖动（与导出/列设置入口常驻时的表现对齐） -->
-    <div v-if="showCheckbox || showCustomConfig || showExportExcel"
-      class="yk-table__toolbar">
-      <!-- 跨页选中提示：reserve-selection 下选中可能来自其他页，给用户一个总览与清空入口。
-           无选中时 SelectionBar 不渲染任何元素，右侧按钮组靠 margin-left:auto 自行贴右，
-           不依赖占位元素 -->
-      <SelectionBar v-if="showCheckbox" :count="selectedRows.length" @clear="clearSelection" />
-      <div class="yk-table__toolbar-actions">
-        <el-button v-if="showExportExcel" link type="primary" class="yk-table__export-btn"
-          @click="exportDialogRef?.openExportDialog()">
-          ⬇ 导出 Excel
-        </el-button>
-        <el-button v-if="showCustomConfig" link type="primary" class="yk-table__config-btn"
-          @click="configDialogRef?.openDialog()">
-          ⚙ 列设置
-        </el-button>
-      </div>
+    <!-- 勾选提示行：仅勾选表格需要（reserve-selection 下的跨页选中总览与清空入口）。
+         常驻渲染并保持固定行高——选中提示的出现/消失不增减这一行高度，表头不会上下抖动。
+         「导出 Excel / 列设置」组件不内置按钮，入口由外部渲染并经 expose 方法触发，
+         故这里不再有内置按钮组 -->
+    <div v-if="showCheckbox" class="yk-table__toolbar">
+      <SelectionBar :count="selectedRows.length" @clear="clearSelection" />
     </div>
 
     <el-table ref="tableEl" v-loading="metaLoading || dataLoading || actionsLoading || customConfigLoading" :data="rows"
@@ -315,8 +315,8 @@ defineExpose(exposed);
 
     <!-- 列设置对话框（内部自管 useCustomConfig；始终挂载，columns 也来自它——
          customConfig 的 width 直接写在 col.width 上，表格读 col.width 即可；
-         不再接收 showCustomConfig/innerPageSize：前者由 Table 自身控制「⚙ 列设置」按钮显隐，
-         后者改为经 defineExpose 暴露 defaultPageSize/updateDefaultPageSize 由 Table 主动读写） -->
+         面板不内置入口：外部经 expose 的 openConfigDialog 打开；
+         defaultPageSize/updateDefaultPageSize 由 Table 主动读写） -->
     <ColumnConfigDialog ref="configDialogRef" :load-custom-config-fun="loadCustomConfigFun"
       :save-custom-config-fun="saveCustomConfigFun" :meta="meta" />
   </div>
@@ -326,19 +326,9 @@ defineExpose(exposed);
 .yk-table__toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  /* 固定行高（el-button 默认高度）：无选中且无入口按钮时也保留这一行，
-     选中提示出现/消失时表头不再上下移动 */
+  /* 固定行高：勾选表格的选中提示出现/消失时，表头不再上下移动 */
   min-height: var(--el-component-size, 32px);
   margin-bottom: 2px;
-}
-
-.yk-table__toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  /* 无论左侧选中提示是否存在，按钮组始终吸附工具栏右侧 */
-  margin-left: auto;
 }
 
 .yk-table__pagination {

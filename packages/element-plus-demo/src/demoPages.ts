@@ -14,6 +14,7 @@ import CustomExportTablePage from "./pages/table/CustomExportTablePage.vue";
 import DataLoadedTablePage from "./pages/table/DataLoadedTablePage.vue";
 import ColumnWidthTablePage from "./pages/table/ColumnWidthTablePage.vue";
 import ColumnRenderTablePage from "./pages/table/ColumnRenderTablePage.vue";
+import ExternalEntryButtonsTablePage from "./pages/table/ExternalEntryButtonsTablePage.vue";
 
 /**
  * Demo 页面注册表：导航按钮与 App 动态渲染共用的唯一数据源。
@@ -79,6 +80,11 @@ export const demoPages = [
     id: "table-column-render",
     label: "自定义列渲染（column render 优先）",
     component: ColumnRenderTablePage,
+  },
+  {
+    id: "table-external-entry-buttons",
+    label: "外部自定义入口按钮（openConfigDialog/openExportDialog）",
+    component: ExternalEntryButtonsTablePage,
   },
 ] as const satisfies readonly DemoPageDef[];
 

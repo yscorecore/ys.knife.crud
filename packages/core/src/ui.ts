@@ -68,6 +68,10 @@ export interface TableApi {
     reload(): void
     /** 清空全部选中（含其他页的选中） */
     clearSelection(): void
+    /** 打开列设置面板（showCustomConfig 启用时有效）；供外部自定义按钮触发 */
+    openConfigDialog(): void
+    /** 打开导出 Excel 的范围选择对话框（showExportExcel 启用时有效）；供外部自定义按钮触发 */
+    openExportDialog(): void
 }
 
 

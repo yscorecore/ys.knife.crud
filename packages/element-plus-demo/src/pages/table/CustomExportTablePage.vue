@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from "vue";
+import type { TableApi } from "@ys.knife.crud/core";
 import { YsTable } from "@ys.knife.crud/element-plus";
 import { createExcelJsExportApiFunc } from "@ys.knife.crud/export-exceljs";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
@@ -12,6 +14,8 @@ defineEmits<{
 // 大数据 + 每次请求 300ms 延迟：导出所有需 30 次请求（约 9 秒），进度条与取消清晰可见
 const dataFun = delayedData(exportRows, 300);
 
+const tableRef = ref<TableApi | null>(null);
+
 const { loadCustomConfigFun, saveCustomConfigFun } = useLocalCustomConfig(
   "yk-crud-demo-table-columns-custom-export",
 );
@@ -22,10 +26,16 @@ const exportorFunc = createExcelJsExportApiFunc();
 <template>
   <DemoPageLayout
     title="自定义列 + 导出 Excel"
-    hint="showCustomConfig 与 showExportExcel 同时开启：先用「⚙ 列设置」调整列的显隐/顺序/宽度，再点「⬇ 导出 Excel」——导出的列与界面所见严格一致（隐藏列不导出、顺序一致、列宽映射）。300 行数据 + 每次请求 300ms 延迟（导出所有约需 9 秒），可清楚看到进度条并中途取消。"
+    hint="showCustomConfig 与 showExportExcel 同时开启：先用下方外部「⚙ 列设置」按钮（ref.openConfigDialog）调整列的显隐/顺序/宽度，再用「⬇ 导出 Excel」按钮（ref.openExportDialog）导出——导出的列与界面所见严格一致（隐藏列不导出、顺序一致、列宽映射）。300 行数据 + 每次请求 300ms 延迟（导出所有约需 9 秒），可清楚看到进度条并中途取消。"
     @back="$emit('back')"
   >
+    <template #toolbar>
+      <el-button @click="tableRef?.openConfigDialog()">⚙ 列设置</el-button>
+      <el-button type="success" @click="tableRef?.openExportDialog()">⬇ 导出 Excel</el-button>
+    </template>
+
     <ys-table
+      ref="tableRef"
       :meta-fun="metaFun"
       :data-fun="dataFun"
       :page-size="10"
