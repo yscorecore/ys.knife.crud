@@ -27,6 +27,8 @@ export interface ExportExcelProps {
     /** 可选。导出实现工厂；缺省使用 core 的控制台假实现（createConsoleExportApiFunc，只打日志不产出文件） */
     readonly exportorFunc?: ExportApiFunc;
     readonly exportPageSize?: number;
+    /** 可选。「导出所有」的最大拉取页数（循环次数上限），缺省 1000；防止数据量过大时无休止导出 */
+    readonly exportMaxPages?: number;
 
 }
 export interface DefaultProps {

@@ -33,6 +33,8 @@ const props = defineProps<{
   selectedRows: unknown[];
   /** 导出所有时分页拉取的步长（独立于界面分页大小） */
   exportPageSize: number;
+  /** 「导出所有」的最大拉取页数（循环次数上限） */
+  exportMaxPages: number;
   /** 是否还有下一页（决定「导出所有」选项是否出现） */
   hasMorePage: boolean;
 }>();
@@ -59,6 +61,7 @@ const {
   currentRows: toRef(props, "currentRows"),
   selectedRows: toRef(props, "selectedRows"),
   exportPageSize: toRef(props, "exportPageSize"),
+  exportMaxPages: toRef(props, "exportMaxPages"),
   hasMorePage: toRef(props, "hasMorePage"),
 });
 

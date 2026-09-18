@@ -29,6 +29,8 @@ interface UseExportExcelOptions {
   selectedRows: Ref<unknown[]>;
   /** 导出所有时分页拉取的步长（独立于界面分页大小，避免用大页尺寸拖慢导出） */
   exportPageSize: Ref<number>;
+  /** 「导出所有」的最大拉取页数（循环次数上限）；防止数据量过大时无休止导出 */
+  exportMaxPages: Ref<number>;
   /** 是否还有下一页（决定「导出所有」选项是否出现） */
   hasMorePage: Ref<boolean>;
 }
@@ -49,6 +51,7 @@ export function useExportExcel({
   currentRows,
   selectedRows,
   exportPageSize,
+  exportMaxPages,
   hasMorePage,
 }: UseExportExcelOptions) {
   /** 导出选项：exportSelected=false 不含「导出选中」；只有一页（hasMorePage=false）不含「导出所有」 */
@@ -154,13 +157,15 @@ export function useExportExcel({
     await api.renderHeader({ [sheet]: columns.value });
     try {
       const limit = exportPageSize.value;
+      // 最大拉取页数：每次循环拉一页，超过上限即停止（导出已拉取的部分），防止数据量过大导不完
+      const maxPages = Math.max(1, exportMaxPages.value);
       let offset = 0;
-      for (;;) {
+      for (let page = 1; ; page++) {
         const res = await props.dataFun(limit, offset, exportAbort.signal);
         await api.renderRows(sheet, (res.items as Record<string, unknown>[]).map(exportRowValues));
         exportFetched.value += res.items.length;
         if (res.totalCount != null) exportTotal.value = res.totalCount;
-        if (exportCancelled || !res.hasNext || res.items.length === 0) break;
+        if (exportCancelled || !res.hasNext || res.items.length === 0 || page >= maxPages) break;
         offset += limit;
       }
     } catch (e) {

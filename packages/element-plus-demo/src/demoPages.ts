@@ -5,6 +5,7 @@ import ActionsTablePage from "./pages/table/ActionsTablePage.vue";
 import ListTablePage from "./pages/table/ListTablePage.vue";
 import PagedTablePage from "./pages/table/PagedTablePage.vue";
 import UnknownTotalTablePage from "./pages/table/UnknownTotalTablePage.vue";
+import ExportMaxPagesTablePage from "./pages/table/ExportMaxPagesTablePage.vue";
 import CheckboxTablePage from "./pages/table/CheckboxTablePage.vue";
 import CustomTablePage from "./pages/table/CustomTablePage.vue";
 import ComboTablePage from "./pages/table/ComboTablePage.vue";
@@ -39,6 +40,11 @@ export const demoPages = [
     id: "table-unknown-total",
     label: "未知总条数（totalCount=null + indeterminate 导出进度）",
     component: UnknownTotalTablePage,
+  },
+  {
+    id: "table-export-max-pages",
+    label: "导出页数上限（exportMaxPages=3 截断导出）",
+    component: ExportMaxPagesTablePage,
   },
   {
     id: "table-checkbox",

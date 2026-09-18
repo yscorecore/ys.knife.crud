@@ -49,6 +49,8 @@ const props = defineProps({
   showExportExcel: { type: Boolean, default: false },
   /** 导出「所有数据」时每次分页拉取的条数，默认 1000（独立于界面分页大小） */
   exportPageSize: { type: Number, default: 1000 },
+  /** 「导出所有」的最大拉取页数（循环次数上限），默认 1000；防止数据量过大时无休止导出 */
+  exportMaxPages: { type: Number, default: 1000 },
   /** 导出实现工厂：每次导出调用它得到一个全新的 ExportApi 实例，组件只经该接口写文件。
    *  缺省使用内置 ExcelJS 实现（createExcelJsExportApiFunc）；
    *  将来可替换为其它实现（CSV、服务端导出等），组件无需改动 */
@@ -287,7 +289,8 @@ defineExpose(exposed);
          不传 total：导出总条数由 dataFun 响应中的 totalCount 探测，
          未知时对话框进度条走 indeterminate 动画 -->
     <ExportExcelDialog v-if="showExportExcel" ref="exportDialogRef" :current-rows="rows" :selected-rows="selectedRows"
-      :data-fun="props.dataFun" :export-page-size="props.exportPageSize" :exportor-func="props.exportorFunc"
+      :data-fun="props.dataFun" :export-page-size="props.exportPageSize" :export-max-pages="props.exportMaxPages"
+      :exportor-func="props.exportorFunc"
       :table-name="meta?.displayName ?? '数据'" :columns="columns" :has-more-page="showPagination"
       :export-selected="props.showCheckbox" />
 
