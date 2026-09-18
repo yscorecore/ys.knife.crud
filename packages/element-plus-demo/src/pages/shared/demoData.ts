@@ -119,6 +119,18 @@ export const exportRows: UserRow[] = Array.from({ length: 300 }, (_, i) => ({
   secret: `e${i + 1}`,
 }));
 
+/** 大数据全功能演示用的 10000 行（pageSize=20 → 500 页）。
+ *  工厂函数：行操作删除会 splice，每次进入页面拿全新一份，不污染其他演示 */
+export function createBigRows(): UserRow[] {
+  return Array.from({ length: 10_000 }, (_, i) => ({
+    id: i + 1,
+    name: `BigUser${i + 1}`,
+    email: `big${i + 1}@example.com`,
+    age: 18 + (i % 45),
+    secret: `b${i + 1}`,
+  }));
+}
+
 /**
  * 给数据源加网络延迟（并响应 AbortSignal 中断），用于演示「导出所有」的进度与取消。
  * 切片语义直接复用 constData，避免与分页契约漂移。
@@ -128,6 +140,38 @@ export function delayedData<T>(values: T[], delayMs: number): NewPageFunc<T> {
   return (limit, offset, signal) =>
     new Promise((resolve, reject) => {
       const timer = setTimeout(() => resolve(inner(limit, offset)), delayMs);
+      signal?.addEventListener("abort", () => {
+        clearTimeout(timer);
+        reject(new DOMException("Aborted", "AbortError"));
+      });
+    });
+}
+
+/**
+ * 带延迟的分页数据源，并可选择是否在响应中返回 totalCount，用于对比两种分页形态：
+ * - withTotal=true：返回真实总数，分页器一次性显示精确 Total 与全部页码；
+ * - withTotal=false：totalCount 返回 null、仅靠 hasNext 指示翻页——
+ *   Table 按「offset + 当前页条数 + 1」估算总数，页码随翻页逐步增长，末页收敛为真实值。
+ * 支持 AbortSignal 中断，「导出所有」流式拉取时可取消。
+ */
+export function delayedPagedData<T>(
+  values: T[],
+  delayMs: number,
+  withTotal: boolean,
+): NewPageFunc<T> {
+  return (limit, offset, signal) =>
+    new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        const o = Math.max(0, offset ?? 0);
+        const l = Math.max(0, limit ?? 10);
+        resolve({
+          limit: l,
+          offset: o,
+          totalCount: withTotal ? values.length : null,
+          hasNext: o + l < values.length,
+          items: values.slice(o, o + l),
+        });
+      }, delayMs);
       signal?.addEventListener("abort", () => {
         clearTimeout(timer);
         reject(new DOMException("Aborted", "AbortError"));

@@ -17,6 +17,8 @@ import ColumnRenderTablePage from "./pages/table/ColumnRenderTablePage.vue";
 import CsvExportTablePage from "./pages/table/CsvExportTablePage.vue";
 import ExternalControlTablePage from "./pages/table/ExternalControlTablePage.vue";
 import ExternalEntryButtonsTablePage from "./pages/table/ExternalEntryButtonsTablePage.vue";
+import BigDataTablePage from "./pages/table/BigDataTablePage.vue";
+import BigDataNoTotalTablePage from "./pages/table/BigDataNoTotalTablePage.vue";
 
 /**
  * Demo 页面注册表：导航按钮与 App 动态渲染共用的唯一数据源。
@@ -97,6 +99,16 @@ export const demoPages = [
     id: "table-external-entry-buttons",
     label: "外部自定义入口按钮（openConfigDialog/openExportDialog）",
     component: ExternalEntryButtonsTablePage,
+  },
+  {
+    id: "table-big-data",
+    label: "大数据全功能表格（10000 行，显示总条数）",
+    component: BigDataTablePage,
+  },
+  {
+    id: "table-big-data-no-total",
+    label: "大数据全功能表格（10000 行，不返回总条数）",
+    component: BigDataNoTotalTablePage,
   },
 ] as const satisfies readonly DemoPageDef[];
 

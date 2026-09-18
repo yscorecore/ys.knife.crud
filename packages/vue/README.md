@@ -85,7 +85,7 @@ const {
 
 Drives Excel export. `scope === "all"` streams data page by page via `dataFun`, writing each page through `ExportApi.renderRows` so memory stays bounded. Cancellation supports a "keep the partial file already written" confirmation.
 
-The composable owns all dialog visibility, progress state, and actions. **Recommended pattern**: a dialog component calls `useExportExcel` internally and exposes `trigger()` via `defineExpose`, so the parent only passes data inputs and never touches export-internal state.
+The composable owns all dialog visibility, progress state, and actions. **Recommended pattern**: a dialog component calls `useExportExcel` internally and exposes `openExportDialog()` via `defineExpose`, so the parent only passes data inputs and never touches export-internal state.
 
 ```ts
 import { toRef } from "vue";
@@ -94,15 +94,15 @@ import { useExportExcel } from "@ys.knife.crud/vue";
 // Inside a self-managing dialog component (e.g. exportExcelDialog.vue)
 const props = defineProps<{
   dataFun: NewPageFunc<unknown>;
-  showCheckbox: boolean;
+  exportSelected: boolean;
   exportorFunc?: ExportApiFunc;
-  meta: Meta | null;
+  tableName?: string;
   columns: Column[];
-  rows: Record<string, unknown>[];
+  currentRows: Record<string, unknown>[];
   selectedRows: unknown[];
-  total: number;
-  innerPageSize: number;
-  showPagination: boolean;
+  exportPageSize: number;
+  exportMaxPages: number;
+  hasMorePage: boolean;
 }>();
 
 const {
@@ -110,7 +110,8 @@ const {
   exportDialogVisible,    // Ref<boolean>
   exporting,              // Ref<boolean>
   exportFetched,          // Ref<number>
-  exportTotal,            // Ref<number>
+  exportTotal,            // Ref<number | null> — null while total is unknown
+  exportTotalKnown,       // ComputedRef<boolean> — false until a response carries totalCount
   exportPercent,          // ComputedRef<number>
   exportCancelledVisible, // Ref<boolean>
   exportCancelledRows,    // Ref<number>
@@ -120,41 +121,45 @@ const {
   keepPartialExport,      // () => Promise<void>
   discardPartialExport,   // () => Promise<void>
 } = useExportExcel({
-  props,          // reactive — dataFun/showCheckbox/exportorFunc auto-tracked
-  meta: toRef(props, "meta"),
+  props,          // reactive — dataFun/exportSelected/exportorFunc auto-tracked
+  tableName: toRef(props, "tableName"),
   columns: toRef(props, "columns"),
-  rows: toRef(props, "rows"),
+  currentRows: toRef(props, "currentRows"),
   selectedRows: toRef(props, "selectedRows"),
-  total: toRef(props, "total"),
-  innerPageSize: toRef(props, "innerPageSize"),
-  showPagination: toRef(props, "showPagination"),
+  exportPageSize: toRef(props, "exportPageSize"),
+  exportMaxPages: toRef(props, "exportMaxPages"),
+  hasMorePage: toRef(props, "hasMorePage"),
 });
 
-// Expose trigger so the parent's toolbar button can start the export flow
-defineExpose({ trigger: onExportClick });
+// Expose the entry point so the parent's toolbar button can start the export flow
+defineExpose({ openExportDialog: onExportClick });
 ```
 
-> **Why `toRef`?** Vue auto-unwraps `Ref` values passed as props, so `props.meta` is `Meta | null`, not `Ref<Meta | null>`. `toRef(props, "meta")` re-wraps it into a `Ref` that the composable can read via `.value`, preserving reactivity. The `columns`/`rows`/`total`/`showPagination` options accept `Ref<T>` (not strictly `ComputedRef<T>`), so both `computed()` results and `toRef()` wrappers work.
+> **Why `toRef`?** Vue auto-unwraps `Ref` values passed as props, so `props.tableName` is `string | undefined`, not `Ref<string | undefined>`. `toRef(props, "tableName")` re-wraps it into a `Ref` that the composable can read via `.value`, preserving reactivity. The `columns`/`currentRows`/`exportPageSize`/`exportMaxPages`/`hasMorePage` options accept `Ref<T>` (not strictly `ComputedRef<T>`), so both `computed()` results and `toRef()` wrappers work.
 
-The parent component then only wires data inputs and calls `trigger()`:
+> **Unknown total.** During "export all", `exportTotal` starts at `null` and is set **only from a page response's `totalCount`**. APIs that omit it (paging via `hasNext` alone) keep it `null`: `exportTotalKnown` stays false, the progress bar runs an indeterminate animation with no percentage, and the UI shows just the loaded count (no misleading denominator). The stream still terminates correctly on `hasNext: false`.
+>
+> **Page cap.** `exportMaxPages` bounds the number of page fetches regardless of `hasNext`, so an unexpectedly huge result set can never loop forever; the rows fetched so far are still exported as a partial file.
+
+The parent component then only wires data inputs and calls `openExportDialog()`:
 
 ```vue
 <ExportExcelDialog
   v-if="showExportExcel"
   ref="exportDialogRef"
   :data-fun="props.dataFun"
-  :show-checkbox="props.showCheckbox"
+  :export-selected="props.showCheckbox"
   :exportor-func="props.exportorFunc"
-  :meta="meta"
+  :table-name="meta?.displayName ?? '数据'"
   :columns="columns"
-  :rows="rows"
+  :current-rows="rows"
   :selected-rows="selectedRows"
-  :total="total"
-  :inner-page-size="innerPageSize"
-  :show-pagination="showPagination"
+  :export-page-size="props.exportPageSize"
+  :export-max-pages="props.exportMaxPages"
+  :has-more-page="showPagination"
 />
 <!-- toolbar button -->
-<el-button v-if="showExportExcel" @click="exportDialogRef?.trigger()">⬇ 导出 Excel</el-button>
+<el-button v-if="showExportExcel" @click="exportDialogRef?.openExportDialog()">⬇ 导出 Excel</el-button>
 ```
 
 If `exportorFunc` is not provided, the core console stub (`createConsoleExportApiFunc`) is used — it logs calls and produces no file. Inject a real implementation such as [`@ys.knife.crud/export-exceljs`](../export-exceljs) for actual file output.
