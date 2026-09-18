@@ -6,34 +6,33 @@ import {
   type ExportApiFunc,
   type ExportOption,
   type ExportScope,
-  type Meta,
   type PageFunc,
 } from "@ys.knife.crud/core";
 
 /** useExportExcel 需要从组件 props 中访问的成员 */
 interface ExportProps {
   readonly dataFun: PageFunc<unknown>;
-  readonly showCheckbox: boolean;
-  readonly exportApiFunc?: ExportApiFunc;
+  readonly exportSelected: boolean;
+  readonly exportorFunc?: ExportApiFunc;
 }
 
 /** useExportExcel 的入参：组件内已有的响应式状态与工具函数 */
 interface UseExportExcelOptions {
   props: ExportProps;
-  /** 列元数据（表名用于 sheet 标识与导出文件名） */
-  meta: Ref<Meta | null>;
+  /** 表名（用于 sheet 标识与导出文件名；undefined 时回退到「数据」/「导出数据」） */
+  tableName: Ref<string | undefined>;
   /** 当前界面显示的列（已含 meta/customConfig 两层过滤与排序，导出与其所见即所得） */
   columns: Ref<Column[]>;
   /** 当前页行数据 */
-  rows: Ref<Record<string, unknown>[]>;
+  currentRows: Ref<Record<string, unknown>[]>;
   /** checkbox 列当前选中的行（跨页累计） */
   selectedRows: Ref<unknown[]>;
   /** 数据总条数 */
   total: Ref<number>;
   /** 导出所有时分页拉取的步长（独立于界面分页大小，避免用大页尺寸拖慢导出） */
   exportPageSize: Ref<number>;
-  /** 分页组件是否显示（决定「导出所有」选项是否出现） */
-  showPagination: Ref<boolean>;
+  /** 是否还有下一页（决定「导出所有」选项是否出现） */
+  hasMorePage: Ref<boolean>;
 }
 
 /**
@@ -41,32 +40,32 @@ interface UseExportExcelOptions {
  * 取消后的「保留部分文件 / 丢弃」流程。
  *
  * 组件只经 ExportApi 接口操作（renderHeader → renderRows → download/cancel），
- * 不关心底层实现；未显式传 exportApiFunc 时缺省使用 core 的控制台假实现
+ * 不关心底层实现；未显式传 exportorFunc 时缺省使用 core 的控制台假实现
  * （createConsoleExportApiFunc，只在控制台打日志、不产出文件），
  * 真实导出由消费方注入（如 @ys.knife.crud/export-exceljs）。
  */
 export function useExportExcel({
   props,
-  meta,
+  tableName,
   columns,
-  rows,
+  currentRows,
   selectedRows,
   total,
   exportPageSize,
-  showPagination,
+  hasMorePage,
 }: UseExportExcelOptions) {
-  /** 导出选项：showCheckbox=false 不含「导出选中」；数据只有一页（分页组件不显示）不含「导出所有」 */
+  /** 导出选项：exportSelected=false 不含「导出选中」；只有一页（hasMorePage=false）不含「导出所有」 */
   const exportOptions = computed<ExportOption[]>(() => {
     const opts: ExportOption[] = [];
-    if (props.showCheckbox) {
+    if (props.exportSelected) {
       opts.push({
         value: "selected",
         label: `导出选中的数据（已选 ${selectedRows.value.length} 项）`,
         disabled: selectedRows.value.length === 0,
       });
     }
-    opts.push({ value: "page", label: `导出当前页数据（${rows.value.length} 条）`, disabled: false });
-    if (showPagination.value) {
+    opts.push({ value: "page", label: `导出当前页数据（${currentRows.value.length} 条）`, disabled: false });
+    if (hasMorePage.value) {
       opts.push({ value: "all", label: "导出所有数据", disabled: false });
     }
     return opts;
@@ -105,13 +104,13 @@ export function useExportExcel({
 
   /** 导出 sheet 标识：Table 导出为单 sheet，用表名作为 key（实现侧会做 Excel 非法字符清洗） */
   function exportSheetName(): string {
-    return meta.value?.displayName || "数据";
+    return tableName.value ?? "数据";
   }
 
   /** 创建一个全新的导出实例（一次导出对应一个 ExportApi）。
-   *  未显式传入 exportApiFunc 时用 core 的控制台假实现（只打日志、不产出文件） */
+   *  未显式传入 exportorFunc 时用 core 的控制台假实现（只打日志、不产出文件） */
   function newExportApi(): ExportApi {
-    if (props.exportApiFunc) return props.exportApiFunc();
+    if (props.exportorFunc) return props.exportorFunc();
     return createConsoleExportApiFunc()();
   }
 
@@ -127,7 +126,7 @@ export function useExportExcel({
       await exportAllStreaming();
       return;
     }
-    const data = (scope === "selected" ? selectedRows.value : rows.value) as Record<string, unknown>[];
+    const data = (scope === "selected" ? selectedRows.value : currentRows.value) as Record<string, unknown>[];
     const api = newExportApi();
     const sheet = exportSheetName();
     await api.renderHeader({ [sheet]: columns.value });
@@ -200,7 +199,7 @@ export function useExportExcel({
     const now = new Date();
     const pad = (n: number) => String(n).padStart(2, "0");
     const stamp = `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
-    return `${meta.value?.displayName || "导出数据"}_${stamp}${partial ? "_部分" : ""}.xlsx`;
+    return `${tableName.value ?? "导出数据"}_${stamp}${partial ? "_部分" : ""}.xlsx`;
   }
 
   return {

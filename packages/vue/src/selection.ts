@@ -1,4 +1,4 @@
-import { ref, type Ref } from "vue";
+import { ref } from "vue";
 
 /**
  * 行选择（checkbox 列）逻辑：维护选中行、响应表格的 selection-change、

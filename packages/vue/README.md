@@ -4,7 +4,7 @@ Reusable **Vue 3 composables** for `ys.knife.crud` — the UI-library-agnostic l
 
 These composables encapsulate the table business logic (column configuration, Excel export, row actions) without depending on any specific UI component library, so any Vue 3 project can consume them. They build on top of [`@ys.knife.crud/core`](../core) for the framework-agnostic contracts (`Meta`, `Column`, `Action`, `ExportApi`, `CustomConfig`, …).
 
-The element-plus view layer ([`@ys.knife.crud/component-elementplus`](../component-elementplus)) is one consumer: it keeps only the `.vue` components and delegates all logic to this package.
+The element-plus view layer ([`@ys.knife.crud/element-plus`](../element-plus)) is one consumer: it keeps only the `.vue` components and delegates all logic to this package.
 
 ## Features
 
@@ -91,11 +91,11 @@ The composable owns all dialog visibility, progress state, and actions. **Recomm
 import { toRef } from "vue";
 import { useExportExcel } from "@ys.knife.crud/vue";
 
-// Inside a self-managing dialog component (e.g. ExportExcelDialog.vue)
+// Inside a self-managing dialog component (e.g. exportExcelDialog.vue)
 const props = defineProps<{
   dataFun: PageFunc<unknown>;
   showCheckbox: boolean;
-  exportApiFunc?: ExportApiFunc;
+  exportorFunc?: ExportApiFunc;
   meta: Meta | null;
   columns: Column[];
   rows: Record<string, unknown>[];
@@ -120,7 +120,7 @@ const {
   keepPartialExport,      // () => Promise<void>
   discardPartialExport,   // () => Promise<void>
 } = useExportExcel({
-  props,          // reactive — dataFun/showCheckbox/exportApiFunc auto-tracked
+  props,          // reactive — dataFun/showCheckbox/exportorFunc auto-tracked
   meta: toRef(props, "meta"),
   columns: toRef(props, "columns"),
   rows: toRef(props, "rows"),
@@ -144,7 +144,7 @@ The parent component then only wires data inputs and calls `trigger()`:
   ref="exportDialogRef"
   :data-fun="props.dataFun"
   :show-checkbox="props.showCheckbox"
-  :export-api-func="props.exportApiFunc"
+  :exportor-func="props.exportorFunc"
   :meta="meta"
   :columns="columns"
   :rows="rows"
@@ -157,7 +157,7 @@ The parent component then only wires data inputs and calls `trigger()`:
 <el-button v-if="showExportExcel" @click="exportDialogRef?.trigger()">⬇ 导出 Excel</el-button>
 ```
 
-If `exportApiFunc` is not provided, the core console stub (`createConsoleExportApiFunc`) is used — it logs calls and produces no file. Inject a real implementation such as [`@ys.knife.crud/export-exceljs`](../export-exceljs) for actual file output.
+If `exportorFunc` is not provided, the core console stub (`createConsoleExportApiFunc`) is used — it logs calls and produces no file. Inject a real implementation such as [`@ys.knife.crud/export-exceljs`](../export-exceljs) for actual file output.
 
 ### `useRowActions`
 
@@ -193,7 +193,7 @@ const {
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  @ys.knife.crud/component-elementplus  (.vue)   │  ← element-plus view layer
+│  @ys.knife.crud/element-plus  (.vue)   │  ← element-plus view layer
 └───────────────────────┬─────────────────────────┘
                         │ consumes
                         ▼
@@ -207,7 +207,7 @@ const {
 └─────────────────────────────────────────────────┘
 
          @ys.knife.crud/export-exceljs
-         (ExportApi implementation, injected as exportApiFunc)
+         (ExportApi implementation, injected as exportorFunc)
 ```
 
 ## Scripts

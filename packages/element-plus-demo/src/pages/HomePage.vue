@@ -9,9 +9,9 @@ defineEmits<{
 
 <template>
   <main class="home">
-    <h1>component-elementplus-demo</h1>
+    <h1>element-plus-demo</h1>
     <p class="lead">
-      用于验证 <code>@ys.knife.crud/component-elementplus</code> 组件库的本地演示项目。
+      用于验证 <code>@ys.knife.crud/element-plus</code> 组件库的本地演示项目。
       此包标记为 <code>private</code>，不会发布到 npm。
     </p>
 

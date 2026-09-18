@@ -97,7 +97,7 @@ class ExcelJsExportApi implements ExportApi {
 }
 
 /**
- * 创建 ExcelJS 版 exportApiFunc：每次调用返回一个全新的 ExportApi 实例
+ * 创建 ExcelJS 版 exportorFunc：每次调用返回一个全新的 ExportApi 实例
  * （一次导出对应一个实例，互不串状态）。
  *
  * 将来如需其它导出形态（CSV、服务端导出等），按同样的 ExportApiFunc 签名

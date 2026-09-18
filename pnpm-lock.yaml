@@ -27,7 +27,26 @@ importers:
         specifier: ^8.18.2
         version: 8.70.0(eslint@9.39.5)(typescript@5.9.3)
 
-  packages/component-elementplus:
+  packages/core:
+    dependencies:
+      ys.knife.query.js:
+        specifier: ^0.0.24
+        version: 0.0.24
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.5
+        version: 22.20.2
+      tsup:
+        specifier: ^8.3.6
+        version: 8.5.1(postcss@8.5.28)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+      vitest:
+        specifier: ^3.0.2
+        version: 3.2.7(@types/node@22.20.2)(happy-dom@15.11.7)
+
+  packages/element-plus:
     dependencies:
       '@ys.knife.crud/core':
         specifier: workspace:*
@@ -73,14 +92,14 @@ importers:
         specifier: ^2.2.0
         version: 2.2.12(typescript@5.9.3)
 
-  packages/component-elementplus-demo:
+  packages/element-plus-demo:
     dependencies:
-      '@ys.knife.crud/component-elementplus':
-        specifier: workspace:*
-        version: link:../component-elementplus
       '@ys.knife.crud/core':
         specifier: workspace:*
         version: link:../core
+      '@ys.knife.crud/element-plus':
+        specifier: workspace:*
+        version: link:../element-plus
       '@ys.knife.crud/export-exceljs':
         specifier: workspace:*
         version: link:../export-exceljs
@@ -103,25 +122,6 @@ importers:
       vue-tsc:
         specifier: ^2.2.0
         version: 2.2.12(typescript@5.9.3)
-
-  packages/core:
-    dependencies:
-      ys.knife.query.js:
-        specifier: ^0.0.24
-        version: 0.0.24
-    devDependencies:
-      '@types/node':
-        specifier: ^22.10.5
-        version: 22.20.2
-      tsup:
-        specifier: ^8.3.6
-        version: 8.5.1(postcss@8.5.28)(typescript@5.9.3)
-      typescript:
-        specifier: ^5.9.2
-        version: 5.9.3
-      vitest:
-        specifier: ^3.0.2
-        version: 3.2.7(@types/node@22.20.2)(happy-dom@15.11.7)
 
   packages/export-exceljs:
     dependencies:

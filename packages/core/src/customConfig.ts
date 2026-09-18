@@ -51,13 +51,13 @@ export function mergeConfigs(...configs: loadCustomConfigFunc[]): loadCustomConf
 }
 
 export function saveLocalStorageConfig(key: string): saveCustomConfigFunc {
-    return (config: CustomConfig, signal?: AbortSignal) => {
+    return (config: CustomConfig) => {
         localStorage.setItem(key, JSON.stringify(config));
         return Promise.resolve()
     }
 }
 export function loadLocalStorageConfig(key: string): loadCustomConfigFunc {
-    return (signal?: AbortSignal) => {
+    return () => {
         const text = localStorage.getItem(key);
         if (text) {
             return Promise.resolve(JSON.parse(text) as CustomConfig);

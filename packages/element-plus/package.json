@@ -1,5 +1,5 @@
 {
-  "name": "@ys.knife.crud/component-elementplus",
+  "name": "@ys.knife.crud/element-plus",
   "version": "0.1.0",
   "description": "Vue 3 + element-plus UI components for ys.knife.crud",
   "type": "module",
@@ -27,7 +27,7 @@
   "repository": {
     "type": "git",
     "url": "git+ssh://git@github.com/yscorecore/ys.knife.crud.git",
-    "directory": "packages/component-elementplus"
+    "directory": "packages/element-plus"
   },
   "scripts": {
     "build": "vite build",

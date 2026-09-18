@@ -76,7 +76,7 @@ defineExpose({
   // 函数
   updateDefaultPageSize,
   loadCustomConfigs,
-  openConfigDialog,
+  openDialog: openConfigDialog,
 });
 </script>
 

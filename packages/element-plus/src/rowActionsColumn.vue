@@ -6,7 +6,7 @@ import { useRowActions, visibleActions, isEnabled } from "@ys.knife.crud/vue";
 /**
  * 行操作列：内部加载并维护行操作列表，渲染 el-table-column 与操作按钮组。
  *
- * Table.vue 只需传入 rowActionsFunc，行操作的加载、可见/禁用判断全部在此完成。
+ * table.vue 只需传入 rowActionsFunc，行操作的加载、可见/禁用判断全部在此完成。
  * 经 defineExpose 暴露 actionsLoading / loadActions 供父组件使用
  * （reload 调 loadActions、v-loading 合并 actionsLoading）。
  *

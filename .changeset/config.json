@@ -8,6 +8,6 @@
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
   "ignore": [
-    "@ys.knife.crud/component-elementplus-demo"
+    "@ys.knife.crud/element-plus-demo"
   ]
 }

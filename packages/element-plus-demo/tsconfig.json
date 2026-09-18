@@ -6,7 +6,7 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": ["vite/client"],
     "paths": {
-      "@ys.knife.crud/component-elementplus": ["../component-elementplus/src/index"]
+      "@ys.knife.crud/element-plus": ["../element-plus/src/index"]
     }
   },
   "include": ["src", "vite.config.ts", "index.html"]

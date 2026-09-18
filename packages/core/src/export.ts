@@ -2,9 +2,9 @@ import type { Column } from "./meta";
 
 /**
  * ExportApi 是「导出实现」的抽象契约：Table 等组件只经此接口写文件，
- * 具体格式（ExcelJS / CSV / 服务端导出等）由 exportApiFunc 注入的实现决定。
+ * 具体格式（ExcelJS / CSV / 服务端导出等）由 exportorFunc 注入的实现决定。
  *
- * 生命周期（一次导出对应 exportApiFunc() 返回的一个全新实例）：
+ * 生命周期（一次导出对应 exportorFunc() 返回的一个全新实例）：
  *   renderHeader（一次性声明全部 sheet 及各自表头）
  *   → renderRows × N（向指定 sheet 追加数据行；调用方按页喂数据即边读边写）
  *   → download（成文件并触发下载）或 cancel（丢弃已写入内容，不产出文件）
@@ -34,7 +34,7 @@ export type ExportApiFunc = () => ExportApi
 /**
  * 控制台版 ExportApi（假导出）：不产出任何文件，
  * 把 renderHeader / renderRows / download / cancel 的调用打到 console。
- * 用作组件的缺省导出实现——未注入 exportApiFunc 时导出流程可完整走通，
+ * 用作组件的缺省导出实现——未注入 exportorFunc 时导出流程可完整走通，
  * 方便联调与演示；生产环境请注入真实实现（如 @ys.knife.crud/export-exceljs）。
  */
 class ConsoleExportApi implements ExportApi {
@@ -83,7 +83,7 @@ class ConsoleExportApi implements ExportApi {
 }
 
 /**
- * 创建控制台版 exportApiFunc：每次调用返回一个全新的 ConsoleExportApi 实例。
+ * 创建控制台版 exportorFunc：每次调用返回一个全新的 ConsoleExportApi 实例。
  * @param name 日志前缀，默认 "ConsoleExportApi"
  */
 export function createConsoleExportApiFunc(name = "ConsoleExportApi"): ExportApiFunc {

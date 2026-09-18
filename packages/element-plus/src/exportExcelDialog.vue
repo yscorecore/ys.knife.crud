@@ -3,8 +3,7 @@ import { toRef } from "vue";
 import { useExportExcel } from "@ys.knife.crud/vue";
 import type {
   Column,
-  ExportApiFunc,
-  Meta,
+  ExportApiFunc as ExportorFunc,
   PageFunc,
 } from "@ys.knife.crud/core";
 
@@ -15,29 +14,29 @@ import type {
  * 3. 「导出所有」被取消后的询问（已写入的行可保留为部分文件，或整体丢弃）
  *
  * 组件自管导出流：内部调用 useExportExcel 拥有全部对话框可见性、进度状态与动作，
- * Table.vue 只需传入数据输入并经 ref 调 trigger() 触发导出入口。
+ * table.vue 只需传入数据输入并经 ref 调 openExportDialog() 触发导出入口。
  */
 const props = defineProps<{
   /** 分页数据源（导出所有时逐页拉取） */
   dataFun: PageFunc<unknown>;
-  /** 是否有勾选列（决定「导出选中」选项是否出现） */
-  showCheckbox: boolean;
+  /** 父级是否启用勾选列——决定「导出选中」选项是否出现 */
+  exportSelected: boolean;
   /** 导出实现工厂；缺省使用 core 的控制台假实现 */
-  exportApiFunc?: ExportApiFunc;
-  /** 列元数据（表名用于 sheet 标识与导出文件名） */
-  meta: Meta | null;
+  exportorFunc?: ExportorFunc;
+  /** 表名（用于 sheet 标识与导出文件名；缺省时回退到「数据」/「导出数据」） */
+  tableName?: string;
   /** 当前界面显示的列（导出与其所见即所得） */
   columns: Column[];
   /** 当前页行数据 */
-  rows: Record<string, unknown>[];
+  currentRows: Record<string, unknown>[];
   /** checkbox 列当前选中的行（跨页累计） */
   selectedRows: unknown[];
   /** 数据总条数 */
   total: number;
   /** 导出所有时分页拉取的步长（独立于界面分页大小） */
   exportPageSize: number;
-  /** 分页组件是否显示（决定「导出所有」选项是否出现） */
-  showPagination: boolean;
+  /** 是否还有下一页（决定「导出所有」选项是否出现） */
+  hasMorePage: boolean;
 }>();
 
 const {
@@ -55,17 +54,17 @@ const {
   keepPartialExport,
   discardPartialExport,
 } = useExportExcel({
-  props, // reactive — dataFun/showCheckbox/exportApiFunc 自动追踪
-  meta: toRef(props, "meta"),
+  props, // reactive — dataFun/exportSelected/exportorFunc 自动追踪
+  tableName: toRef(props, "tableName"),
   columns: toRef(props, "columns"),
-  rows: toRef(props, "rows"),
+  currentRows: toRef(props, "currentRows"),
   selectedRows: toRef(props, "selectedRows"),
   total: toRef(props, "total"),
   exportPageSize: toRef(props, "exportPageSize"),
-  showPagination: toRef(props, "showPagination"),
+  hasMorePage: toRef(props, "hasMorePage"),
 });
 
-defineExpose({ trigger: onExportClick });
+defineExpose({ openExportDialog: onExportClick });
 </script>
 
 <template>

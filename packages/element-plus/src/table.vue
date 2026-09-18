@@ -6,10 +6,14 @@ import type {
   TableProps as CoreTableProps,
 } from "@ys.knife.crud/core";
 import { useDefault, useSelection } from "@ys.knife.crud/vue";
-import ExportExcelDialog from "./ExportExcelDialog.vue";
-import ColumnConfigDialog from "./ColumnConfigDialog.vue";
-import RowActionsColumn from "./RowActionsColumn.vue";
-import SelectionBar from "./SelectionBar.vue";
+import ExportExcelDialog from "./exportExcelDialog.vue";
+import ColumnConfigDialog from "./columnConfigDialog.vue";
+import RowActionsColumn from "./rowActionsColumn.vue";
+import SelectionBar from "./selectionBar.vue";
+
+// 组件名统一带 ys 前缀：模板中以 <ys-table>（或 <YsTable>）使用，
+// 同时保证全局注册（app.component）、递归组件与 devtools 中名称稳定。
+defineOptions({ name: "YsTable" });
 
 /**
  * Table 组件的 props = core 的 TableProps（metaFun + dataFun），
@@ -48,7 +52,7 @@ const props = defineProps({
   /** 导出实现工厂：每次导出调用它得到一个全新的 ExportApi 实例，组件只经该接口写文件。
    *  缺省使用内置 ExcelJS 实现（createExcelJsExportApiFunc）；
    *  将来可替换为其它实现（CSV、服务端导出等），组件无需改动 */
-  exportApiFunc: { type: Function as PropType<NonNullable<CoreTableProps["exportApiFunc"]>>, required: false },
+  exportorFunc: { type: Function as PropType<NonNullable<CoreTableProps["exportorFunc"]>>, required: false },
   /** 行 key，默认 "id" */
   rowKey: { type: String, default: "id" },
 });
@@ -76,10 +80,6 @@ const tableEl = ref<{ clearSelection?: () => void } | null>(null);
 
 const { selectedRows, onSelectionChange } = useSelection();
 
-/** 清空全部选中（含其他页）；表格会触发 selection-change 同步 selectedRows */
-function clearSelection(): void {
-  tableEl.value?.clearSelection?.();
-}
 
 /* ---------------- 子组件引用（行操作 / 列设置 / 导出） ---------------- */
 
@@ -118,8 +118,8 @@ const innerPageSize = computed(() => configDialogRef.value?.defaultPageSize ?? p
 
 const customConfigLoading = computed(() => configDialogRef.value?.customConfigLoading ?? false);
 
-/** 导出对话框实例引用（按钮经 ref 调 trigger() 触发导出入口） */
-const exportDialogRef = ref<{ trigger: () => void } | null>(null);
+/** 导出对话框实例引用（按钮经 ref 调 openExportDialog() 触发导出入口） */
+const exportDialogRef = ref<{ openExportDialog: () => void } | null>(null);
 
 /* ---------------- 数据加载与分页（依赖 innerPageSize，故留本组件） ---------------- */
 
@@ -201,17 +201,22 @@ watch(() => props.dataFun, () => {
  */
 type ExposedShape = {
   readonly [K in keyof TableApi]: TableApi[K] extends (...args: infer A) => infer R
-    ? (...args: A) => R
-    : Ref<TableApi[K]>;
+  ? (...args: A) => R
+  : Ref<TableApi[K]>;
 };
+
+/** 清空全部选中（含其他页的选中）——委托 el-table 的 clearSelection */
+function clearSelection(): void {
+  tableEl.value?.clearSelection?.();
+}
 
 const exposed = {
   meta,
   paged,
   currentPage,
   selectedRows,
-  clearSelection,
   reload,
+  clearSelection,
 } satisfies ExposedShape;
 
 defineExpose(exposed);
@@ -221,110 +226,52 @@ defineExpose(exposed);
   <div class="yk-table">
     <!-- 顶部工具栏：左侧为跨页选中提示（有选中时显示），右侧为导出 / 列设置入口。
          同一行节省纵向空间，任一条件满足即渲染 -->
-    <div
-      v-if="(showCheckbox && selectedRows.length > 0) || showCustomConfig || showExportExcel"
-      class="yk-table__toolbar"
-    >
-      <!-- 跨页选中提示：reserve-selection 下选中可能来自其他页，给用户一个总览与清空入口 -->
-      <SelectionBar
-        v-if="showCheckbox"
-        :count="selectedRows.length"
-        @clear="clearSelection"
-      />
-      <!-- 无选中提示时的占位，保证右侧按钮组始终靠右 -->
-      <span v-else />
+    <div v-if="(showCheckbox && selectedRows.length > 0) || showCustomConfig || showExportExcel"
+      class="yk-table__toolbar">
+      <!-- 跨页选中提示：reserve-selection 下选中可能来自其他页，给用户一个总览与清空入口。
+           无选中时 SelectionBar 不渲染任何元素，右侧按钮组靠 margin-left:auto 自行贴右，
+           不依赖占位元素 -->
+      <SelectionBar v-if="showCheckbox" :count="selectedRows.length" @clear="clearSelection" />
       <div class="yk-table__toolbar-actions">
-        <el-button
-          v-if="showExportExcel"
-          link
-          type="primary"
-          class="yk-table__export-btn"
-          @click="exportDialogRef?.trigger()"
-        >
+        <el-button v-if="showExportExcel" link type="primary" class="yk-table__export-btn"
+          @click="exportDialogRef?.openExportDialog()">
           ⬇ 导出 Excel
         </el-button>
-        <el-button
-          v-if="showCustomConfig"
-          link
-          type="primary"
-          class="yk-table__config-btn"
-          @click="configDialogRef?.openDialog()"
-        >
+        <el-button v-if="showCustomConfig" link type="primary" class="yk-table__config-btn"
+          @click="configDialogRef?.openDialog()">
           ⚙ 列设置
         </el-button>
       </div>
     </div>
 
-    <el-table
-      ref="tableEl"
-      v-loading="metaLoading || dataLoading || actionsLoading || customConfigLoading"
-      :data="rows"
-      :row-key="rowKey"
-      border
-      @selection-change="onSelectionChange"
-    >
+    <el-table ref="tableEl" v-loading="metaLoading || dataLoading || actionsLoading || customConfigLoading" :data="rows"
+      :row-key="rowKey" border @selection-change="onSelectionChange">
       <!-- 勾选列：reserve-selection 使翻页后选中按 rowKey 跨页保留；表头 checkbox 全选/取消全选当前页 -->
-      <el-table-column
-        v-if="showCheckbox"
-        type="selection"
-        width="48"
-        reserve-selection
-      />
-      <el-table-column
-        v-for="col in columns"
-        :key="col.propertyPath"
-        :prop="col.propertyPath"
-        :label="col.displayName"
-        :width="col.width"
-        show-overflow-tooltip
-      />
+      <el-table-column v-if="showCheckbox" type="selection" width="48" reserve-selection />
+      <el-table-column v-for="col in columns" :key="col.propertyPath" :prop="col.propertyPath" :label="col.displayName"
+        :width="col.width" show-overflow-tooltip />
       <!-- 行操作列：内部自管 actions 加载与渲染 -->
-      <RowActionsColumn
-        v-if="props.rowActionsFunc"
-        ref="rowActionsRef"
-        :row-actions-func="props.rowActionsFunc"
-      />
+      <RowActionsColumn v-if="props.rowActionsFunc" ref="rowActionsRef" :row-actions-func="props.rowActionsFunc" />
     </el-table>
 
     <!-- 数据超过一页时自动显示的分页组件；sizes 支持用户切换每页条数 -->
-    <el-pagination
-      v-if="showPagination"
-      class="yk-table__pagination"
-      layout="total, sizes, prev, pager, next"
-      :total="total"
-      :page-sizes="pageSizes"
-      :page-size="innerPageSize"
-      :current-page="currentPage"
-      @current-change="onPageChange"
-      @size-change="onSizeChange"
-    />
+    <el-pagination v-if="showPagination" class="yk-table__pagination" layout="total, sizes, prev, pager, next"
+      :total="total" :page-sizes="pageSizes" :page-size="innerPageSize" :current-page="currentPage"
+      @current-change="onPageChange" @size-change="onSizeChange" />
 
-    <!-- 导出 Excel 对话框组（范围选择 / 进度 / 取消询问）—— 内部自管 useExportExcel -->
-    <ExportExcelDialog
-      v-if="showExportExcel"
-      ref="exportDialogRef"
-      :data-fun="props.dataFun"
-      :show-checkbox="props.showCheckbox"
-      :export-api-func="props.exportApiFunc"
-      :meta="meta"
-      :columns="columns"
-      :rows="rows"
-      :selected-rows="selectedRows"
-      :total="total"
-      :export-page-size="props.exportPageSize"
-      :show-pagination="showPagination"
-    />
+    <!-- 导出 Excel 对话框组（范围选择 / 进度 / 取消询问）—— 内部自管 useExportExcel。
+         props 按相关性分组：数据管道 → 列定义 → 当前页快照 → 选择 -->
+    <ExportExcelDialog v-if="showExportExcel" ref="exportDialogRef" :current-rows="rows" :selected-rows="selectedRows"
+      :data-fun="props.dataFun" :export-page-size="props.exportPageSize" :exportor-func="props.exportorFunc"
+      :table-name="meta?.displayName ?? '数据'" :columns="columns" :total="total" :has-more-page="showPagination"
+      :export-selected="props.showCheckbox" />
 
     <!-- 列设置对话框（内部自管 useCustomConfig；始终挂载，columns 也来自它——
          customConfig 的 width 直接写在 col.width 上，表格读 col.width 即可；
          不再接收 showCustomConfig/innerPageSize：前者由 Table 自身控制「⚙ 列设置」按钮显隐，
          后者改为经 defineExpose 暴露 defaultPageSize/updateDefaultPageSize 由 Table 主动读写） -->
-    <ColumnConfigDialog
-      ref="configDialogRef"
-      :load-custom-config-fun="loadCustomConfigFun"
-      :save-custom-config-fun="saveCustomConfigFun"
-      :meta="meta"
-    />
+    <ColumnConfigDialog ref="configDialogRef" :load-custom-config-fun="loadCustomConfigFun"
+      :save-custom-config-fun="saveCustomConfigFun" :meta="meta" />
   </div>
 </template>
 
@@ -335,11 +282,15 @@ defineExpose(exposed);
   justify-content: space-between;
   margin-bottom: 8px;
 }
+
 .yk-table__toolbar-actions {
   display: flex;
   align-items: center;
   gap: 12px;
+  /* 无论左侧选中提示是否存在，按钮组始终吸附工具栏右侧 */
+  margin-left: auto;
 }
+
 .yk-table__pagination {
   margin-top: 12px;
   justify-content: flex-end;
