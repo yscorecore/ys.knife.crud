@@ -36,3 +36,7 @@ _*.js
 _symlink_test/
 _tarballs/
 *.log
+*.png
+*.ts.timestamp*
+*/dist.bak/*
+/dist.bak/

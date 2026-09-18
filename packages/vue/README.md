@@ -2,7 +2,7 @@
 
 Reusable **Vue 3 composables** for `ys.knife.crud` — the UI-library-agnostic logic layer that drives a CRUD table.
 
-These composables encapsulate the table business logic (column configuration, Excel export, row actions, row selection) without depending on any specific UI component library, so any Vue 3 project can consume them. They build on top of [`@ys.knife.crud/core`](../core) for the framework-agnostic contracts (`Meta`, `Column`, `Action`, `ExportApi`, `CustomConfig`, …).
+These composables encapsulate the table business logic (column configuration, Excel export, row actions) without depending on any specific UI component library, so any Vue 3 project can consume them. They build on top of [`@ys.knife.crud/core`](../core) for the framework-agnostic contracts (`Meta`, `Column`, `Action`, `ExportApi`, `CustomConfig`, …).
 
 The element-plus view layer ([`@ys.knife.crud/component-elementplus`](../component-elementplus)) is one consumer: it keeps only the `.vue` components and delegates all logic to this package.
 
@@ -10,10 +10,11 @@ The element-plus view layer ([`@ys.knife.crud/component-elementplus`](../compone
 
 | Composable | Responsibility |
 | --- | --- |
+| `useDefault` | Table default state (`meta`, `paged`, `rows`, `metaLoading`, `dataLoading`, `currentPage`), derived `total`, and `loadMeta`. Leaves page-size-dependent logic (`loadData`, `showPagination`) to the view layer. |
 | `useCustomConfig` | Column visibility / order / width + user default page size, plus the column-settings panel draft state. |
 | `useExportExcel` | Export scope selection (selected / current page / all), streaming pagination fetch with progress & cancel, and "keep partial file / discard" flow. |
 | `useRowActions` | Load row actions (`rowActionsFunc`), plus `visibleActions` / `isEnabled` pure helpers. |
-| `useSelectedRows` | Track checkbox selection (cross-page accumulation) and clear all selections. |
+| `useSelection` | Track checkbox selection (cross-page accumulation) and clear all selections. |
 
 ## Installation
 
@@ -45,7 +46,7 @@ import {
   useCustomConfig,
   useExportExcel,
   useRowActions,
-  useSelectedRows,
+  useSelection,
   visibleActions,
   isEnabled,
 } from "@ys.knife.crud/vue";
@@ -63,20 +64,21 @@ const props = defineProps<{
 }>();
 
 const meta = ref<Meta | null>(null);
-const innerPageSize = ref(20);
 
 const {
-  columns,            // ComputedRef<Column[]> — final visible columns in display order
-  columnWidth,        // (propertyPath) => string | undefined
-  loadCustomConfigs,  // (signal?) => Promise<void>
-  savePageSize,       // (size: number) => void
-  configDialogVisible,// Ref<boolean>
-  draftColumns,       // Ref<DraftColumn[]>
-  openConfigDialog,   // () => void
-  moveDraft,          // (index: number, delta: number) => void
-  resetDraft,         // () => void
-  saveConfigDialog,   // () => Promise<void>
-} = useCustomConfig(props, meta, innerPageSize);
+  columns,              // ComputedRef<Column[]> — final visible columns in display order,
+                        // each Column carries `width` (px string, e.g. "120") from CustomConfig
+  loadCustomConfigs,    // (signal?) => Promise<void>
+  customConfigLoading,  // Ref<boolean> — true while loadCustomConfigs is in flight
+  defaultPageSize,      // Ref<number | undefined> — user's saved default page size
+  updateDefaultPageSize, // (size: number) => void — update state + persist as default
+  configDialogVisible,  // Ref<boolean>
+  draftColumns,         // Ref<DraftColumn[]>
+  openConfigDialog,     // () => void
+  moveDraft,            // (index: number, delta: number) => void
+  resetDraft,           // () => void
+  saveConfigDialog,     // () => Promise<void>
+} = useCustomConfig(props, meta);
 ```
 
 ### `useExportExcel`
@@ -173,7 +175,7 @@ const visible = visibleActions(actions.value, row);
 const disabled = !isEnabled(action, row);
 ```
 
-### `useSelectedRows`
+### `useSelection`
 
 Tracks rows selected via checkbox. Designed for tables with `reserve-selection` so selection persists across pages.
 
@@ -184,7 +186,7 @@ const {
   selectedRows,      // Ref<unknown[]> — cross-page accumulated selection
   onSelectionChange, // (selection: unknown[]) => void
   clearSelection,    // () => void — clears all pages
-} = useSelectedRows(tableEl);
+} = useSelection(tableEl);
 ```
 
 ## Relationship to other packages

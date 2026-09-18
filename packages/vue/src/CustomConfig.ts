@@ -7,29 +7,46 @@ import type {
   CustomConfigProps,
 } from "@ys.knife.crud/core";
 
-/** useCustomConfig 需要从组件 props 中访问的成员 */
-
-
 /**
  * 列自定义配置逻辑：管理列的显隐、顺序、宽度以及用户默认分页大小，
  * 并提供列设置面板的状态与操作。
  *
  * @param props  组件 props（只需 showCustomConfig / loadCustomConfigFun / saveCustomConfigFun）
  * @param meta   列元数据 ref（用于获取 showForDisplay=true 的候选列）
- * @param innerPageSize  当前生效的每页条数（用户切换分页大小时同步持久化）
  */
 export function useCustomConfig(
   props: CustomConfigProps,
   meta: Ref<Meta | null>,
-  innerPageSize: Ref<number>,
 ) {
+  /* ---------------- 状态 ---------------- */
+
   /** 用户自定义配置（列的 visible/order/width，以及用户默认分页大小） */
   const customConfigs = ref<CustomConfig>({ columns: {} });
+
+  /** 自定义配置加载态：loadCustomConfigs 进行中为 true（含 watch 触发的内部调用） */
+  const customConfigLoading = ref(false);
+
+  /**
+   * 内部维护用户默认分页大小：saveConfigDialog 时读取此值一并保存；
+   * loadCustomConfigs 加载到已保存的 pageSize 时会写回此 ref。
+   * 初始为 undefined——只在加载到保存值或父组件调用 updateDefaultPageSize
+   * 时才被设置，便于父组件区分「未保存过分页大小」与「保存过某数字」。
+   */
+  const defaultPageSize = ref<number | undefined>(undefined);
+
+  /** 列设置面板显隐 */
+  const configDialogVisible = ref(false);
+
+  /** 列设置面板的草稿列（与最终 customConfigs 解耦，保存后才同步过去） */
+  const draftColumns = ref<DraftColumn[]>([]);
+
+  /* ---------------- 派生（最终显示列） ---------------- */
 
   /**
    * 最终显示的列，两层规则：
    * 1. 先看 meta：showForDisplay=true 的列才进入候选（也是列设置面板里可编辑的列）
-   * 2. showCustomConfig 开启时再应用 CustomConfig：visible=false 隐藏、order 调整顺序
+   * 2. showCustomConfig 开启时再应用 CustomConfig：visible=false 隐藏、order 调整顺序、
+   *    width 写到返回列对象上（表格组件直接读 col.width 设置列宽，不再单独查表）
    */
   const columns = computed(() => {
     const displayable = (meta.value?.columns ?? []).filter((c) => c.showForDisplay);
@@ -40,38 +57,46 @@ export function useCustomConfig(
     const merged = sorted.map((col, idx) => ({ col, cfg: cfg[col.propertyPath], idx }));
     const visibleCols = merged.filter((x) => x.cfg?.visible ?? true);
     visibleCols.sort((a, b) => (a.cfg?.order ?? a.idx) - (b.cfg?.order ?? b.idx));
-    return visibleCols.map((x) => x.col);
+    return visibleCols.map(({ col, cfg: c }) => ({
+      ...col,
+      // 空字符串视为未设置（与原 columnWidth() 行为一致：返回 undefined）
+      width: c?.width || undefined,
+    }));
   });
 
-  /** 列宽：仅 showCustomConfig 开启且配置了宽度时生效 */
-  function columnWidth(propertyPath: string): string | undefined {
-    if (!props.showCustomConfig) return undefined;
-    return customConfigs.value.columns[propertyPath]?.width || undefined;
-  }
+  /* ---------------- 配置加载与持久化 ---------------- */
 
-  /** 加载用户自定义配置（含列设置与默认分页大小；返回 null 按空配置处理） */
+  /** 加载用户自定义配置（含列设置与默认分页大小；返回 null 按空配置处理）。
+   *  进行中将 customConfigLoading 置 true（含 watch 触发的内部调用） */
   async function loadCustomConfigs(signal?: AbortSignal): Promise<void> {
-    if (!props.loadCustomConfigFun) {
-      customConfigs.value = { columns: {} };
-      return;
-    }
-    const loaded = (await props.loadCustomConfigFun(signal)) ?? { columns: {} };
-    customConfigs.value = loaded;
-    // 应用用户上次选择的每页条数
-    if (loaded.pageSize !== undefined) {
-      innerPageSize.value = loaded.pageSize;
+    customConfigLoading.value = true;
+    try {
+      if (!props.loadCustomConfigFun) {
+        customConfigs.value = { columns: {} };
+        return;
+      }
+      const loaded = (await props.loadCustomConfigFun(signal)) ?? { columns: {} };
+      customConfigs.value = loaded;
+      // 应用用户上次选择的每页条数
+      if (loaded.pageSize !== undefined) {
+        defaultPageSize.value = loaded.pageSize;
+      }
+    } finally {
+      customConfigLoading.value = false;
     }
   }
 
-  /** 持久化用户默认分页大小（保留已有列设置） */
-  function savePageSize(size: number): void {
+  /**
+   * 用户切换每页条数时调用：更新内部状态并持久化为默认分页大小
+   * （保留已有列设置）。父组件（Table）经 defineExpose 透传此方法。 */
+  function updateDefaultPageSize(size: number): void {
+    defaultPageSize.value = size;
     const configs: CustomConfig = { pageSize: size, columns: customConfigs.value.columns };
     props.saveCustomConfigFun?.(configs);
     customConfigs.value = configs;
   }
 
-  const configDialogVisible = ref(false);
-  const draftColumns = ref<DraftColumn[]>([]);
+  /* ---------------- 列设置面板操作 ---------------- */
 
   /**
    * 生成草稿：候选列 = meta 中 showForDisplay=true 的列
@@ -135,23 +160,30 @@ export function useCustomConfig(
         width: d.width,
       };
     });
-    const configs: CustomConfig = { pageSize: innerPageSize.value, columns };
+    const configs: CustomConfig = { pageSize: defaultPageSize.value, columns };
     await props.saveCustomConfigFun?.(configs);
     customConfigs.value = configs;
     configDialogVisible.value = false;
   }
 
+  /* ---------------- 副作用 ---------------- */
+
   // 外部 loadCustomConfigFun 变化时重新加载
   watch(() => props.loadCustomConfigFun, () => loadCustomConfigs());
 
+  /* ---------------- 暴露 ----------------
+   * 字段（状态 + 派生）集中在前，函数集中在后，便于消费方按类别解构。 */
   return {
+    // 字段
     customConfigs,
-    columns,
-    columnWidth,
-    loadCustomConfigs,
-    savePageSize,
+    customConfigLoading,
+    defaultPageSize,
     configDialogVisible,
     draftColumns,
+    columns,
+    // 函数
+    loadCustomConfigs,
+    updateDefaultPageSize,
     openConfigDialog,
     moveDraft,
     resetDraft,

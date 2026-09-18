@@ -4,8 +4,6 @@
  *
  * 作为 Table 顶部工具栏的左侧内容使用：reserve-selection 下选中可能来自其他页，
  * 给用户一个总览与清空入口。无选中时不渲染。
- *
- * 配合 useSelectedRows 的 selectedRows / clearSelection。
  */
 defineProps<{
   /** 当前选中的行数 */

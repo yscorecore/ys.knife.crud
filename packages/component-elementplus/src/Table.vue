@@ -1,16 +1,14 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, type PropType, type Ref } from "vue";
 import type {
-  Meta,
-  PagedList,
+  Column,
   TableApi,
   TableProps as CoreTableProps,
 } from "@ys.knife.crud/core";
-import { useCustomConfig } from "@ys.knife.crud/vue";
+import { useDefault, useSelection } from "@ys.knife.crud/vue";
 import ExportExcelDialog from "./ExportExcelDialog.vue";
 import ColumnConfigDialog from "./ColumnConfigDialog.vue";
 import RowActionsColumn from "./RowActionsColumn.vue";
-import SelectionColumn from "./SelectionColumn.vue";
 import SelectionBar from "./SelectionBar.vue";
 
 /**
@@ -51,52 +49,39 @@ const props = defineProps({
    *  缺省使用内置 ExcelJS 实现（createExcelJsExportApiFunc）；
    *  将来可替换为其它实现（CSV、服务端导出等），组件无需改动 */
   exportApiFunc: { type: Function as PropType<NonNullable<CoreTableProps["exportApiFunc"]>>, required: false },
-  /** 外部加载态，会和组件内部加载态合并 */
-  loading: { type: Boolean, default: false },
   /** 行 key，默认 "id" */
   rowKey: { type: String, default: "id" },
 });
 
-const meta = ref<Meta | null>(null);
-const paged = ref<PagedList<unknown> | null>(null);
-const metaLoading = ref(false);
-const dataLoading = ref(false);
-/** 当前页码（1 基），翻页时驱动 dataFun 的 offset */
-const currentPage = ref(1);
-/** 当前生效的每页条数：初始取 pageSize prop，用户可在分页组件里切换 */
-const innerPageSize = ref(props.pageSize);
+/* ---------------- 默认状态（useDefault） ----------------
+ * useDefault 内聚与 innerPageSize 无关的部分：meta/paged/rows/两类 loading/
+ * currentPage/total/loadMeta + metaFun 变化监听。依赖 innerPageSize 的
+ * loadData/showPagination + pageSize/dataFun 变化监听留在本组件——innerPageSize
+ * 是视图层解析（列设置对话框 defaultPageSize ?? props.pageSize），不耦合到 agnostic composable。 */
+const {
+  meta,
+  paged,
+  rows,
+  metaLoading,
+  dataLoading,
+  currentPage,
+  total,
+  loadMeta,
+} = useDefault(props);
 
-/* ---------------- 行选择（由 SelectionColumn 自管） ---------------- */
+/* ---------------- 行选择（checkbox 列） ---------------- */
 
-/** 勾选列实例引用（经 defineExpose 暴露 selectedRows/clearSelection） */
-const selectionRef = ref<{
-  selectedRows: unknown[];
-  clearSelection: () => void;
-} | null>(null);
+/** el-table 实例引用（clearSelection 等公开方法） */
+const tableEl = ref<{ clearSelection?: () => void } | null>(null);
 
-const selectedRows = computed(() => selectionRef.value?.selectedRows ?? []);
+const { selectedRows, onSelectionChange } = useSelection();
 
-/** 清空全部选中（含其他页），供工具栏 SelectionBar 与 TableApi 调用 */
+/** 清空全部选中（含其他页）；表格会触发 selection-change 同步 selectedRows */
 function clearSelection(): void {
-  selectionRef.value?.clearSelection();
+  tableEl.value?.clearSelection?.();
 }
 
-/* ---------------- 列自定义配置（显隐/顺序/宽度 + 用户默认分页大小） ---------------- */
-
-const {
-  columns,
-  columnWidth,
-  loadCustomConfigs,
-  savePageSize,
-  configDialogVisible,
-  draftColumns,
-  openConfigDialog,
-  moveDraft,
-  resetDraft,
-  saveConfigDialog,
-} = useCustomConfig(props, meta, innerPageSize);
-
-/* ---------------- 行操作（由 RowActionsColumn 自管） ---------------- */
+/* ---------------- 子组件引用（行操作 / 列设置 / 导出） ---------------- */
 
 /** 行操作列实例引用（经 defineExpose 暴露 actionsLoading/loadActions） */
 const rowActionsRef = ref<{
@@ -106,36 +91,39 @@ const rowActionsRef = ref<{
 
 const actionsLoading = computed(() => rowActionsRef.value?.actionsLoading ?? false);
 
-/* ---------------- 数据（派生状态与加载） ---------------- */
+/** 列设置对话框实例引用（经 defineExpose 暴露 columns/defaultPageSize/updateDefaultPageSize/loadCustomConfigs/customConfigLoading/openDialog） */
+const configDialogRef = ref<{
+  columns: Column[];
+  /** 当前用户默认分页大小（加载到保存值时回写；undefined 表示未保存过分页大小） */
+  defaultPageSize: number | undefined;
+  /** 用户切换每页条数时调用：更新内部状态并持久化为默认值 */
+  updateDefaultPageSize: (size: number) => void;
+  loadCustomConfigs: (signal?: AbortSignal) => Promise<void>;
+  /** 自定义配置加载态（loadCustomConfigs 进行中为 true） */
+  customConfigLoading: boolean;
+  /** 打开列设置面板（工具栏「⚙ 列设置」按钮） */
+  openDialog: () => void;
+} | null>(null);
 
-/** 当前页行数据，来自 dataFun 返回的 PagedList.items */
-const rows = computed(() => (paged.value?.items ?? []) as Record<string, unknown>[]);
+/** 最终显示列（已含 meta/customConfig 两层过滤与排序，customConfig 的 width 也写在 col.width 上），对话框挂载前为空 */
+const columns = computed(() => configDialogRef.value?.columns ?? []);
 
-/** 总条数：优先 totalCount，缺失时按当前页 items 估算（hasNext 表示至少还有一页） */
-const total = computed(() => {
-  const p = paged.value;
-  if (!p) return 0;
-  if (p.totalCount != null) return p.totalCount;
-  return p.offset + p.items.length + (p.hasNext ? 1 : 0);
-});
+/**
+ * 当前生效的每页条数：优先取 ColumnConfigDialog 暴露的 defaultPageSize
+ * （用户保存的默认值——由 loadCustomConfigs 加载、updateDefaultPageSize 写入），
+ * 若未保存过分页大小（defaultPageSize 为 undefined）则回落到 props.pageSize。
+ * 与 columns 同源——皆由 ColumnConfigDialog 经 defineExpose 提供，不再单独维护 ref。
+ */
+const innerPageSize = computed(() => configDialogRef.value?.defaultPageSize ?? props.pageSize);
 
-/** 数据超过一页（或已知还有下一页）时自动显示分页组件。
- *  阈值取「当前每页条数」与「可选条数最小值」的较小者：
- *  用户把每页调大（如 100）后即使一页装得下，分页组件也不消失，还能再调回来 */
-const showPagination = computed(() => {
-  const threshold = Math.min(innerPageSize.value, ...props.pageSizes);
-  return total.value > threshold || (paged.value?.hasNext ?? false);
-});
+const customConfigLoading = computed(() => configDialogRef.value?.customConfigLoading ?? false);
 
-async function loadMeta(signal?: AbortSignal): Promise<void> {
-  metaLoading.value = true;
-  try {
-    meta.value = await props.metaFun(signal);
-  } finally {
-    metaLoading.value = false;
-  }
-}
+/** 导出对话框实例引用（按钮经 ref 调 trigger() 触发导出入口） */
+const exportDialogRef = ref<{ trigger: () => void } | null>(null);
 
+/* ---------------- 数据加载与分页（依赖 innerPageSize，故留本组件） ---------------- */
+
+/** 加载当前页数据（dataFun）；offset 由 (currentPage-1)*innerPageSize 计算 */
 async function loadData(signal?: AbortSignal): Promise<void> {
   dataLoading.value = true;
   try {
@@ -146,49 +134,62 @@ async function loadData(signal?: AbortSignal): Promise<void> {
   }
 }
 
+/**
+ * 数据超过一页（或已知还有下一页）时自动显示分页组件。
+ * 阈值取「当前每页条数」与「可选条数最小值」的较小者：
+ * 用户把每页调大（如 100）后即使一页装得下，分页组件也不消失，还能再调回来。
+ */
+const showPagination = computed(() => {
+  const threshold = Math.min(innerPageSize.value, ...props.pageSizes);
+  return total.value > threshold || (paged.value?.hasNext ?? false);
+});
+
+/* ---------------- 分页交互 ---------------- */
+
 /** 翻页：更新页码并重新请求对应 offset 的数据 */
 function onPageChange(page: number): void {
   currentPage.value = page;
   loadData();
 }
 
-/** 切换每页条数：回到第一页并按新 limit 重新请求，同时持久化用户选择 */
+/** 切换每页条数：先经对话框持久化为默认值（同步更新 defaultPageSize，
+ *  computed innerPageSize 立即反映新值），再回到第一页按新 limit 重新请求 */
 function onSizeChange(size: number): void {
-  innerPageSize.value = size;
+  configDialogRef.value?.updateDefaultPageSize(size);
   currentPage.value = 1;
   loadData();
-  // 持久化用户默认分页大小（保留已有列设置）
-  savePageSize(size);
 }
 
-/* ---------------- 导出 Excel（逻辑由 ExportExcelDialog 自管） ---------------- */
+/* ---------------- 生命周期 ---------------- */
 
-/** 导出对话框实例引用（按钮经 ref 调 trigger() 触发导出入口） */
-const exportDialogRef = ref<{ trigger: () => void } | null>(null);
-
-/* ---------------- 生命周期 & 暴露 API ---------------- */
-
-/** 重新加载元数据、数据、行操作与列自定义配置 */
-function reload(): void {
-  loadMeta();
+/**
+ * 重新加载：metaFun / 行操作 / 列自定义配置 三者并行加载，全部完成后再 loadData。
+ * 必须等 loadCustomConfigs 完成——它写回 defaultPageSize，computed innerPageSize 才
+ * 反映用户保存的默认分页大小，loadData 才用正确的 limit。
+ */
+async function reload(): Promise<void> {
+  await Promise.all([
+    loadMeta(),
+    rowActionsRef.value?.loadActions(),
+    configDialogRef.value?.loadCustomConfigs(),
+  ]);
+  currentPage.value = 1;
   loadData();
-  rowActionsRef.value?.loadActions();
-  loadCustomConfigs();
 }
 
 onMounted(reload);
-watch(() => props.metaFun, () => loadMeta());
-// 外部 pageSize 变化时同步内部值并回到第一页
+// metaFun 变化的监听已内聚在 useDefault 中
+// 外部 pageSize 变化：走与用户下拉切换同一路径——持久化为默认值、回第一页、重新加载
 watch(() => props.pageSize, (size) => {
-  innerPageSize.value = size;
-  currentPage.value = 1;
-  loadData();
+  onSizeChange(size);
 });
 // 数据源变化视为全新查询：回到第一页再加载
 watch(() => props.dataFun, () => {
   currentPage.value = 1;
   loadData();
 });
+
+/* ---------------- 暴露 API ---------------- */
 
 /**
  * core 的 TableApi 是「父组件视角」的输出契约（状态为解包后的值），
@@ -247,7 +248,7 @@ defineExpose(exposed);
           link
           type="primary"
           class="yk-table__config-btn"
-          @click="openConfigDialog"
+          @click="configDialogRef?.openDialog()"
         >
           ⚙ 列设置
         </el-button>
@@ -255,22 +256,26 @@ defineExpose(exposed);
     </div>
 
     <el-table
-      v-loading="metaLoading || dataLoading || actionsLoading || loading"
+      ref="tableEl"
+      v-loading="metaLoading || dataLoading || actionsLoading || customConfigLoading"
       :data="rows"
       :row-key="rowKey"
       border
+      @selection-change="onSelectionChange"
     >
-      <!-- 勾选列：内部自管选中状态（跨页累计）与清空 -->
-      <SelectionColumn
+      <!-- 勾选列：reserve-selection 使翻页后选中按 rowKey 跨页保留；表头 checkbox 全选/取消全选当前页 -->
+      <el-table-column
         v-if="showCheckbox"
-        ref="selectionRef"
+        type="selection"
+        width="48"
+        reserve-selection
       />
       <el-table-column
         v-for="col in columns"
         :key="col.propertyPath"
         :prop="col.propertyPath"
         :label="col.displayName"
-        :width="columnWidth(col.propertyPath)"
+        :width="col.width"
         show-overflow-tooltip
       />
       <!-- 行操作列：内部自管 actions 加载与渲染 -->
@@ -310,13 +315,15 @@ defineExpose(exposed);
       :show-pagination="showPagination"
     />
 
-    <!-- 列设置对话框 -->
+    <!-- 列设置对话框（内部自管 useCustomConfig；始终挂载，columns 也来自它——
+         customConfig 的 width 直接写在 col.width 上，表格读 col.width 即可；
+         不再接收 showCustomConfig/innerPageSize：前者由 Table 自身控制「⚙ 列设置」按钮显隐，
+         后者改为经 defineExpose 暴露 defaultPageSize/updateDefaultPageSize 由 Table 主动读写） -->
     <ColumnConfigDialog
-      v-model:visible="configDialogVisible"
-      v-model:draft-columns="draftColumns"
-      @move="moveDraft"
-      @reset="resetDraft"
-      @save="saveConfigDialog"
+      ref="configDialogRef"
+      :load-custom-config-fun="loadCustomConfigFun"
+      :save-custom-config-fun="saveCustomConfigFun"
+      :meta="meta"
     />
   </div>
 </template>

@@ -1,58 +1,108 @@
 <script setup lang="ts">
-import { type PropType } from "vue";
-import type { DraftColumn } from "@ys.knife.crud/core";
+import { toRef, type PropType } from "vue";
+import type { Meta, CustomConfigProps } from "@ys.knife.crud/core";
+import { useCustomConfig } from "@ys.knife.crud/vue";
 
 /**
  * 列设置对话框：勾选显隐、上移/下移调顺序、输入框调列宽。
  *
- * 可见状态与草稿由外层 useCustomConfig 管理，组件只负责展示与事件转发；
- * 草稿变更通过 v-model 双向绑定回传外层，保存/取消由外层决定如何处理。
+ * 自管模式（与 ExportExcelDialog 相同）：列自定义逻辑（useCustomConfig）
+ * 全部内聚在本组件——加载/保存配置、草稿状态、面板操作都不外泄；
+ * 父组件（Table）只经 defineExpose 拿到它需要的最小接口：
+ * - columns：最终显示列（已含 customConfig 的 width，表格直接读 col.width）
+ * - defaultPageSize：当前用户默认分页大小（加载到保存值时回写此 ref，
+ *   父组件据此把用户保存的默认分页大小应用回 Table）
+ * - updateDefaultPageSize：用户切换每页条数时持久化为默认值
+ * - loadCustomConfigs：reload 时重新加载配置
+ * - customConfigLoading：自定义配置加载态（loadCustomConfigs 进行中为 true）
+ * - openDialog：打开列设置面板（工具栏「⚙ 列设置」按钮）
+ *
+ * 不再经 v-model 与父组件双向同步分页大小：组件内部维护
+ * 「用户默认分页大小」状态（defaultPageSize），父组件通过读取此属性
+ * 获取加载到的保存值、通过调用 updateDefaultPageSize(size) 写入新值。
+ *
+ * 一旦挂载即应用自定义配置（不再接收 showCustomConfig 标志），
+ * 是否显示「⚙ 列设置」入口由父组件 Table 的 showCustomConfig 控制。
  */
-defineProps({
-  /** 对话框可见 */
-  visible: { type: Boolean, default: false },
-  /** 列草稿（双向绑定，外层在保存时根据最新草稿写入 CustomConfig） */
-  draftColumns: { type: Array as PropType<DraftColumn[]>, required: true },
+const props = defineProps({
+  /** 加载自定义配置（含列设置与用户默认分页大小；返回 null 按空配置处理） */
+  loadCustomConfigFun: { type: Function as PropType<NonNullable<import("@ys.knife.crud/core").TableProps["loadCustomConfigFun"]>>, required: false },
+  /** 保存自定义配置（含列设置与用户默认分页大小） */
+  saveCustomConfigFun: { type: Function as PropType<NonNullable<import("@ys.knife.crud/core").TableProps["saveCustomConfigFun"]>>, required: false },
+  /** 列元数据（候选列取 meta 中 showForDisplay=true 的列） */
+  meta: { type: Object as PropType<Meta | null>, default: null },
 });
 
-const emit = defineEmits<{
-  /** 关闭对话框（点遮罩 / ESC / 取消按钮） */
-  (e: "update:visible", v: boolean): void;
-  /** 草稿变更（v-model:draftColumns 同步） */
-  (e: "update:draftColumns", v: DraftColumn[]): void;
-  /** 调整草稿中某列的顺序（上移/下移） */
-  (e: "move", index: number, delta: number): void;
-  /** 重置草稿（恢复到默认状态：全部可见、按 displayOrder 排序、清空宽度） */
-  (e: "reset"): void;
-  /** 保存列设置 */
-  (e: "save"): void;
-}>();
+/* ---------------- 自管桥接（useCustomConfig） ----------------
+ * useCustomConfig 仍按 CustomConfigProps 形状读取 props，本组件不再向父组件
+ * 收取 showCustomConfig（一旦挂载即应用自定义配置），这里构造一个 always-true
+ * 的合成 props。用 getter 让 loadCustomConfigFun/saveCustomConfigFun 仍能
+ * 响应父组件传入 prop 的变化（watch/computed 经 getter 读到最新值）。
+ *
+ * defaultPageSize 与 updateDefaultPageSize 也内聚在 useCustomConfig 内：
+ * defaultPageSize 是「用户默认分页大小」状态（saveConfigDialog 读、
+ * loadCustomConfigs 加载后写回），updateDefaultPageSize 是用户切换每页
+ * 条数时的「更新状态 + 持久化」组合动作——父组件经 defineExpose 透传。 */
+const customConfigProps: CustomConfigProps = {
+  get showCustomConfig() { return true; },
+  get loadCustomConfigFun() { return props.loadCustomConfigFun; },
+  get saveCustomConfigFun() { return props.saveCustomConfigFun; },
+};
+
+const {
+  // 字段（状态 + 派生）
+  columns,
+  customConfigLoading,
+  defaultPageSize,
+  configDialogVisible,
+  draftColumns,
+  // 函数
+  loadCustomConfigs,
+  updateDefaultPageSize,
+  openConfigDialog,
+  moveDraft,
+  resetDraft,
+  saveConfigDialog,
+} = useCustomConfig(customConfigProps, toRef(props, "meta"));
+
+/* ---------------- 暴露 API ----------------
+ * 对外只暴露父组件（Table）需要的最小接口，面板内部状态（draftColumns、
+ * configDialogVisible 等）不外泄。字段在前，函数在后。 */
+defineExpose({
+  // 字段
+  columns,
+  defaultPageSize,
+  customConfigLoading,
+  // 函数
+  updateDefaultPageSize,
+  loadCustomConfigs,
+  openConfigDialog,
+});
 </script>
 
 <template>
   <el-dialog
-    :model-value="visible"
+    v-model="configDialogVisible"
     title="列设置"
     width="480px"
-    @update:model-value="emit('update:visible', $event)"
   >
     <div v-for="(d, i) in draftColumns" :key="d.propertyPath" class="col-config-row">
       <el-checkbox v-model="d.visible" class="col-config-name">{{ d.displayName }}</el-checkbox>
       <el-input v-model="d.width" class="col-config-width" placeholder="宽度(如 120)" size="small" />
-      <el-button link type="primary" :disabled="i === 0" @click="emit('move', i, -1)">上移</el-button>
+      <el-button link type="primary" :disabled="i === 0" @click="moveDraft(i, -1)">上移</el-button>
       <el-button
         link
         type="primary"
         :disabled="i === draftColumns.length - 1"
-        @click="emit('move', i, 1)"
+        @click="moveDraft(i, 1)"
       >
         下移
       </el-button>
     </div>
     <template #footer>
-      <el-button @click="emit('reset')">重置</el-button>
-      <el-button @click="emit('update:visible', false)">取消</el-button>
-      <el-button type="primary" class="col-config-save" @click="emit('save')">保存</el-button>
+      <el-button @click="resetDraft">重置</el-button>
+      <el-button @click="configDialogVisible = false">取消</el-button>
+      <el-button type="primary" class="col-config-save" @click="saveConfigDialog">保存</el-button>
     </template>
   </el-dialog>
 </template>

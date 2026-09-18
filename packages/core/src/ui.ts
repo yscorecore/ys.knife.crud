@@ -11,6 +11,9 @@ import type { ExportApiFunc } from "./export"
 export interface RowActionsProps {
     readonly rowActionsFunc?: RowActionsFunc<unknown>;
 }
+export interface SelectionProps {
+    showCheckbox?: boolean,
+}
 /**
  * 自定义列的配置 props
  */
@@ -26,14 +29,17 @@ export interface ExportExcelProps {
     readonly exportPageSize?: number;
 
 }
+export interface DefaultProps {
+    readonly metaFun: MetaFunc
+    readonly dataFun: PageFunc<unknown>,
+    readonly pageSize: number,
+    readonly pageSizes: number[],
+}
 
 
 /** TableProps 是组件的「输入契约」：父组件通过 props 传入 */
-export interface TableProps extends RowActionsProps, CustomConfigProps, ExportExcelProps {
-    metaFun: MetaFunc
-    dataFun: PageFunc<unknown>
-    /** 可选，默认 false。为 true 时表格第一列显示 checkbox（表头含全选/取消全选） */
-    showCheckbox?: boolean,
+export interface TableProps extends RowActionsProps, SelectionProps, CustomConfigProps, ExportExcelProps, DefaultProps {
+
 }
 
 /**
