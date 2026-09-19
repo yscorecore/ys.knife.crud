@@ -1,6 +1,6 @@
 import type { App, Plugin } from "vue";
-import YsTable from "./table.vue";
-import YsMainPanel from "./mainPanel.vue";
+import YsTable from "./table/table.vue";
+import YsMainPanel from "./mainPanel/mainPanel.vue";
 
 export { YsTable, YsMainPanel };
 
