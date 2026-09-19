@@ -66,6 +66,8 @@ export interface TableApi {
     readonly currentPage: number
     /** checkbox 列当前选中的行（跨页累计，reserve-selection） */
     readonly selectedRows: unknown[]
+    /** 当前页的行数据（dataFun 返回的 PagedList.items；挂载前为空数组） */
+    readonly rows: unknown[]
     /** 重新加载元数据、数据与行操作 */
     reload(): void
     /** 清空全部选中（含其他页的选中） */

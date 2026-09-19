@@ -270,6 +270,7 @@ const exposed = {
   paged,
   currentPage,
   selectedRows,
+  rows,
   reload,
   clearSelection,
   openConfigDialog,
