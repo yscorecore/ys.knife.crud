@@ -18,6 +18,7 @@ import ExternalControlTablePage from "./pages/table/ExternalControlTablePage.vue
 import BigDataTablePage from "./pages/table/BigDataTablePage.vue";
 import BigDataNoTotalTablePage from "./pages/table/BigDataNoTotalTablePage.vue";
 import CustomSelectionBarTablePage from "./pages/table/CustomSelectionBarTablePage.vue";
+import CustomEntryButtonsTablePage from "./pages/table/CustomEntryButtonsTablePage.vue";
 
 /**
  * Demo 页面注册表：导航按钮与 App 动态渲染共用的唯一数据源。
@@ -103,6 +104,11 @@ export const demoPages = [
     id: "table-custom-selection-bar",
     label: "自定义选中提示条（showSelectionBar=false）",
     component: CustomSelectionBarTablePage,
+  },
+  {
+    id: "table-custom-entry-buttons",
+    label: "自定义列设置/导出按钮（openConfigDialog / openExportDialog）",
+    component: CustomEntryButtonsTablePage,
   },
 ] as const satisfies readonly DemoPageDef[];
 
