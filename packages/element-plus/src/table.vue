@@ -39,6 +39,12 @@ const props = defineProps({
   pageSizes: { type: Array as PropType<number[]>, default: () => [10, 20, 50, 100] },
   /** 为 true 时第一列显示 checkbox（表头含全选/取消全选），默认 false */
   showCheckbox: { type: Boolean, default: false },
+  /**
+   * 是否渲染内置的跨页选中提示条（「已选 N 项 · 清空」），默认 true。
+   * 为 false 时不渲染内置提示条（选中仍按 rowKey 跨页累计，selectedRows/clearSelection
+   * 照常可用），由外部自行渲染自定义样式的提示条。
+   */
+  showSelectionBar: { type: Boolean, default: true },
   /** 为 true 时启用列设置能力（挂载列设置面板与持久化流程），默认 false。
    *  组件不内置入口按钮：由外部自行渲染按钮，经 expose 的 openConfigDialog() 触发 */
   showCustomConfig: { type: Boolean, default: false },
@@ -265,11 +271,10 @@ defineExpose(exposed);
 
 <template>
   <div class="yk-table">
-    <!-- 勾选提示行：仅勾选表格需要（reserve-selection 下的跨页选中总览与清空入口）。
-         常驻渲染并保持固定行高——选中提示的出现/消失不增减这一行高度，表头不会上下抖动。
-         「导出 Excel / 列设置」组件不内置按钮，入口由外部渲染并经 expose 方法触发，
-         故这里不再有内置按钮组 -->
-    <div v-if="showCheckbox" class="yk-table__toolbar">
+    <!-- 内置跨页选中提示条：仅 showCheckbox + showSelectionBar 时渲染。
+         showSelectionBar=false 时由外部自行渲染自定义样式（经 selectedRows/clearSelection），
+         此处不保留空行；勾选/取消勾选引起的布局由外部自行消化 -->
+    <div v-if="showCheckbox && showSelectionBar" class="yk-table__toolbar">
       <SelectionBar :count="selectedRows.length" @clear="clearSelection" />
     </div>
 

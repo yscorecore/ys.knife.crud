@@ -51,9 +51,9 @@ class ExcelJsExportApi implements ExportApi {
       usedNames.add(name);
       const sheet = this.workbook.addWorksheet(name);
       sheet.columns = columns.map((c, i) => ({
-        width: this.options.columnWidths?.[key]?.[i] ?? Math.max(10, (c.displayName ?? c.propertyPath).length * 2),
+        width: this.options.columnWidths?.[key]?.[i] ?? Math.max(10, c.displayName.length * 2),
       }));
-      sheet.addRow(columns.map((c) => c.displayName ?? c.propertyPath));
+      sheet.addRow(columns.map((c) => c.displayName));
       this.sheets.set(key, sheet);
     }
     return Promise.resolve();

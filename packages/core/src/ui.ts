@@ -1,7 +1,7 @@
 import type { Meta, MetaFunc } from "./meta"
-import type { NewPageFunc } from "./page"
+import type { PageFunc } from "./page"
 import type { PagedList } from "ys.knife.query.js"
-import type { RowActionsFunc } from "./action"
+import type { Action, RowActionsFunc } from "./action"
 import type { loadCustomConfigFunc as loadCustomConfigFunc, saveCustomConfigFunc } from "./customConfig"
 import type { ExportApiFunc } from "./export"
 
@@ -27,13 +27,11 @@ export interface ExportExcelProps {
     /** 可选。导出实现工厂；缺省使用 core 的控制台假实现（createConsoleExportApiFunc，只打日志不产出文件） */
     readonly exportorFunc?: ExportApiFunc;
     readonly exportPageSize?: number;
-    /** 可选。「导出所有」的最大拉取页数（循环次数上限），缺省 1000；防止数据量过大时无休止导出 */
-    readonly exportMaxPages?: number;
 
 }
 export interface DefaultProps {
     readonly metaFun: MetaFunc
-    readonly dataFun: NewPageFunc<unknown>,
+    readonly dataFun: PageFunc<unknown>,
     readonly pageSize: number,
     readonly pageSizes: number[],
 }
@@ -53,7 +51,7 @@ export interface TableProps extends RowActionsProps, SelectionProps, CustomConfi
  *
  * 注意：这里的状态成员是「解包后」的视图（如 selectedRows: unknown[]），
  * 因为父组件经模板 ref 访问 expose 代理时 ref 会被自动解包；
- * 组件内部实现时每个状态对应一个 Ref<成员类型>（见 element-plus 包 table.vue 的 ExposedShape）。
+ * 组件内部实现时每个状态对应一个 Ref<成员类型>（见 Table.vue 的 ExposedShape）。
  */
 export interface TableApi {
     /** 列元数据（metaFun 加载结果，未加载完成时为 null） */
@@ -68,10 +66,6 @@ export interface TableApi {
     reload(): void
     /** 清空全部选中（含其他页的选中） */
     clearSelection(): void
-    /** 打开列设置面板（showCustomConfig 启用时有效）；供外部自定义按钮触发 */
-    openConfigDialog(): void
-    /** 打开导出 Excel 的范围选择对话框（showExportExcel 启用时有效）；供外部自定义按钮触发 */
-    openExportDialog(): void
 }
 
 

@@ -6,12 +6,12 @@ import {
   type ExportApiFunc,
   type ExportOption,
   type ExportScope,
-  type NewPageFunc,
+  type PageFunc,
 } from "@ys.knife.crud/core";
 
 /** useExportExcel 需要从组件 props 中访问的成员 */
 interface ExportProps {
-  readonly dataFun: NewPageFunc<unknown>;
+  readonly dataFun: PageFunc<unknown>;
   readonly exportSelected: boolean;
   readonly exportorFunc?: ExportApiFunc;
 }
@@ -27,10 +27,10 @@ interface UseExportExcelOptions {
   currentRows: Ref<Record<string, unknown>[]>;
   /** checkbox 列当前选中的行（跨页累计） */
   selectedRows: Ref<unknown[]>;
+  /** 数据总条数 */
+  total: Ref<number>;
   /** 导出所有时分页拉取的步长（独立于界面分页大小，避免用大页尺寸拖慢导出） */
   exportPageSize: Ref<number>;
-  /** 「导出所有」的最大拉取页数（循环次数上限）；防止数据量过大时无休止导出 */
-  exportMaxPages: Ref<number>;
   /** 是否还有下一页（决定「导出所有」选项是否出现） */
   hasMorePage: Ref<boolean>;
 }
@@ -50,8 +50,8 @@ export function useExportExcel({
   columns,
   currentRows,
   selectedRows,
+  total,
   exportPageSize,
-  exportMaxPages,
   hasMorePage,
 }: UseExportExcelOptions) {
   /** 导出选项：exportSelected=false 不含「导出选中」；只有一页（hasMorePage=false）不含「导出所有」 */
@@ -75,14 +75,7 @@ export function useExportExcel({
   /** 「导出所有」进度状态 */
   const exporting = ref(false);
   const exportFetched = ref(0);
-  /**
-   * 导出目标总条数：null 表示未知（两种模式）。
-   * 初始为 null——totalCount 不再从表格传入，而是在「导出所有」过程中
-   * 从每页响应探测：任一响应携带 totalCount 即切换为已知模式。
-   */
-  const exportTotal = ref<number | null>(null);
-  /** 总条数是否已知：未知时进度条走 indeterminate 动画，不显示百分比与分母 */
-  const exportTotalKnown = computed(() => exportTotal.value != null);
+  const exportTotal = ref(0);
   /** 取消标记：每页返回后检查，兼容忽略 AbortSignal 的 dataFun */
   let exportCancelled = false;
   let exportAbort: AbortController | null = null;
@@ -93,13 +86,10 @@ export function useExportExcel({
   /** 取消时已写入的数据行数（不含表头） */
   const exportCancelledRows = ref(0);
 
-  /** 导出进度百分比：总条数未知时返回值仅作为 indeterminate 动画的条宽（固定 50%），
-   *  不表达真实进度；已知时为 fetched/total（total=0 视为 100%） */
+  /** 导出进度百分比：totalCount 未知时按已加载条数滚动到 99% 封顶 */
   const exportPercent = computed(() => {
-    const t = exportTotal.value;
-    if (t == null) return 50;
-    if (t === 0) return 100;
-    return Math.min(100, Math.round((exportFetched.value / t) * 100));
+    if (exportTotal.value > 0) return Math.min(100, Math.round((exportFetched.value / exportTotal.value) * 100));
+    return exportFetched.value > 0 ? 99 : 0;
   });
 
   /** 点击导出入口：只剩一个可用选项时跳过对话框直接导出 */
@@ -150,22 +140,20 @@ export function useExportExcel({
     exporting.value = true;
     exportCancelled = false;
     exportFetched.value = 0;
-    exportTotal.value = null;
+    exportTotal.value = total.value;
     exportAbort = new AbortController();
     const api = newExportApi();
     const sheet = exportSheetName();
     await api.renderHeader({ [sheet]: columns.value });
     try {
       const limit = exportPageSize.value;
-      // 最大拉取页数：每次循环拉一页，超过上限即停止（导出已拉取的部分），防止数据量过大导不完
-      const maxPages = Math.max(1, exportMaxPages.value);
       let offset = 0;
-      for (let page = 1; ; page++) {
-        const res = await props.dataFun(limit, offset, exportAbort.signal);
+      for (;;) {
+        const res = await props.dataFun({ limit, offset }, exportAbort.signal);
         await api.renderRows(sheet, (res.items as Record<string, unknown>[]).map(exportRowValues));
         exportFetched.value += res.items.length;
         if (res.totalCount != null) exportTotal.value = res.totalCount;
-        if (exportCancelled || !res.hasNext || res.items.length === 0 || page >= maxPages) break;
+        if (exportCancelled || !res.hasNext || res.items.length === 0) break;
         offset += limit;
       }
     } catch (e) {
@@ -220,7 +208,6 @@ export function useExportExcel({
     exporting,
     exportFetched,
     exportTotal,
-    exportTotalKnown,
     exportPercent,
     exportCancelledVisible,
     exportCancelledRows,

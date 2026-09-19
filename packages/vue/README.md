@@ -95,6 +95,8 @@ import { useExportExcel } from "@ys.knife.crud/vue";
 const props = defineProps<{
   dataFun: NewPageFunc<unknown>;
   exportSelected: boolean;
+  dataFun: PageFunc<unknown>;
+  showCheckbox: boolean;
   exportorFunc?: ExportApiFunc;
   tableName?: string;
   columns: Column[];
@@ -198,7 +200,7 @@ const {
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  @ys.knife.crud/element-plus  (.vue)   │  ← element-plus view layer
+│  @ys.knife.crud/element-plus  (.vue)            │  ← element-plus view layer
 └───────────────────────┬─────────────────────────┘
                         │ consumes
                         ▼

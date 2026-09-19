@@ -53,7 +53,7 @@ class ConsoleExportApi implements ExportApi {
         this.ensureActive()
         for (const [key, columns] of Object.entries(sheets)) {
             this.sheets.set(key, [])
-            console.log(`[${this.name}] renderHeader sheet="${key}" columns=[${columns.map((c) => c.displayName ?? c.propertyPath).join(", ")}]`)
+            console.log(`[${this.name}] renderHeader sheet="${key}" columns=[${columns.map((c) => c.displayName).join(", ")}]`)
         }
     }
 
