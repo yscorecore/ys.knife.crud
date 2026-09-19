@@ -113,7 +113,7 @@ export const demoPages = [
   },
   {
     id: "table-card-view",
-    label: "表格 / 卡片视图切换（viewMode + #card 插槽）",
+    label: "表格 / 卡片 / 列表视图切换（viewMode + #card / #list 插槽）",
     component: CardViewTablePage,
   },
 ] as const satisfies readonly DemoPageDef[];

@@ -19,8 +19,10 @@ export interface SelectionProps {
  * 表格的展示形态：
  * - table：传统表格视图（默认）
  * - card：卡片网格视图（卡片内容可经 #card 插槽自定义，默认 JSON 序列化展示整行）
+ * - list：列表视图，一行一条数据、占满整行宽度（行内容可经 #list 插槽自定义，
+ *   默认 JSON 序列化展示整行；checkbox 在行首，行操作右键菜单与卡片视图共用）
  */
-export type ViewMode = "table" | "card"
+export type ViewMode = "table" | "card" | "list"
 
 /**
  * 展示形态相关 props
@@ -28,9 +30,10 @@ export type ViewMode = "table" | "card"
 export interface ViewProps {
     /** 展示形态，默认 "table"。配合 update:viewMode 事件可使用 v-model:view-mode 受控切换 */
     readonly viewMode?: ViewMode;
-    /** 是否在工具栏内置「表格 / 卡片」切换控件，默认 true；
-     *  置 false 时由外部自行渲染切换控件（仍可用 v-model:view-mode 驱动） */
-    readonly showViewSwitch?: boolean;
+    /** 内置视图切换控件要显示的模式集合，默认 []（不渲染内置切换控件）。
+     *  非空时在工具栏渲染切换控件，且只包含数组中列出的模式（按数组顺序），
+     *  如 ["table", "card", "list"]；保持默认空数组即完全由外部自控（仍可用 v-model:view-mode 驱动） */
+    readonly viewSwitchModes?: ViewMode[];
 }
 /**
  * 自定义列的配置 props

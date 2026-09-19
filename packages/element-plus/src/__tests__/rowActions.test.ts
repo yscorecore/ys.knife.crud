@@ -46,6 +46,8 @@ function mountTable(editFn: (row: UserRow) => Promise<void>, deleteFn: (row: Use
       pageSize: 10,
       rowKey: "id",
       rowActionsFunc,
+      // 内置切换控件默认不渲染（viewSwitchModes=[]），这里显式开启以测试右键菜单用例中的视图切换
+      viewSwitchModes: ["table", "card"],
     },
     global: { plugins: [ElementPlus] },
   });

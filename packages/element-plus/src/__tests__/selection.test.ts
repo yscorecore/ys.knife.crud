@@ -30,7 +30,7 @@ async function settle(): Promise<void> {
   await nextTick();
 }
 
-function mountTable() {
+function mountTable(overrides: Record<string, unknown> = {}) {
   return mount(YsTable, {
     props: {
       metaFun: async () => meta,
@@ -38,6 +38,8 @@ function mountTable() {
       pageSize: 10,
       rowKey: "id",
       showCheckbox: true,
+      viewSwitchModes: ["table", "card", "list"],
+      ...overrides,
     },
     global: { plugins: [ElementPlus] },
   });
@@ -105,6 +107,16 @@ describe("cross-page selection (controlled rowKey map)", () => {
     expect((wrapper.vm as unknown as { selectedRows: unknown[] }).selectedRows).toHaveLength(3);
   });
 
+  it("hides the built-in view switch by default (empty viewSwitchModes)", async () => {
+    // 默认 viewSwitchModes=[]：不渲染内置切换控件，但工具栏（选中提示所在行）照常渲染
+    const wrapper = mountTable({ viewSwitchModes: [] });
+    await settle();
+
+    expect(findByName(wrapper, "ElRadioGroup").exists()).toBe(false);
+    expect(wrapper.find(".yk-table__toolbar").exists()).toBe(true);
+    expect(findByName(wrapper, "ElTable").exists()).toBe(true);
+  });
+
   it("switches view via the built-in radio without a bound v-model (uncontrolled)", async () => {
     const wrapper = mountTable();
     await settle();
@@ -129,5 +141,35 @@ describe("cross-page selection (controlled rowKey map)", () => {
     await settle();
     expect(findByName(wrapper, "ElTable").exists()).toBe(true);
     expect(wrapper.find(".yk-table__cards").exists()).toBe(false);
+  });
+
+  it("renders list view with one full-width item per row and selectable checkboxes", async () => {
+    const wrapper = mountTable();
+    await settle();
+
+    // 切到列表视图
+    await wrapper.setProps({ viewMode: "list" });
+    await settle();
+
+    // el-table 不渲染，列表项数量 = 当前页行数（10 行）
+    expect(findByName(wrapper, "ElTable").exists()).toBe(false);
+    expect(wrapper.findAll(".yk-table__list-item")).toHaveLength(10);
+
+    // 勾选第一行的 checkbox（直接 emit 组件 change 事件，作用域回调写入跨页选中集合）
+    await findByName(wrapper, "ElCheckbox").vm.$emit("change", true);
+    await settle();
+    expect((wrapper.vm as unknown as { selectedRows: unknown[] }).selectedRows).toHaveLength(1);
+
+    // 翻页后选中保留
+    const pager = findByName(wrapper, "ElPagination");
+    pager.vm.$emit("current-change", 2);
+    await settle();
+    expect((wrapper.vm as unknown as { selectedRows: unknown[] }).selectedRows).toHaveLength(1);
+
+    // 切回表格视图：el-table 重新挂载且累计选中不变
+    await wrapper.setProps({ viewMode: "table" });
+    await settle();
+    expect(findByName(wrapper, "ElTable").exists()).toBe(true);
+    expect((wrapper.vm as unknown as { selectedRows: unknown[] }).selectedRows).toHaveLength(1);
   });
 });

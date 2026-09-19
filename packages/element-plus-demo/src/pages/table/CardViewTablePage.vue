@@ -16,21 +16,22 @@ const dataFun = constData(manyRows);
 const tableRef = ref<TableApi | null>(null);
 const { showSelection } = useSelectionViewer(tableRef);
 
-// v-model:view-mode 受控：本页关闭内置切换控件（show-view-switch=false），
+// v-model:view-mode 受控：本页不传 view-switch-modes（默认空数组，内置切换控件不渲染），
 // 由页面工具栏里的自定义控件驱动，演示「切换入口完全可由外部自定义」
 const viewMode = ref<ViewMode>("card");
 </script>
 
 <template>
   <DemoPageLayout
-    title="表格 / 卡片视图切换（viewMode + #card 插槽）"
-    hint="viewMode 支持 table（默认）与 card 两种形态，v-model:view-mode 受控切换；本页关掉了内置切换控件（show-view-switch=false），由上方自定义控件驱动。卡片内容经 #card 插槽自定义（作用域 { row, index }，本页画了头像/姓名/邮箱/年龄）；不提供插槽时默认把整行 JSON 序列化显示。卡片右上角 checkbox 与表格勾选共用同一套跨页选中——在卡片里勾选后翻页、切回表格视图，选中状态都保留。"
+    title="表格 / 卡片 / 列表视图切换（viewMode + #card / #list 插槽）"
+    hint="viewMode 支持 table（默认）/ card / list 三种形态，v-model:view-mode 受控切换；内置切换控件由 view-switch-modes 数组控制——默认空数组不渲染（本页即如此），由上方自定义控件驱动。卡片内容经 #card 插槽自定义（作用域 { row, index }），列表视图一行一条数据、占满整行宽度，行内容经 #list 插槽自定义（本页画了头像/姓名/邮箱/年龄的横向单行布局）；不提供插槽时默认把整行 JSON 序列化显示。三种视图的 checkbox 共用同一套跨页选中——在列表里勾选后翻页、切回表格/卡片视图，选中状态都保留。"
     @back="$emit('back')"
   >
     <template #toolbar>
       <el-radio-group v-model="viewMode" size="default">
         <el-radio-button value="table">表格视图</el-radio-button>
         <el-radio-button value="card">卡片视图</el-radio-button>
+        <el-radio-button value="list">列表视图</el-radio-button>
       </el-radio-group>
       <el-button type="primary" @click="showSelection">查看选中</el-button>
     </template>
@@ -38,7 +39,6 @@ const viewMode = ref<ViewMode>("card");
     <ys-table
       ref="tableRef"
       v-model:view-mode="viewMode"
-      :show-view-switch="false"
       :meta-fun="metaFun"
       :data-fun="dataFun"
       :page-size="10"
@@ -56,6 +56,19 @@ const viewMode = ref<ViewMode>("card");
             </el-tag>
           </div>
           <div class="user-card__id">#{{ (row as unknown as UserRow).id }}</div>
+        </div>
+      </template>
+
+      <!-- 自定义列表行内容：与卡片布局区分的横向单行（头像 + 姓名/邮箱 + 年龄 + #id） -->
+      <template #list="{ row }">
+        <div class="user-row">
+          <div class="user-row__avatar">{{ (row as unknown as UserRow).name.slice(0, 1) }}</div>
+          <span class="user-row__name">{{ (row as unknown as UserRow).name }}</span>
+          <span class="user-row__email">{{ (row as unknown as UserRow).email }}</span>
+          <el-tag size="small" type="info" effect="plain">
+            {{ (row as unknown as UserRow).age }} 岁
+          </el-tag>
+          <span class="user-row__id">#{{ (row as unknown as UserRow).id }}</span>
         </div>
       </template>
     </ys-table>
@@ -108,6 +121,48 @@ const viewMode = ref<ViewMode>("card");
 }
 
 .user-card__id {
+  font-size: 12px;
+  color: #c0c4cc;
+  flex-shrink: 0;
+}
+
+/* ---------------- 列表视图行（横向单行布局） ---------------- */
+.user-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.user-row__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--el-color-primary, #409eff);
+  color: #fff;
+  font-size: 14px;
+  line-height: 32px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.user-row__name {
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.user-row__email {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  color: #909399;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-row__id {
   font-size: 12px;
   color: #c0c4cc;
   flex-shrink: 0;

@@ -72,16 +72,19 @@ const props = defineProps({
   /** 行 key，默认 "id" */
   rowKey: { type: String, default: "id" },
   /**
-   * 展示形态，默认 "table"（表格视图）；设为 "card" 时以卡片网格渲染当前页行。
+   * 展示形态，默认 "table"（表格视图）；设为 "card" 时以卡片网格渲染当前页行，
+   * 设为 "list" 时以列表渲染（一行一条全宽，内容经 #list 插槽自定义）。
    * 受控与非受控皆可：用 v-model:view-mode 时由父级驱动；不绑定时内置切换控件
    * 自行切换（组件内部维护状态，同时照常派发 update:viewMode）。
    */
   viewMode: { type: String as PropType<ViewMode>, default: "table" },
   /**
-   * 是否在工具栏内置「表格 / 卡片」切换控件，默认 true。
-   * 置 false 时不渲染内置控件，由外部自行渲染切换控件（仍经 v-model:view-mode 驱动）。
+   * 内置视图切换控件要显示的模式集合，默认 []（不渲染内置切换控件）。
+   * 非空时在工具栏渲染切换控件，且只包含数组中列出的模式（按数组顺序），
+   * 如 ["table", "card", "list"]。保持默认空数组即完全由外部自控
+   * （仍可经 v-model:view-mode 或监听 update:viewMode 驱动）。
    */
-  showViewSwitch: { type: Boolean, default: true },
+  viewSwitchModes: { type: Array as PropType<ViewMode[]>, default: () => [] },
 });
 
 /** 单次加载完成后的结果（PagedList）；组件对外事件基于此类型 */
@@ -286,6 +289,13 @@ const currentViewMode = computed<ViewMode>({
   },
 });
 
+/** 内置切换控件各模式的按钮文案（key 与 ViewMode 一致） */
+const viewSwitchLabels: Record<ViewMode, string> = {
+  table: "表格",
+  card: "卡片",
+  list: "列表",
+};
+
 // 卡片 → 表格：el-table 重新挂载后把累计选中恢复到勾选态（restoreSelection 内含 nextTick）
 watch(currentViewMode, (mode) => {
   if (mode === "table") void restoreSelection();
@@ -398,7 +408,8 @@ defineExpose(exposed);
          仅勾选的表格里，选中提示的出现/消失不再增减这一行的高度，
          表头不会上下抖动（与入口控件常驻时的表现对齐）。
          showSelectionBar=false 时左侧提示条不渲染（由外部自行实现），右侧控件组照常 -->
-    <div v-if="(showCheckbox && showSelectionBar) || showViewSwitch || showCustomConfig || showExportExcel"
+    <div
+      v-if="(showCheckbox && showSelectionBar) || viewSwitchModes.length > 0 || showCustomConfig || showExportExcel"
       class="yk-table__toolbar">
       <!-- 跨页选中提示：选中按 rowKey 跨页累计，可能来自其他页，给用户一个总览与清空入口。
            无选中时 SelectionBar 不渲染任何元素，右侧控件组靠 margin-left:auto 自行贴右，
@@ -414,12 +425,12 @@ defineExpose(exposed);
           @click="openConfigDialog()">
           ⚙ 列设置
         </el-button>
-        <!-- 内置「表格 / 卡片」视图切换，位于列设置入口右侧；showViewSwitch=false 时
-             由外部经 v-model:view-mode 或监听 update:viewMode 自控 -->
-        <el-radio-group v-if="showViewSwitch" v-model="currentViewMode" size="small"
+        <!-- 内置视图切换控件：仅渲染 viewSwitchModes 中列出的模式（按数组顺序）；
+             默认空数组时不渲染，由外部经 v-model:view-mode 或监听 update:viewMode 自控 -->
+        <el-radio-group v-if="viewSwitchModes.length > 0" v-model="currentViewMode" size="small"
           class="yk-table__view-switch">
-          <el-radio-button value="table">表格</el-radio-button>
-          <el-radio-button value="card">卡片</el-radio-button>
+          <el-radio-button v-for="mode in viewSwitchModes" :key="mode" :value="mode">{{ viewSwitchLabels[mode]
+          }}</el-radio-button>
         </el-radio-group>
       </div>
     </div>
@@ -450,7 +461,7 @@ defineExpose(exposed);
     <!-- 卡片视图：当前页每行一张卡片；卡片内容经 #card 插槽自定义（作用域为 { row, index }），
          未提供插槽时默认把整行 JSON 序列化展示。checkbox 与表格视图共用同一套跨页选中状态。
          存在行操作（rowActionsFunc）时，卡片上右键弹出操作菜单（与操作列同一套 actions） -->
-    <div v-else v-loading="viewLoading" class="yk-table__cards">
+    <div v-else-if="currentViewMode === 'card'" v-loading="viewLoading" class="yk-table__cards">
       <div v-for="(row, index) in rows" :key="String(row[rowKey])" class="yk-table__card"
         :class="{
           'is-selected': showCheckbox && isRowSelected(row),
@@ -468,7 +479,30 @@ defineExpose(exposed);
       <el-empty v-if="!viewLoading && rows.length === 0" description="暂无数据" />
     </div>
 
-    <!-- 卡片视图行操作右键菜单：teleport 到 body 避免被容器裁切；
+    <!-- 列表视图：一行一条数据、占满整行宽度；行内容经 #list 插槽自定义（作用域同为 { row, index }），
+         未提供插槽时默认把整行 JSON 序列化展示。checkbox 在行首，与表格/卡片视图共用同一套跨页选中状态；
+         存在行操作时右键弹出操作菜单（与卡片视图共用 onCardContextMenu 及同一个 teleport 菜单） -->
+    <div v-else v-loading="viewLoading" class="yk-table__list">
+      <div v-for="(row, index) in rows" :key="String(row[rowKey])" class="yk-table__list-item"
+        :class="{
+          'is-selected': showCheckbox && isRowSelected(row),
+          'has-actions': actions.length > 0,
+        }"
+        :title="actions.length > 0 ? '右键查看行操作' : undefined"
+        @contextmenu="onCardContextMenu($event, row)">
+        <el-checkbox v-if="showCheckbox" class="yk-table__list-item-checkbox"
+          :model-value="isRowSelected(row)"
+          @change="onCardCheck(row, $event)" />
+        <div class="yk-table__list-item-body">
+          <slot name="list" :row="row" :index="index">
+            <pre class="yk-table__list-item-json">{{ JSON.stringify(row, null, 2) }}</pre>
+          </slot>
+        </div>
+      </div>
+      <el-empty v-if="!viewLoading && rows.length === 0" description="暂无数据" />
+    </div>
+
+    <!-- 卡片/列表视图行操作右键菜单：teleport 到 body 避免被容器裁切；
          透明遮罩捕获菜单外点击/右键以关闭，Esc 同样关闭 -->
     <teleport to="body">
       <template v-if="cardMenu">
@@ -565,6 +599,58 @@ defineExpose(exposed);
 /* 配置了行操作的卡片：右键可弹操作菜单 */
 .yk-table__card.has-actions {
   cursor: context-menu;
+}
+
+/* ---------------- 列表视图 ---------------- */
+.yk-table__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* 加载遮罩始终有可挂载的高度，避免空容器遮罩塌陷 */
+  min-height: 120px;
+}
+
+.yk-table__list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--el-border-color, #dcdfe6);
+  border-radius: 6px;
+  background: var(--el-bg-color, #fff);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.yk-table__list-item.is-selected {
+  border-color: var(--el-color-primary, #409eff);
+  /* inset 光晕勾边，与卡片选中态一致，且不引发布局位移 */
+  box-shadow: 0 0 0 1px var(--el-color-primary, #409eff) inset;
+}
+
+/* 配置了行操作的列表行：右键可弹操作菜单（与卡片共用） */
+.yk-table__list-item.has-actions {
+  cursor: context-menu;
+}
+
+.yk-table__list-item-checkbox {
+  flex-shrink: 0;
+}
+
+/* 行内容占满剩余宽度；min-width:0 允许插槽内容内部收缩/截断而不撑破行 */
+.yk-table__list-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* JSON 兜底样式：与卡片视图的 yk-table__card-json 一致 */
+.yk-table__list-item-json {
+  margin: 0;
+  max-height: 160px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
 }
 
 /* 透明遮罩：铺满视口，捕获菜单外的点击/右键以关闭菜单 */
