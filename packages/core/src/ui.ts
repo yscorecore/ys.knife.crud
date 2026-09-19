@@ -136,3 +136,31 @@ export interface ExportOption {
     label: string,
     disabled: boolean,
 }
+
+/**
+ * 主面板（YsMainPanel）功能树节点：
+ * - children 非空：分组节点，渲染为可展开子菜单（component 被忽略）
+ * - children 为空/缺省：叶子节点，点击后在右侧主面板以选项卡打开，
+ *   选项卡内容经 component 指定的组件类型名称动态解析加载
+ */
+export interface FunctionNode {
+    /** 节点唯一标识：同时作为功能树的菜单 index 与主面板选项卡的 key */
+    readonly key: string;
+    /** 菜单与选项卡的文案 */
+    readonly label: string;
+    /** 可选图标（emoji 等字符），渲染在叶子菜单与分组标题前缀处 */
+    readonly icon?: string;
+    /** 叶子节点对应的组件类型名称，由 YsMainPanel 的 resolveComponent prop 解析 */
+    readonly component?: string;
+    /** 叶子节点渲染面板组件时经 v-bind 透传的 props（静态声明，随节点定义；
+     *  同一 component 类型可配合不同 props 与 key 开启多个实例） */
+    readonly props?: Record<string, unknown>;
+    /** 子节点；非空时该节点视为分组节点 */
+    readonly children?: FunctionNode[];
+}
+
+/**
+ * 主面板（YsMainPanel）功能树数据加载函数：
+ * 异步返回功能树节点数组（数据可来自后端接口）。
+ */
+export type FunctionNodesFunc = () => Promise<FunctionNode[]>
