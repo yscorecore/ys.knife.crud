@@ -30,7 +30,7 @@ async function settle(): Promise<void> {
   await nextTick();
 }
 
-function mountTable(overrides: Record<string, unknown> = {}) {
+function mountTable(overrides: Record<string, unknown> = {}, slots: Record<string, string> = {}) {
   return mount(YsTable, {
     props: {
       metaFun: async () => meta,
@@ -41,6 +41,7 @@ function mountTable(overrides: Record<string, unknown> = {}) {
       viewSwitchModes: ["table", "card", "list"],
       ...overrides,
     },
+    slots,
     global: { plugins: [ElementPlus] },
   });
 }
@@ -171,5 +172,42 @@ describe("cross-page selection (controlled rowKey map)", () => {
     await settle();
     expect(findByName(wrapper, "ElTable").exists()).toBe(true);
     expect((wrapper.vm as unknown as { selectedRows: unknown[] }).selectedRows).toHaveLength(1);
+  });
+
+  it("shares the #empty slot across table/card/list views and falls back to el-empty", async () => {
+    // 空数据 + 自定义 #empty 插槽
+    const wrapper = mountTable({ dataFun: constData([]) }, { empty: "<div class='my-empty'>自定义空态</div>" });
+    await settle();
+
+    // 表格视图：插槽内容生效
+    expect(wrapper.find(".my-empty").exists()).toBe(true);
+
+    // 卡片视图：插槽内容生效，默认 el-empty 不渲染
+    await wrapper.setProps({ viewMode: "card" });
+    await settle();
+    expect(wrapper.find(".yk-table__cards").exists()).toBe(true);
+    expect(wrapper.find(".my-empty").exists()).toBe(true);
+    expect(wrapper.find(".yk-table__cards .el-empty").exists()).toBe(false);
+
+    // 列表视图：插槽内容生效
+    await wrapper.setProps({ viewMode: "list" });
+    await settle();
+    expect(wrapper.find(".yk-table__list").exists()).toBe(true);
+    expect(wrapper.find(".my-empty").exists()).toBe(true);
+    expect(wrapper.find(".yk-table__list .el-empty").exists()).toBe(false);
+  });
+
+  it("falls back to the default el-empty in card/list views without a #empty slot", async () => {
+    // 空数据 + 未提供 #empty：三种视图都回落 el-empty「暂无数据」
+    const wrapper = mountTable({ dataFun: constData([]) });
+    await settle();
+
+    await wrapper.setProps({ viewMode: "card" });
+    await settle();
+    expect(wrapper.find(".yk-table__cards .el-empty").exists()).toBe(true);
+
+    await wrapper.setProps({ viewMode: "list" });
+    await settle();
+    expect(wrapper.find(".yk-table__list .el-empty").exists()).toBe(true);
   });
 });

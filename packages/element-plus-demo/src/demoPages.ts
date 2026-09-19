@@ -20,6 +20,7 @@ import BigDataNoTotalTablePage from "./pages/table/BigDataNoTotalTablePage.vue";
 import CustomSelectionBarTablePage from "./pages/table/CustomSelectionBarTablePage.vue";
 import CustomEntryButtonsTablePage from "./pages/table/CustomEntryButtonsTablePage.vue";
 import CardViewTablePage from "./pages/table/CardViewTablePage.vue";
+import LoadingTablePage from "./pages/table/LoadingTablePage.vue";
 
 /**
  * Demo 页面注册表：导航按钮与 App 动态渲染共用的唯一数据源。
@@ -115,6 +116,11 @@ export const demoPages = [
     id: "table-card-view",
     label: "表格 / 卡片 / 列表视图切换（viewMode + #card / #list 插槽）",
     component: CardViewTablePage,
+  },
+  {
+    id: "table-loading",
+    label: "加载中效果（2 秒慢接口 + #loading 插槽）",
+    component: LoadingTablePage,
   },
 ] as const satisfies readonly DemoPageDef[];
 

@@ -436,32 +436,44 @@ defineExpose(exposed);
     </div>
 
     <!-- 表格视图：v-if 与卡片视图二选一；切回本视图后由 useSelection.restoreSelection
-         把跨页累计选中恢复到勾选列（选中状态以 rowKey Map 为准，不再用 reserve-selection） -->
-    <el-table v-if="currentViewMode === 'table'" ref="tableEl" v-loading="viewLoading" :data="rows"
-      :row-key="rowKey" border @selection-change="onSelectionChange" @header-dragend="onColumnResize">
-      <!-- 空数据提示：使用者经 #empty 插槽自定义；仅在使用者提供了插槽时才声明，
-           否则保留 el-table 默认的「暂无数据」空态 -->
-      <template v-if="$slots.empty" #empty>
-        <slot name="empty" />
-      </template>
-      <!-- 勾选列：跨页保留由 useSelection 的 rowKey Map 受控维护，表头 checkbox 全选/取消全选当前页 -->
-      <el-table-column v-if="showCheckbox" type="selection" width="48" />
-      <!-- 数据列：col.render 存在时优先用自定义渲染（返回字符串/VNode 均可，
-           经函数式组件呈现），否则走默认的 propertyPath 取值显示 -->
-      <el-table-column v-for="col in columns" :key="col.propertyPath" :prop="col.propertyPath" :label="col.displayName"
-        :width="col.width" show-overflow-tooltip>
-        <template v-if="col.render" #default="{ row }">
-          <component :is="() => col.render!(row, (row as Record<string, unknown>)[col.propertyPath])" />
+         把跨页累计选中恢复到勾选列（选中状态以 rowKey Map 为准，不再用 reserve-selection）。
+         外层 wrap 为自制 loading 遮罩提供定位上下文（不再用 el-table 的 v-loading 指令，
+         以便三种视图共用 #loading 插槽） -->
+    <div v-if="currentViewMode === 'table'" class="yk-table__table-wrap">
+      <el-table ref="tableEl" :data="rows"
+        :row-key="rowKey" border @selection-change="onSelectionChange" @header-dragend="onColumnResize">
+        <!-- 空数据提示：使用者经 #empty 插槽自定义（表格/卡片/列表三种视图共享，见下方两个视图分支）；
+             仅在使用者提供了插槽时才声明，否则保留 el-table 默认的「暂无数据」空态 -->
+        <template v-if="$slots.empty" #empty>
+          <slot name="empty" />
         </template>
-      </el-table-column>
-      <!-- 行操作列：actions 状态归 Table 所有（视图切换往返不丢失；卡片右键菜单共用） -->
-      <RowActionsColumn v-if="props.rowActionsFunc" :actions="actions" />
-    </el-table>
+        <!-- 勾选列：跨页保留由 useSelection 的 rowKey Map 受控维护，表头 checkbox 全选/取消全选当前页 -->
+        <el-table-column v-if="showCheckbox" type="selection" width="48" />
+        <!-- 数据列：col.render 存在时优先用自定义渲染（返回字符串/VNode 均可，
+             经函数式组件呈现），否则走默认的 propertyPath 取值显示 -->
+        <el-table-column v-for="col in columns" :key="col.propertyPath" :prop="col.propertyPath" :label="col.displayName"
+          :width="col.width" show-overflow-tooltip>
+          <template v-if="col.render" #default="{ row }">
+            <component :is="() => col.render!(row, (row as Record<string, unknown>)[col.propertyPath])" />
+          </template>
+        </el-table-column>
+        <!-- 行操作列：actions 状态归 Table 所有（视图切换往返不丢失；卡片右键菜单共用） -->
+        <RowActionsColumn v-if="props.rowActionsFunc" :actions="actions" />
+      </el-table>
+      <!-- 加载遮罩：三种视图共用 #loading 插槽；未提供插槽时渲染内置 spinner -->
+      <transition name="yk-loading-fade">
+        <div v-if="viewLoading" class="yk-table__loading-mask">
+          <slot name="loading">
+            <span class="yk-table__loading-spinner" aria-label="加载中" />
+          </slot>
+        </div>
+      </transition>
+    </div>
 
     <!-- 卡片视图：当前页每行一张卡片；卡片内容经 #card 插槽自定义（作用域为 { row, index }），
          未提供插槽时默认把整行 JSON 序列化展示。checkbox 与表格视图共用同一套跨页选中状态。
          存在行操作（rowActionsFunc）时，卡片上右键弹出操作菜单（与操作列同一套 actions） -->
-    <div v-else-if="currentViewMode === 'card'" v-loading="viewLoading" class="yk-table__cards">
+    <div v-else-if="currentViewMode === 'card'" class="yk-table__cards">
       <div v-for="(row, index) in rows" :key="String(row[rowKey])" class="yk-table__card"
         :class="{
           'is-selected': showCheckbox && isRowSelected(row),
@@ -476,13 +488,25 @@ defineExpose(exposed);
           <pre class="yk-table__card-json">{{ JSON.stringify(row, null, 2) }}</pre>
         </slot>
       </div>
-      <el-empty v-if="!viewLoading && rows.length === 0" description="暂无数据" />
+      <!-- 空数据提示：与表格视图共享 #empty 插槽；未提供插槽时回落 el-empty「暂无数据」 -->
+      <template v-if="!viewLoading && rows.length === 0">
+        <slot v-if="$slots.empty" name="empty" />
+        <el-empty v-else description="暂无数据" />
+      </template>
+      <!-- 加载遮罩：三种视图共用 #loading 插槽；未提供插槽时渲染内置 spinner -->
+      <transition name="yk-loading-fade">
+        <div v-if="viewLoading" class="yk-table__loading-mask">
+          <slot name="loading">
+            <span class="yk-table__loading-spinner" aria-label="加载中" />
+          </slot>
+        </div>
+      </transition>
     </div>
 
     <!-- 列表视图：一行一条数据、占满整行宽度；行内容经 #list 插槽自定义（作用域同为 { row, index }），
          未提供插槽时默认把整行 JSON 序列化展示。checkbox 在行首，与表格/卡片视图共用同一套跨页选中状态；
          存在行操作时右键弹出操作菜单（与卡片视图共用 onCardContextMenu 及同一个 teleport 菜单） -->
-    <div v-else v-loading="viewLoading" class="yk-table__list">
+    <div v-else class="yk-table__list">
       <div v-for="(row, index) in rows" :key="String(row[rowKey])" class="yk-table__list-item"
         :class="{
           'is-selected': showCheckbox && isRowSelected(row),
@@ -499,7 +523,19 @@ defineExpose(exposed);
           </slot>
         </div>
       </div>
-      <el-empty v-if="!viewLoading && rows.length === 0" description="暂无数据" />
+      <!-- 空数据提示：与表格视图共享 #empty 插槽；未提供插槽时回落 el-empty「暂无数据」 -->
+      <template v-if="!viewLoading && rows.length === 0">
+        <slot v-if="$slots.empty" name="empty" />
+        <el-empty v-else description="暂无数据" />
+      </template>
+      <!-- 加载遮罩：三种视图共用 #loading 插槽；未提供插槽时渲染内置 spinner -->
+      <transition name="yk-loading-fade">
+        <div v-if="viewLoading" class="yk-table__loading-mask">
+          <slot name="loading">
+            <span class="yk-table__loading-spinner" aria-label="加载中" />
+          </slot>
+        </div>
+      </transition>
     </div>
 
     <!-- 卡片/列表视图行操作右键菜单：teleport 到 body 避免被容器裁切；
@@ -579,6 +615,8 @@ defineExpose(exposed);
   gap: 12px;
   /* 加载遮罩始终有可挂载的高度，避免空容器遮罩塌陷 */
   min-height: 120px;
+  /* 自制 loading 遮罩的定位上下文（替代原 v-loading 自动追加的 relative） */
+  position: relative;
 }
 
 .yk-table__card {
@@ -608,6 +646,8 @@ defineExpose(exposed);
   gap: 8px;
   /* 加载遮罩始终有可挂载的高度，避免空容器遮罩塌陷 */
   min-height: 120px;
+  /* 自制 loading 遮罩的定位上下文（替代原 v-loading 自动追加的 relative） */
+  position: relative;
 }
 
 .yk-table__list-item {
@@ -651,6 +691,50 @@ defineExpose(exposed);
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-all;
+}
+
+/* ---------------- 加载遮罩（三种视图共用，#loading 插槽可自定义内容） ---------------- */
+/* 表格视图的外层包裹：为遮罩提供定位上下文 */
+.yk-table__table-wrap {
+  position: relative;
+}
+
+.yk-table__loading-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--el-mask-color, rgba(255, 255, 255, 0.9));
+  border-radius: 4px;
+}
+
+/* 默认 spinner：纯 CSS 圆环旋转（不依赖 @element-plus/icons-vue） */
+.yk-table__loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid var(--el-color-primary, #409eff);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: yk-table-loading-spin 0.8s linear infinite;
+}
+
+@keyframes yk-table-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* 遮罩淡入淡出：自制 transition，不依赖 element-plus 的 el-loading-fade 样式 */
+.yk-loading-fade-enter-active,
+.yk-loading-fade-leave-active {
+  transition: opacity 0.3s;
+}
+
+.yk-loading-fade-enter-from,
+.yk-loading-fade-leave-to {
+  opacity: 0;
 }
 
 /* 透明遮罩：铺满视口，捕获菜单外的点击/右键以关闭菜单 */
