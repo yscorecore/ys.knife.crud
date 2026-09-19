@@ -47,6 +47,11 @@ h1 {
   margin-bottom: 16px;
 }
 .toolbar {
+  /* 横向工具行：按钮 / radio-group / switch 等控件垂直居中对齐，避免内联基线错位 */
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
   margin-bottom: 12px;
 }
 code {

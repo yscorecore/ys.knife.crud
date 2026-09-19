@@ -31,7 +31,7 @@ const externalPageSize = ref(10);
     @back="$emit('back')"
   >
     <template #toolbar>
-      <el-button-group style="margin-right: 16px">
+      <el-button-group>
         <el-button :type="externalPageSize === 10 ? 'primary' : undefined" @click="externalPageSize = 10">
           外部每页 10 条
         </el-button>

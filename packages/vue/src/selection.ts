@@ -106,6 +106,32 @@ export function useSelection({ tableEl, rows, rowKey }: UseSelectionOptions) {
     tableEl.value?.clearSelection?.();
   }
 
+  /**
+   * 选中当前页所有行（其他页已选中不受影响）。
+   * 先把当前页全部 key 写入累计集合，再经 restoreSelection 把勾选态同步到 el-table。
+   */
+  function selectAllOnPage(): void {
+    const next = new Map(selectedMap.value);
+    for (const row of rows.value) next.set(keyOf(row), row);
+    selectedMap.value = next;
+    void restoreSelection();
+  }
+
+  /**
+   * 反选当前页行（其他页已选中不受影响）。
+   * 对当前页每行：已选中的移除、未选中的加入；再经 restoreSelection 同步到 el-table。
+   */
+  function invertSelectionOnPage(): void {
+    const next = new Map(selectedMap.value);
+    for (const row of rows.value) {
+      const key = keyOf(row);
+      if (next.has(key)) next.delete(key);
+      else next.set(key, row);
+    }
+    selectedMap.value = next;
+    void restoreSelection();
+  }
+
   // 当前页数据变化（首载 / 翻页 / 切换每页条数）时的处理。
   // 必须 flush:'pre' 且【先置 restoring=true】：el-table 在其 data watcher（同为 pre，
   // 但创建晚于本 watcher）里会清空内部选中并派发一次空的 selection-change——
@@ -124,5 +150,7 @@ export function useSelection({ tableEl, rows, rowKey }: UseSelectionOptions) {
     toggleRowSelection,
     restoreSelection,
     clearSelection,
+    selectAllOnPage,
+    invertSelectionOnPage,
   };
 }

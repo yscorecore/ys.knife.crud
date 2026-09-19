@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, toRef, watch, type PropType, type Ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, toRef, watch, type PropType, type Ref } from "vue";
 import type {
+  Action,
   Column,
   TableApi,
   TableProps as CoreTableProps,
   ViewMode,
 } from "@ys.knife.crud/core";
-import { useDefault, useSelection } from "@ys.knife.crud/vue";
+import { useDefault, useRowActions, useSelection, visibleActions, isEnabled } from "@ys.knife.crud/vue";
 import ExportExcelDialog from "./exportExcelDialog.vue";
 import ColumnConfigDialog from "./columnConfigDialog.vue";
 import RowActionsColumn from "./rowActionsColumn.vue";
@@ -72,7 +73,8 @@ const props = defineProps({
   rowKey: { type: String, default: "id" },
   /**
    * 展示形态，默认 "table"（表格视图）；设为 "card" 时以卡片网格渲染当前页行。
-   * 配合 update:viewMode 事件可使用 v-model:view-mode 受控切换。
+   * 受控与非受控皆可：用 v-model:view-mode 时由父级驱动；不绑定时内置切换控件
+   * 自行切换（组件内部维护状态，同时照常派发 update:viewMode）。
    */
   viewMode: { type: String as PropType<ViewMode>, default: "table" },
   /**
@@ -124,18 +126,26 @@ const {
   toggleRowSelection,
   restoreSelection,
   clearSelection,
+  selectAllOnPage,
+  invertSelectionOnPage,
 } = useSelection({ tableEl, rows, rowKey: toRef(props, "rowKey") });
 
 
-/* ---------------- 子组件引用（行操作 / 列设置 / 导出） ---------------- */
+/* ---------------- 子组件引用（列设置 / 导出） ---------------- */
 
-/** 行操作列实例引用（经 defineExpose 暴露 actionsLoading/loadActions） */
-const rowActionsRef = ref<{
-  actionsLoading: boolean;
-  loadActions: (signal?: AbortSignal) => Promise<void>;
-} | null>(null);
-
-const actionsLoading = computed(() => rowActionsRef.value?.actionsLoading ?? false);
+/**
+ * 行操作状态提升到 Table：
+ * - 修复视图切换往返后操作列消失——RowActionsColumn 在 v-if 内会被卸载重建，
+ *   若 actions 归它所有，重建后初始为空且不会重新加载；
+ * - 卡片视图的右键菜单与表格视图的操作列共用同一份 actions。
+ * 经 getter 合成 props，使 composable 内 watch(() => props.rowActionsFunc) 持续生效。
+ */
+const rowActionsProps = {
+  get rowActionsFunc() {
+    return props.rowActionsFunc;
+  },
+};
+const { actions, actionsLoading, loadActions } = useRowActions(rowActionsProps);
 
 /** 列设置对话框实例引用（经 defineExpose 暴露 columns/defaultPageSize/updateDefaultPageSize/loadCustomConfigs/customConfigLoading/openDialog） */
 const configDialogRef = ref<{
@@ -237,7 +247,7 @@ function onColumnResize(newWidth: number, _oldWidth: number, column: { property?
 async function reload(): Promise<void> {
   await Promise.all([
     loadMeta(),
-    rowActionsRef.value?.loadActions(),
+    loadActions(),
     configDialogRef.value?.loadCustomConfigs(),
   ]);
   currentPage.value = 1;
@@ -255,8 +265,29 @@ watch(() => props.dataFun, () => {
   currentPage.value = 1;
   loadData();
 });
-// 卡片 → 表格：el-table 重新挂载后把累计选中恢复到勾选态（restoreSelection 内含 nextTick）
+
+/* ---------------- 展示形态（受控 / 非受控皆可） ---------------- */
+
+/**
+ * 内部实际生效的视图模式：
+ * - 父级用 v-model:view-mode（受控）：set 时 emit，父级回写 prop，下面的 watch 再同步回来；
+ * - 父级只给初始值或根本不传（非受控）：内置切换控件直接改本地态即可生效，
+ *   同时照常 emit update:viewMode（外部需要感知时可监听）。
+ */
+const innerViewMode = ref<ViewMode>(props.viewMode);
 watch(() => props.viewMode, (mode) => {
+  innerViewMode.value = mode;
+});
+const currentViewMode = computed<ViewMode>({
+  get: () => innerViewMode.value,
+  set: (mode) => {
+    innerViewMode.value = mode;
+    emit("update:viewMode", mode);
+  },
+});
+
+// 卡片 → 表格：el-table 重新挂载后把累计选中恢复到勾选态（restoreSelection 内含 nextTick）
+watch(currentViewMode, (mode) => {
   if (mode === "table") void restoreSelection();
 });
 
@@ -297,10 +328,53 @@ function onCardCheck(row: Record<string, unknown>, checked: string | number | bo
   toggleRowSelection(row, Boolean(checked));
 }
 
-/** 内置「表格 / 卡片」切换控件：向父级派发更新，支持 v-model:view-mode */
-function onViewModeChange(value: string | number | boolean): void {
-  emit("update:viewMode", value as ViewMode);
+/* ---------------- 卡片视图：行操作右键菜单 ---------------- */
+
+/** 当前打开的右键菜单（null 表示关闭）；记录点击位置与目标行 */
+const cardMenu = ref<{ x: number; y: number; row: Record<string, unknown> } | null>(null);
+
+/** 菜单当前应对目标行展示的可见操作（action.show 缺省视为可见） */
+const cardMenuActions = computed<Action<unknown>[]>(() =>
+  cardMenu.value ? visibleActions(actions.value, cardMenu.value.row) : [],
+);
+
+/**
+ * 卡片右键：存在行操作时拦截浏览器默认菜单并弹出自定义菜单。
+ * 位置做视口边界收敛，避免菜单溢出屏幕。
+ */
+function onCardContextMenu(event: MouseEvent, row: Record<string, unknown>): void {
+  // 无行操作时不拦截，保留浏览器原生右键菜单
+  if (actions.value.length === 0) return;
+  event.preventDefault();
+  const menuWidth = 176;
+  const itemHeight = 34;
+  const menuHeight = cardMenuItemsCount(row) * itemHeight + 8;
+  cardMenu.value = {
+    x: Math.min(event.clientX, window.innerWidth - menuWidth - 8),
+    y: Math.min(event.clientY, window.innerHeight - menuHeight - 8),
+    row,
+  };
 }
+
+/** 该右键位置下可见操作数量（用于打开前估算菜单高度做边界收敛） */
+function cardMenuItemsCount(row: Record<string, unknown>): number {
+  return visibleActions(actions.value, row).length;
+}
+
+/** 执行菜单项：先关闭菜单再执行 action（execute 可能触发弹层/reload） */
+function onCardMenuAction(action: Action<unknown>): void {
+  const row = cardMenu.value?.row;
+  cardMenu.value = null;
+  if (row) void action.execute(row);
+}
+
+/** Esc 关闭菜单 */
+function onCardMenuKeydown(event: KeyboardEvent): void {
+  if (event.key === "Escape") cardMenu.value = null;
+}
+
+onMounted(() => window.addEventListener("keydown", onCardMenuKeydown));
+onBeforeUnmount(() => window.removeEventListener("keydown", onCardMenuKeydown));
 
 const exposed = {
   meta,
@@ -330,14 +404,8 @@ defineExpose(exposed);
            无选中时 SelectionBar 不渲染任何元素，右侧控件组靠 margin-left:auto 自行贴右，
            不依赖占位元素 -->
       <SelectionBar v-if="showCheckbox && showSelectionBar" :count="selectedRows.length"
-        @clear="clearSelection" />
+        @clear="clearSelection" @select-all="selectAllOnPage" @invert="invertSelectionOnPage" />
       <div class="yk-table__toolbar-actions">
-        <!-- 内置「表格 / 卡片」视图切换；showViewSwitch=false 时由外部经 v-model:view-mode 自控 -->
-        <el-radio-group v-if="showViewSwitch" :model-value="viewMode" size="small"
-          class="yk-table__view-switch" @change="onViewModeChange">
-          <el-radio-button value="table">表格</el-radio-button>
-          <el-radio-button value="card">卡片</el-radio-button>
-        </el-radio-group>
         <el-button v-if="showExportExcel" link type="primary" class="yk-table__export-btn"
           @click="openExportDialog()">
           ⬇ 导出 Excel
@@ -346,12 +414,19 @@ defineExpose(exposed);
           @click="openConfigDialog()">
           ⚙ 列设置
         </el-button>
+        <!-- 内置「表格 / 卡片」视图切换，位于列设置入口右侧；showViewSwitch=false 时
+             由外部经 v-model:view-mode 或监听 update:viewMode 自控 -->
+        <el-radio-group v-if="showViewSwitch" v-model="currentViewMode" size="small"
+          class="yk-table__view-switch">
+          <el-radio-button value="table">表格</el-radio-button>
+          <el-radio-button value="card">卡片</el-radio-button>
+        </el-radio-group>
       </div>
     </div>
 
     <!-- 表格视图：v-if 与卡片视图二选一；切回本视图后由 useSelection.restoreSelection
          把跨页累计选中恢复到勾选列（选中状态以 rowKey Map 为准，不再用 reserve-selection） -->
-    <el-table v-if="viewMode === 'table'" ref="tableEl" v-loading="viewLoading" :data="rows"
+    <el-table v-if="currentViewMode === 'table'" ref="tableEl" v-loading="viewLoading" :data="rows"
       :row-key="rowKey" border @selection-change="onSelectionChange" @header-dragend="onColumnResize">
       <!-- 空数据提示：使用者经 #empty 插槽自定义；仅在使用者提供了插槽时才声明，
            否则保留 el-table 默认的「暂无数据」空态 -->
@@ -368,15 +443,21 @@ defineExpose(exposed);
           <component :is="() => col.render!(row, (row as Record<string, unknown>)[col.propertyPath])" />
         </template>
       </el-table-column>
-      <!-- 行操作列：内部自管 actions 加载与渲染（卡片视图不挂载，行操作仅属于表格视图） -->
-      <RowActionsColumn v-if="props.rowActionsFunc" ref="rowActionsRef" :row-actions-func="props.rowActionsFunc" />
+      <!-- 行操作列：actions 状态归 Table 所有（视图切换往返不丢失；卡片右键菜单共用） -->
+      <RowActionsColumn v-if="props.rowActionsFunc" :actions="actions" />
     </el-table>
 
     <!-- 卡片视图：当前页每行一张卡片；卡片内容经 #card 插槽自定义（作用域为 { row, index }），
-         未提供插槽时默认把整行 JSON 序列化展示。checkbox 与表格视图共用同一套跨页选中状态 -->
+         未提供插槽时默认把整行 JSON 序列化展示。checkbox 与表格视图共用同一套跨页选中状态。
+         存在行操作（rowActionsFunc）时，卡片上右键弹出操作菜单（与操作列同一套 actions） -->
     <div v-else v-loading="viewLoading" class="yk-table__cards">
       <div v-for="(row, index) in rows" :key="String(row[rowKey])" class="yk-table__card"
-        :class="{ 'is-selected': showCheckbox && isRowSelected(row) }">
+        :class="{
+          'is-selected': showCheckbox && isRowSelected(row),
+          'has-actions': actions.length > 0,
+        }"
+        :title="actions.length > 0 ? '右键查看行操作' : undefined"
+        @contextmenu="onCardContextMenu($event, row)">
         <el-checkbox v-if="showCheckbox" class="yk-table__card-checkbox"
           :model-value="isRowSelected(row)"
           @change="onCardCheck(row, $event)" />
@@ -386,6 +467,22 @@ defineExpose(exposed);
       </div>
       <el-empty v-if="!viewLoading && rows.length === 0" description="暂无数据" />
     </div>
+
+    <!-- 卡片视图行操作右键菜单：teleport 到 body 避免被容器裁切；
+         透明遮罩捕获菜单外点击/右键以关闭，Esc 同样关闭 -->
+    <teleport to="body">
+      <template v-if="cardMenu">
+        <div class="yk-table__menu-mask" @click="cardMenu = null"
+          @contextmenu.prevent="cardMenu = null" />
+        <ul class="yk-table__context-menu" :style="{ left: `${cardMenu.x}px`, top: `${cardMenu.y}px` }">
+          <li v-for="action in cardMenuActions" :key="action.name" class="yk-table__context-menu-item"
+            :class="{ 'is-disabled': !isEnabled(action, cardMenu.row) }"
+            @click="isEnabled(action, cardMenu.row) && onCardMenuAction(action)">
+            {{ action.desc }}
+          </li>
+        </ul>
+      </template>
+    </teleport>
 
     <!-- 数据超过一页时自动显示的分页组件；sizes 支持用户切换每页条数。
          两种模式：totalCount 已知 → layout 含 total，显示「共 N 条」；
@@ -436,8 +533,8 @@ defineExpose(exposed);
 }
 
 .yk-table__view-switch {
-  /* 与右侧文字按钮拉开距离 */
-  margin-right: 4px;
+  /* 与左侧「列设置」文字入口拉开距离 */
+  margin-left: 4px;
 }
 
 /* ---------------- 卡片视图 ---------------- */
@@ -463,6 +560,56 @@ defineExpose(exposed);
   border-color: var(--el-color-primary, #409eff);
   /* inset 光晕勾边，比改 border-width 更不引发布局位移 */
   box-shadow: 0 0 0 1px var(--el-color-primary, #409eff) inset;
+}
+
+/* 配置了行操作的卡片：右键可弹操作菜单 */
+.yk-table__card.has-actions {
+  cursor: context-menu;
+}
+
+/* 透明遮罩：铺满视口，捕获菜单外的点击/右键以关闭菜单 */
+.yk-table__menu-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+}
+
+.yk-table__context-menu {
+  position: fixed;
+  z-index: 2001;
+  box-sizing: border-box;
+  min-width: 120px;
+  margin: 4px 0;
+  padding: 4px 0;
+  list-style: none;
+  background: var(--el-bg-color-overlay, #fff);
+  border: 1px solid var(--el-border-color-light, #e4e7ed);
+  border-radius: 4px;
+  box-shadow: var(--el-box-shadow-light, 0 0 12px rgba(0, 0, 0, 0.12));
+}
+
+.yk-table__context-menu-item {
+  padding: 0 16px;
+  font-size: 14px;
+  line-height: 34px;
+  color: var(--el-text-color-regular, #606266);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.yk-table__context-menu-item:hover {
+  background: var(--el-fill-color-light, #f5f7fa);
+  color: var(--el-color-primary, #409eff);
+}
+
+.yk-table__context-menu-item.is-disabled {
+  color: var(--el-disabled-text-color, #a8abb2);
+  cursor: not-allowed;
+}
+
+.yk-table__context-menu-item.is-disabled:hover {
+  background: transparent;
+  color: var(--el-disabled-text-color, #a8abb2);
 }
 
 .yk-table__card-checkbox {

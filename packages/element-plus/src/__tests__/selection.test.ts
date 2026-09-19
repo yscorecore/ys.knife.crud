@@ -104,4 +104,30 @@ describe("cross-page selection (controlled rowKey map)", () => {
     await settle();
     expect((wrapper.vm as unknown as { selectedRows: unknown[] }).selectedRows).toHaveLength(3);
   });
+
+  it("switches view via the built-in radio without a bound v-model (uncontrolled)", async () => {
+    const wrapper = mountTable();
+    await settle();
+
+    // 默认表格视图：ElTable 存在
+    expect(findByName(wrapper, "ElTable").exists()).toBe(true);
+    expect(wrapper.find(".yk-table__cards").exists()).toBe(false);
+
+    // 未绑定 v-model:view-mode：模拟内置 radio-group 选择「卡片」
+    const switcher = findByName(wrapper, "ElRadioGroup");
+    switcher.vm.$emit("update:modelValue", "card");
+    await settle();
+
+    // 组件内部状态自行切换（不依赖父级回写 prop）
+    expect(findByName(wrapper, "ElTable").exists()).toBe(false);
+    expect(wrapper.find(".yk-table__cards").exists()).toBe(true);
+    // 同时向外派发了 update:viewMode
+    expect(wrapper.emitted("update:viewMode")?.[0]).toEqual(["card"]);
+
+    // 切回表格
+    switcher.vm.$emit("update:modelValue", "table");
+    await settle();
+    expect(findByName(wrapper, "ElTable").exists()).toBe(true);
+    expect(wrapper.find(".yk-table__cards").exists()).toBe(false);
+  });
 });

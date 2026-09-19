@@ -40,7 +40,7 @@ const rowActionsFunc: RowActionsFunc<UserRow> = constActions<UserRow>(
 <template>
   <DemoPageLayout
     title="带行操作的表格"
-    hint="表头 + const 数据 + 行操作：rowActionsFunc 由 constActions 提供，最后一列显示「编辑 / 删除」；首行因 show 条件不显示「删除」，删除后 Table 自动 reload。"
+    hint="表头 + const 数据 + 行操作：rowActionsFunc 由 constActions 提供，最后一列显示「编辑 / 删除」；首行因 show 条件不显示「删除」，删除后 Table 自动 reload。切到卡片视图后，在卡片上点右键弹出同一套行操作菜单。"
     @back="$emit('back')"
   >
     <ys-table
