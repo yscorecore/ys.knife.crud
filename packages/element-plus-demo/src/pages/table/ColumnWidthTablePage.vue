@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { constData, loadLocalStorageConfig, saveLocalStorageConfig, type CustomConfig, type saveCustomConfigFunc, type TableApi } from "@ys.knife.crud/core";
+import { constData, loadLocalStorageConfig, saveLocalStorageConfig, type CustomConfig, type saveCustomConfigFunc } from "@ys.knife.crud/core";
 import { YsTable } from "@ys.knife.crud/element-plus";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 import { createRows, metaFun } from "../shared/demoData";
@@ -10,8 +10,6 @@ defineEmits<{
 }>();
 
 const dataFun = constData(createRows());
-
-const tableRef = ref<TableApi | null>(null);
 
 // 列设置（含拖动后的列宽）持久化到 localStorage，刷新页面后仍生效
 const loadCustomConfigFun = loadLocalStorageConfig("yk-crud-demo-column-width");
@@ -32,15 +30,10 @@ const saveCustomConfigFun: saveCustomConfigFunc = async (config: CustomConfig) =
 <template>
   <DemoPageLayout
     title="列宽拖动（header-dragend + 防抖保存）"
-    hint="鼠标拖动表头列边界调整列宽（border 表格默认可拖），松手后宽度立即写入列设置并防抖 500ms 持久化——连续拖动多列只调用一次保存接口（下方计数可见）。宽度经 localStorage 持久化，刷新页面仍保留；外部「⚙ 列设置」按钮（ref.openConfigDialog）里也能看到拖动后的宽度。"
+    hint="鼠标拖动表头列边界调整列宽（border 表格默认可拖），松手后宽度立即写入列设置并防抖 500ms 持久化——连续拖动多列只调用一次保存接口（下方计数可见）。宽度经 localStorage 持久化，刷新页面仍保留；「⚙ 列设置」里也能看到拖动后的宽度。"
     @back="$emit('back')"
   >
-    <template #toolbar>
-      <el-button type="primary" @click="tableRef?.openConfigDialog()">⚙ 列设置</el-button>
-    </template>
-
     <ys-table
-      ref="tableRef"
       :meta-fun="metaFun"
       :data-fun="dataFun"
       show-custom-config

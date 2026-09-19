@@ -52,7 +52,7 @@ const selectedRows = computed<UserRow[]>(
       :data-fun="dataFun"
       :page-size="10"
       show-checkbox
-      :show-selection-bar="false"
+      :show-selection-bar="true"
     />
   </DemoPageLayout>
 </template>

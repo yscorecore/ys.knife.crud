@@ -5,7 +5,6 @@ import ActionsTablePage from "./pages/table/ActionsTablePage.vue";
 import ListTablePage from "./pages/table/ListTablePage.vue";
 import PagedTablePage from "./pages/table/PagedTablePage.vue";
 import UnknownTotalTablePage from "./pages/table/UnknownTotalTablePage.vue";
-import ExportMaxPagesTablePage from "./pages/table/ExportMaxPagesTablePage.vue";
 import CheckboxTablePage from "./pages/table/CheckboxTablePage.vue";
 import CustomTablePage from "./pages/table/CustomTablePage.vue";
 import ComboTablePage from "./pages/table/ComboTablePage.vue";
@@ -16,7 +15,6 @@ import ColumnWidthTablePage from "./pages/table/ColumnWidthTablePage.vue";
 import ColumnRenderTablePage from "./pages/table/ColumnRenderTablePage.vue";
 import CsvExportTablePage from "./pages/table/CsvExportTablePage.vue";
 import ExternalControlTablePage from "./pages/table/ExternalControlTablePage.vue";
-import ExternalEntryButtonsTablePage from "./pages/table/ExternalEntryButtonsTablePage.vue";
 import BigDataTablePage from "./pages/table/BigDataTablePage.vue";
 import BigDataNoTotalTablePage from "./pages/table/BigDataNoTotalTablePage.vue";
 import CustomSelectionBarTablePage from "./pages/table/CustomSelectionBarTablePage.vue";
@@ -46,13 +44,8 @@ export const demoPages = [
   { id: "table-paged", label: "分页表格（25 行数据自动分页）", component: PagedTablePage },
   {
     id: "table-unknown-total",
-    label: "未知总条数（totalCount=null + indeterminate 导出进度）",
+    label: "未知总条数（totalCount=null + 导出进度 99% 封顶）",
     component: UnknownTotalTablePage,
-  },
-  {
-    id: "table-export-max-pages",
-    label: "导出页数上限（exportMaxPages=3 截断导出）",
-    component: ExportMaxPagesTablePage,
   },
   {
     id: "table-checkbox",
@@ -95,11 +88,6 @@ export const demoPages = [
     id: "table-external-control",
     label: "外部 prop 驱动（pageSize 变化 + 切换数据源）",
     component: ExternalControlTablePage,
-  },
-  {
-    id: "table-external-entry-buttons",
-    label: "外部自定义入口按钮（openConfigDialog/openExportDialog）",
-    component: ExternalEntryButtonsTablePage,
   },
   {
     id: "table-big-data",

@@ -45,20 +45,24 @@ const props = defineProps({
    * 照常可用），由外部自行渲染自定义样式的提示条。
    */
   showSelectionBar: { type: Boolean, default: true },
-  /** 为 true 时启用列设置能力（挂载列设置面板与持久化流程），默认 false。
-   *  组件不内置入口按钮：由外部自行渲染按钮，经 expose 的 openConfigDialog() 触发 */
+  /**
+   * 为 true 时渲染内置的「⚙ 列设置」入口按钮，默认 false。
+   * 设为 false 时不渲染内置按钮——外部可自实现按钮并经 expose 的
+   * openConfigDialog() 打开内置列设置面板（面板始终挂载）。
+   */
   showCustomConfig: { type: Boolean, default: false },
   /** 加载自定义配置（含列设置与用户默认分页大小；返回 null 按空配置处理） */
   loadCustomConfigFun: { type: Function as PropType<NonNullable<CoreTableProps["loadCustomConfigFun"]>>, required: false },
   /** 保存自定义配置（含列设置与用户默认分页大小） */
   saveCustomConfigFun: { type: Function as PropType<NonNullable<CoreTableProps["saveCustomConfigFun"]>>, required: false },
-  /** 为 true 时启用导出 Excel 能力（挂载导出对话框与流程），默认 false。
-   *  组件不内置入口按钮：由外部自行渲染按钮，经 expose 的 openExportDialog() 触发 */
+  /**
+   * 为 true 时渲染内置的「⬇ 导出 Excel」入口按钮，默认 false。
+   * 设为 false 时不渲染内置按钮——外部可自实现按钮并经 expose 的
+   * openExportDialog() 打开内置导出对话框（对话框始终挂载）。
+   */
   showExportExcel: { type: Boolean, default: false },
   /** 导出「所有数据」时每次分页拉取的条数，默认 1000（独立于界面分页大小） */
   exportPageSize: { type: Number, default: 1000 },
-  /** 「导出所有」的最大拉取页数（循环次数上限），默认 1000；防止数据量过大时无休止导出 */
-  exportMaxPages: { type: Number, default: 1000 },
   /** 导出实现工厂：每次导出调用它得到一个全新的 ExportApi 实例，组件只经该接口写文件。
    *  缺省使用内置 ExcelJS 实现（createExcelJsExportApiFunc）；
    *  将来可替换为其它实现（CSV、服务端导出等），组件无需改动 */
@@ -149,7 +153,7 @@ async function loadData(signal?: AbortSignal): Promise<void> {
   dataLoading.value = true;
   try {
     const offset = (currentPage.value - 1) * innerPageSize.value;
-    const result = await props.dataFun(innerPageSize.value, offset, signal);
+    const result = await props.dataFun({ limit: innerPageSize.value, offset }, signal);
     paged.value = result;
     // 请求成功才通知外部；取消（AbortError）/异常时 await 直接抛出，不会走到这里
     emit("data-loaded", result);
@@ -245,12 +249,18 @@ function clearSelection(): void {
   tableEl.value?.clearSelection?.();
 }
 
-/** 打开列设置面板——委托 ColumnConfigDialog；供外部自定义按钮触发（showEntryButtons=false 场景） */
+/**
+ * 打开内置列设置对话框——委托 ColumnConfigDialog 的 openDialog。
+ * showCustomConfig=false（不渲染内置「⚙ 列设置」按钮）、外部自实现按钮时的打开入口。
+ */
 function openConfigDialog(): void {
   configDialogRef.value?.openDialog();
 }
 
-/** 打开导出 Excel 对话框——委托 ExportExcelDialog；供外部自定义按钮触发（showEntryButtons=false 场景） */
+/**
+ * 打开内置导出 Excel 对话框——委托 ExportExcelDialog 的 openExportDialog。
+ * showExportExcel=false（不渲染内置「⬇ 导出 Excel」按钮）、外部自实现按钮时的打开入口。
+ */
 function openExportDialog(): void {
   exportDialogRef.value?.openExportDialog();
 }
@@ -271,11 +281,28 @@ defineExpose(exposed);
 
 <template>
   <div class="yk-table">
-    <!-- 内置跨页选中提示条：仅 showCheckbox + showSelectionBar 时渲染。
-         showSelectionBar=false 时由外部自行渲染自定义样式（经 selectedRows/clearSelection），
-         此处不保留空行；勾选/取消勾选引起的布局由外部自行消化 -->
-    <div v-if="showCheckbox && showSelectionBar" class="yk-table__toolbar">
-      <SelectionBar :count="selectedRows.length" @clear="clearSelection" />
+    <!-- 顶部工具栏：左侧为跨页选中提示（有选中时显示），右侧为导出 / 列设置入口。
+         同一行节省纵向空间。启用任一能力即常驻渲染并保持固定行高——
+         仅勾选的表格里，选中提示的出现/消失不再增减这一行的高度，
+         表头不会上下抖动（与导出/列设置入口常驻时的表现对齐）。
+         showSelectionBar=false 时左侧提示条不渲染（由外部自行实现），右侧按钮组照常 -->
+    <div v-if="(showCheckbox && showSelectionBar) || showCustomConfig || showExportExcel"
+      class="yk-table__toolbar">
+      <!-- 跨页选中提示：reserve-selection 下选中可能来自其他页，给用户一个总览与清空入口。
+           无选中时 SelectionBar 不渲染任何元素，右侧按钮组靠 margin-left:auto 自行贴右，
+           不依赖占位元素 -->
+      <SelectionBar v-if="showCheckbox && showSelectionBar" :count="selectedRows.length"
+        @clear="clearSelection" />
+      <div class="yk-table__toolbar-actions">
+        <el-button v-if="showExportExcel" link type="primary" class="yk-table__export-btn"
+          @click="openExportDialog()">
+          ⬇ 导出 Excel
+        </el-button>
+        <el-button v-if="showCustomConfig" link type="primary" class="yk-table__config-btn"
+          @click="openConfigDialog()">
+          ⚙ 列设置
+        </el-button>
+      </div>
     </div>
 
     <el-table ref="tableEl" v-loading="metaLoading || dataLoading || actionsLoading || customConfigLoading" :data="rows"
@@ -309,19 +336,20 @@ defineExpose(exposed);
       @current-change="onPageChange" @size-change="onSizeChange" />
 
     <!-- 导出 Excel 对话框组（范围选择 / 进度 / 取消询问）—— 内部自管 useExportExcel。
+         始终挂载（与列设置面板一致）：showExportExcel 只控制内置按钮显隐，
+         置 false 且外部自实现按钮时经 expose 的 openExportDialog() 打开。
          props 按相关性分组：数据管道 → 列定义 → 当前页快照 → 选择。
-         不传 total：导出总条数由 dataFun 响应中的 totalCount 探测，
-         未知时对话框进度条走 indeterminate 动画 -->
-    <ExportExcelDialog v-if="showExportExcel" ref="exportDialogRef" :current-rows="rows" :selected-rows="selectedRows"
-      :data-fun="props.dataFun" :export-page-size="props.exportPageSize" :export-max-pages="props.exportMaxPages"
+         total 传界面当前总数作为进度条初始分母；导出过程中响应带回 totalCount 时会修正 -->
+    <ExportExcelDialog ref="exportDialogRef" :current-rows="rows" :selected-rows="selectedRows"
+      :data-fun="props.dataFun" :export-page-size="props.exportPageSize" :total="total"
       :exportor-func="props.exportorFunc"
       :table-name="meta?.displayName ?? '数据'" :columns="columns" :has-more-page="showPagination"
       :export-selected="props.showCheckbox" />
 
     <!-- 列设置对话框（内部自管 useCustomConfig；始终挂载，columns 也来自它——
          customConfig 的 width 直接写在 col.width 上，表格读 col.width 即可；
-         面板不内置入口：外部经 expose 的 openConfigDialog 打开；
-         defaultPageSize/updateDefaultPageSize 由 Table 主动读写） -->
+         不再接收 showCustomConfig/innerPageSize：前者由 Table 自身控制「⚙ 列设置」按钮显隐，
+         后者改为经 defineExpose 暴露 defaultPageSize/updateDefaultPageSize 由 Table 主动读写） -->
     <ColumnConfigDialog ref="configDialogRef" :load-custom-config-fun="loadCustomConfigFun"
       :save-custom-config-fun="saveCustomConfigFun" :meta="meta" />
   </div>
@@ -331,9 +359,19 @@ defineExpose(exposed);
 .yk-table__toolbar {
   display: flex;
   align-items: center;
-  /* 固定行高：勾选表格的选中提示出现/消失时，表头不再上下移动 */
+  justify-content: space-between;
+  /* 固定行高（el-button 默认高度）：无选中且无入口按钮时也保留这一行，
+     选中提示出现/消失时表头不再上下移动 */
   min-height: var(--el-component-size, 32px);
   margin-bottom: 2px;
+}
+
+.yk-table__toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  /* 无论左侧选中提示是否存在，按钮组始终吸附工具栏右侧 */
+  margin-left: auto;
 }
 
 .yk-table__pagination {

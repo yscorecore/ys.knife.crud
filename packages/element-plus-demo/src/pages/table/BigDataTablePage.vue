@@ -66,13 +66,11 @@ const rowActionsFunc: RowActionsFunc<UserRow> = constActions<UserRow>(
 <template>
   <DemoPageLayout
     title="大数据全功能表格（10000 行，显示总条数）"
-    hint="10000 行数据 + 50ms 请求延迟，接口返回真实 totalCount：分页器直接显示精确的 Total 10000 与 500 个页码。全部功能开启——跨页勾选（reserve-selection，翻页不丢，工具栏可「查看选中」）、行操作（查看恒可用；编辑在 age&lt;20 时禁用；id=1 受保护不显示删除，删除后显式 reload，总数实时减少）、列设置（localStorage 持久化，外部按钮经 ref.openConfigDialog 打开）、导出 Excel（外部按钮经 ref.openExportDialog 打开；选中 / 当前页 / 所有；导出所有按 500 条/次流式拉取 20 次，进度条显示精确百分比与「已加载 N / 10000」分母）。"
+    hint="10000 行数据 + 50ms 请求延迟，接口返回真实 totalCount：分页器直接显示精确的 Total 10000 与 500 个页码。全部功能开启——跨页勾选（reserve-selection，翻页不丢，工具栏可「查看选中」）、行操作（查看恒可用；编辑在 age&lt;20 时禁用；id=1 受保护不显示删除，删除后显式 reload，总数实时减少）、列设置（localStorage 持久化，表格右上角「⚙ 列设置」入口打开）、导出 Excel（右上角「⬇ 导出 Excel」入口；选中 / 当前页 / 所有；导出所有按 500 条/次流式拉取 20 次，进度条显示精确百分比与「已加载 N / 10000」分母）。"
     @back="$emit('back')"
   >
     <template #toolbar>
       <el-button type="primary" @click="showSelection">查看选中</el-button>
-      <el-button @click="tableRef?.openConfigDialog()">⚙ 列设置</el-button>
-      <el-button type="success" @click="tableRef?.openExportDialog()">⬇ 导出 Excel</el-button>
     </template>
 
     <ys-table

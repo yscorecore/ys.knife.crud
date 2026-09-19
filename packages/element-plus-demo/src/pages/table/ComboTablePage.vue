@@ -25,12 +25,11 @@ const { loadCustomConfigFun, saveCustomConfigFun } = useLocalCustomConfig(
 <template>
   <DemoPageLayout
     title="可勾选 + 自定义列表格"
-    hint="showCheckbox 与 showCustomConfig 同时开启：第一列是 checkbox（跨页保留选中），「⚙ 列设置」由下方外部按钮经 ref.openConfigDialog() 打开，可调整数据列的显隐/顺序/宽度——勾选列固定在第一列，不参与列设置。25 行数据 + pageSize=10，配置独立持久化（与自定义列 demo 互不覆盖）。"
+    hint="showCheckbox 与 showCustomConfig 同时开启：第一列是 checkbox（跨页保留选中），右上「⚙ 列设置」调整数据列的显隐/顺序/宽度——勾选列固定在第一列，不参与列设置。25 行数据 + pageSize=10，配置独立持久化（与自定义列 demo 互不覆盖）。"
     @back="$emit('back')"
   >
     <template #toolbar>
       <el-button type="primary" @click="showSelection">查看选中</el-button>
-      <el-button @click="tableRef?.openConfigDialog()">⚙ 列设置</el-button>
     </template>
 
     <ys-table

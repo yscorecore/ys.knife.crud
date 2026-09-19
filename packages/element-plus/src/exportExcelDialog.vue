@@ -4,7 +4,7 @@ import { useExportExcel } from "@ys.knife.crud/vue";
 import type {
   Column,
   ExportApiFunc as ExportorFunc,
-  NewPageFunc,
+  PageFunc,
 } from "@ys.knife.crud/core";
 
 /**
@@ -18,7 +18,7 @@ import type {
  */
 const props = defineProps<{
   /** 分页数据源（导出所有时逐页拉取） */
-  dataFun: NewPageFunc<unknown>;
+  dataFun: PageFunc<unknown>;
   /** 父级是否启用勾选列——决定「导出选中」选项是否出现 */
   exportSelected: boolean;
   /** 导出实现工厂；缺省使用 core 的控制台假实现 */
@@ -31,10 +31,10 @@ const props = defineProps<{
   currentRows: Record<string, unknown>[];
   /** checkbox 列当前选中的行（跨页累计） */
   selectedRows: unknown[];
+  /** 数据总条数（驱动进度条初始分母；响应中带回 totalCount 时会被修正） */
+  total: number;
   /** 导出所有时分页拉取的步长（独立于界面分页大小） */
   exportPageSize: number;
-  /** 「导出所有」的最大拉取页数（循环次数上限） */
-  exportMaxPages: number;
   /** 是否还有下一页（决定「导出所有」选项是否出现） */
   hasMorePage: boolean;
 }>();
@@ -45,7 +45,6 @@ const {
   exporting,
   exportFetched,
   exportTotal,
-  exportTotalKnown,
   exportPercent,
   exportCancelledVisible,
   exportCancelledRows,
@@ -60,8 +59,8 @@ const {
   columns: toRef(props, "columns"),
   currentRows: toRef(props, "currentRows"),
   selectedRows: toRef(props, "selectedRows"),
+  total: toRef(props, "total"),
   exportPageSize: toRef(props, "exportPageSize"),
-  exportMaxPages: toRef(props, "exportMaxPages"),
   hasMorePage: toRef(props, "hasMorePage"),
 });
 
@@ -97,13 +96,11 @@ defineExpose({ openExportDialog: onExportClick });
     :close-on-click-modal="false"
     :show-close="false"
   >
-    <!-- 总条数已知：真实百分比进度条（含百分比文本）；未知：indeterminate 流动动画，
-         不显示百分比，具体进度以「已加载 N 条」为准 -->
-    <el-progress :percentage="exportPercent" :indeterminate="!exportTotalKnown"
-      :show-text="exportTotalKnown" :duration="!exportTotalKnown ? 3 : undefined" />
+    <!-- 进度百分比：totalCount 未知时分母按估算值走，百分比滚动到 99% 封顶，
+         待响应带回真实 totalCount 后收敛为精确值 -->
+    <el-progress :percentage="exportPercent" />
     <p class="export-progress-text">
-      已加载 {{ exportFetched }}<template v-if="exportTotalKnown"> / {{ exportTotal }}</template> 条<template
-        v-if="!exportTotalKnown">（总条数未知）</template>
+      已加载 {{ exportFetched }} / {{ exportTotal }} 条
     </p>
     <template #footer>
       <el-button class="export-cancel" @click="cancelExport">取消</el-button>

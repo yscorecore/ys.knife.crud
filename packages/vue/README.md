@@ -93,17 +93,15 @@ import { useExportExcel } from "@ys.knife.crud/vue";
 
 // Inside a self-managing dialog component (e.g. exportExcelDialog.vue)
 const props = defineProps<{
-  dataFun: NewPageFunc<unknown>;
-  exportSelected: boolean;
   dataFun: PageFunc<unknown>;
-  showCheckbox: boolean;
+  exportSelected: boolean;
   exportorFunc?: ExportApiFunc;
   tableName?: string;
   columns: Column[];
   currentRows: Record<string, unknown>[];
   selectedRows: unknown[];
+  total: number;
   exportPageSize: number;
-  exportMaxPages: number;
   hasMorePage: boolean;
 }>();
 
@@ -112,9 +110,8 @@ const {
   exportDialogVisible,    // Ref<boolean>
   exporting,              // Ref<boolean>
   exportFetched,          // Ref<number>
-  exportTotal,            // Ref<number | null> — null while total is unknown
-  exportTotalKnown,       // ComputedRef<boolean> — false until a response carries totalCount
-  exportPercent,          // ComputedRef<number>
+  exportTotal,            // Ref<number> — starts from the caller-provided total
+  exportPercent,          // ComputedRef<number> — capped at 99% until real totalCount arrives
   exportCancelledVisible, // Ref<boolean>
   exportCancelledRows,    // Ref<number>
   onExportClick,          // () => void — auto-skips dialog when only one option is enabled
@@ -128,8 +125,8 @@ const {
   columns: toRef(props, "columns"),
   currentRows: toRef(props, "currentRows"),
   selectedRows: toRef(props, "selectedRows"),
+  total: toRef(props, "total"),
   exportPageSize: toRef(props, "exportPageSize"),
-  exportMaxPages: toRef(props, "exportMaxPages"),
   hasMorePage: toRef(props, "hasMorePage"),
 });
 
@@ -137,11 +134,9 @@ const {
 defineExpose({ openExportDialog: onExportClick });
 ```
 
-> **Why `toRef`?** Vue auto-unwraps `Ref` values passed as props, so `props.tableName` is `string | undefined`, not `Ref<string | undefined>`. `toRef(props, "tableName")` re-wraps it into a `Ref` that the composable can read via `.value`, preserving reactivity. The `columns`/`currentRows`/`exportPageSize`/`exportMaxPages`/`hasMorePage` options accept `Ref<T>` (not strictly `ComputedRef<T>`), so both `computed()` results and `toRef()` wrappers work.
+> **Why `toRef`?** Vue auto-unwraps `Ref` values passed as props, so `props.tableName` is `string | undefined`, not `Ref<string | undefined>`. `toRef(props, "tableName")` re-wraps it into a `Ref` that the composable can read via `.value`, preserving reactivity. The `columns`/`currentRows`/`total`/`exportPageSize`/`hasMorePage` options accept `Ref<T>` (not strictly `ComputedRef<T>`), so both `computed()` results and `toRef()` wrappers work.
 
-> **Unknown total.** During "export all", `exportTotal` starts at `null` and is set **only from a page response's `totalCount`**. APIs that omit it (paging via `hasNext` alone) keep it `null`: `exportTotalKnown` stays false, the progress bar runs an indeterminate animation with no percentage, and the UI shows just the loaded count (no misleading denominator). The stream still terminates correctly on `hasNext: false`.
->
-> **Page cap.** `exportMaxPages` bounds the number of page fetches regardless of `hasNext`, so an unexpectedly huge result set can never loop forever; the rows fetched so far are still exported as a partial file.
+> **Unknown total.** During "export all", `exportTotal` is seeded from the caller-provided `total` (an estimate when the API omits `totalCount`). The percentage then scrolls with the loaded count, capped at 99%; once a page response carries a real `totalCount` it replaces the estimate and the bar converges to the exact percentage. The stream still terminates correctly on `hasNext: false`.
 
 The parent component then only wires data inputs and calls `openExportDialog()`:
 
@@ -157,7 +152,7 @@ The parent component then only wires data inputs and calls `openExportDialog()`:
   :current-rows="rows"
   :selected-rows="selectedRows"
   :export-page-size="props.exportPageSize"
-  :export-max-pages="props.exportMaxPages"
+  :total="total"
   :has-more-page="showPagination"
 />
 <!-- toolbar button -->

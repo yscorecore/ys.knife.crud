@@ -18,11 +18,15 @@ export interface SelectionProps {
  * 自定义列的配置 props
  */
 export interface CustomConfigProps {
+    /** 为 true 时渲染内置「⚙ 列设置」按钮；false 时不渲染内置按钮——外部可自实现按钮，
+     *  经 TableApi.openConfigDialog() 打开内置面板（面板始终挂载） */
     readonly showCustomConfig: boolean;
     readonly loadCustomConfigFun?: loadCustomConfigFunc;
     readonly saveCustomConfigFun?: saveCustomConfigFunc;
 }
 export interface ExportExcelProps {
+    /** 为 true 时渲染内置「⬇ 导出 Excel」按钮；false 时不渲染内置按钮——外部可自实现按钮，
+     *  经 TableApi.openExportDialog() 打开内置对话框（对话框始终挂载） */
     readonly showExportExcel: boolean;
     /** 可选。导出实现工厂；缺省使用 core 的控制台假实现（createConsoleExportApiFunc，只打日志不产出文件） */
     readonly exportorFunc?: ExportApiFunc;
@@ -66,6 +70,16 @@ export interface TableApi {
     reload(): void
     /** 清空全部选中（含其他页的选中） */
     clearSelection(): void
+    /**
+     * 打开内置列设置对话框。showCustomConfig=false（不渲染内置「⚙ 列设置」按钮）、
+     * 外部自实现按钮时经此入口打开面板。
+     */
+    openConfigDialog(): void
+    /**
+     * 打开内置导出 Excel 对话框。showExportExcel=false（不渲染内置「⬇ 导出 Excel」按钮）、
+     * 外部自实现按钮时经此入口打开对话框。
+     */
+    openExportDialog(): void
 }
 
 

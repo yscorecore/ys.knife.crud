@@ -45,7 +45,7 @@ export function useDefault(props: DefaultProps) {
    * 两种模式：
    * - 已知（totalKnown=true）：分页显示「共 N 条」，导出进度条为真实百分比；
    * - 未知（totalCount 为 null/undefined）：分页靠 hasNext 翻页（不展示总数），
-   *   导出进度条走 indeterminate 动画，只显示已加载条数。
+   *   导出进度初始分母用估算值，百分比按已加载条数滚动到 99% 封顶。
    */
   const totalKnown = computed(() => paged.value?.totalCount != null);
 
