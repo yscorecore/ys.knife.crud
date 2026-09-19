@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch, type PropType, type Ref } from "vue";
+import { computed, onMounted, ref, toRef, watch, type PropType, type Ref } from "vue";
 import type {
   Column,
   TableApi,
   TableProps as CoreTableProps,
+  ViewMode,
 } from "@ys.knife.crud/core";
 import { useDefault, useSelection } from "@ys.knife.crud/vue";
 import ExportExcelDialog from "./exportExcelDialog.vue";
@@ -69,6 +70,16 @@ const props = defineProps({
   exportorFunc: { type: Function as PropType<NonNullable<CoreTableProps["exportorFunc"]>>, required: false },
   /** 行 key，默认 "id" */
   rowKey: { type: String, default: "id" },
+  /**
+   * 展示形态，默认 "table"（表格视图）；设为 "card" 时以卡片网格渲染当前页行。
+   * 配合 update:viewMode 事件可使用 v-model:view-mode 受控切换。
+   */
+  viewMode: { type: String as PropType<ViewMode>, default: "table" },
+  /**
+   * 是否在工具栏内置「表格 / 卡片」切换控件，默认 true。
+   * 置 false 时不渲染内置控件，由外部自行渲染切换控件（仍经 v-model:view-mode 驱动）。
+   */
+  showViewSwitch: { type: Boolean, default: true },
 });
 
 /** 单次加载完成后的结果（PagedList）；组件对外事件基于此类型 */
@@ -77,6 +88,8 @@ type PagedResult = Awaited<ReturnType<CoreTableProps["dataFun"]>>;
 /** 对外事件：data-loaded 在每次 dataFun 成功返回后触发，携带本次加载的分页结果 */
 const emit = defineEmits<{
   (e: "data-loaded", paged: PagedResult): void;
+  /** 内置视图切换控件切换时触发，配合 viewMode prop 做 v-model:view-mode */
+  (e: "update:viewMode", mode: ViewMode): void;
 }>();
 
 /* ---------------- 默认状态（useDefault） ----------------
@@ -98,10 +111,20 @@ const {
 
 /* ---------------- 行选择（checkbox 列） ---------------- */
 
-/** el-table 实例引用（clearSelection 等公开方法） */
-const tableEl = ref<{ clearSelection?: () => void } | null>(null);
+/** el-table 实例引用（clearSelection / toggleRowSelection 等公开方法；卡片视图下为 null） */
+const tableEl = ref<{
+  clearSelection?: () => void;
+  toggleRowSelection?: (row: unknown, selected?: boolean) => void;
+} | null>(null);
 
-const { selectedRows, onSelectionChange } = useSelection();
+const {
+  selectedRows,
+  onSelectionChange,
+  isRowSelected,
+  toggleRowSelection,
+  restoreSelection,
+  clearSelection,
+} = useSelection({ tableEl, rows, rowKey: toRef(props, "rowKey") });
 
 
 /* ---------------- 子组件引用（行操作 / 列设置 / 导出） ---------------- */
@@ -174,6 +197,11 @@ const showPagination = computed(() => {
   return total.value > threshold || (paged.value?.hasNext ?? false);
 });
 
+/** 视图层加载态（表格 / 卡片网格共用同一个遮罩） */
+const viewLoading = computed(
+  () => metaLoading.value || dataLoading.value || actionsLoading.value || customConfigLoading.value,
+);
+
 /* ---------------- 分页交互 ---------------- */
 
 /** 翻页：更新页码并重新请求对应 offset 的数据 */
@@ -227,6 +255,10 @@ watch(() => props.dataFun, () => {
   currentPage.value = 1;
   loadData();
 });
+// 卡片 → 表格：el-table 重新挂载后把累计选中恢复到勾选态（restoreSelection 内含 nextTick）
+watch(() => props.viewMode, (mode) => {
+  if (mode === "table") void restoreSelection();
+});
 
 /* ---------------- 暴露 API ---------------- */
 
@@ -244,11 +276,6 @@ type ExposedShape = {
   : Ref<TableApi[K]>;
 };
 
-/** 清空全部选中（含其他页的选中）——委托 el-table 的 clearSelection */
-function clearSelection(): void {
-  tableEl.value?.clearSelection?.();
-}
-
 /**
  * 打开内置列设置对话框——委托 ColumnConfigDialog 的 openDialog。
  * showCustomConfig=false（不渲染内置「⚙ 列设置」按钮）、外部自实现按钮时的打开入口。
@@ -263,6 +290,16 @@ function openConfigDialog(): void {
  */
 function openExportDialog(): void {
   exportDialogRef.value?.openExportDialog();
+}
+
+/** 卡片 checkbox 勾选：el-checkbox change 值（string|number|boolean）归一为 boolean 后写入选中集合 */
+function onCardCheck(row: Record<string, unknown>, checked: string | number | boolean): void {
+  toggleRowSelection(row, Boolean(checked));
+}
+
+/** 内置「表格 / 卡片」切换控件：向父级派发更新，支持 v-model:view-mode */
+function onViewModeChange(value: string | number | boolean): void {
+  emit("update:viewMode", value as ViewMode);
 }
 
 const exposed = {
@@ -282,19 +319,25 @@ defineExpose(exposed);
 
 <template>
   <div class="yk-table">
-    <!-- 顶部工具栏：左侧为跨页选中提示（有选中时显示），右侧为导出 / 列设置入口。
+    <!-- 顶部工具栏：左侧为跨页选中提示（有选中时显示），右侧为视图切换 / 导出 / 列设置入口。
          同一行节省纵向空间。启用任一能力即常驻渲染并保持固定行高——
          仅勾选的表格里，选中提示的出现/消失不再增减这一行的高度，
-         表头不会上下抖动（与导出/列设置入口常驻时的表现对齐）。
-         showSelectionBar=false 时左侧提示条不渲染（由外部自行实现），右侧按钮组照常 -->
-    <div v-if="(showCheckbox && showSelectionBar) || showCustomConfig || showExportExcel"
+         表头不会上下抖动（与入口控件常驻时的表现对齐）。
+         showSelectionBar=false 时左侧提示条不渲染（由外部自行实现），右侧控件组照常 -->
+    <div v-if="(showCheckbox && showSelectionBar) || showViewSwitch || showCustomConfig || showExportExcel"
       class="yk-table__toolbar">
-      <!-- 跨页选中提示：reserve-selection 下选中可能来自其他页，给用户一个总览与清空入口。
-           无选中时 SelectionBar 不渲染任何元素，右侧按钮组靠 margin-left:auto 自行贴右，
+      <!-- 跨页选中提示：选中按 rowKey 跨页累计，可能来自其他页，给用户一个总览与清空入口。
+           无选中时 SelectionBar 不渲染任何元素，右侧控件组靠 margin-left:auto 自行贴右，
            不依赖占位元素 -->
       <SelectionBar v-if="showCheckbox && showSelectionBar" :count="selectedRows.length"
         @clear="clearSelection" />
       <div class="yk-table__toolbar-actions">
+        <!-- 内置「表格 / 卡片」视图切换；showViewSwitch=false 时由外部经 v-model:view-mode 自控 -->
+        <el-radio-group v-if="showViewSwitch" :model-value="viewMode" size="small"
+          class="yk-table__view-switch" @change="onViewModeChange">
+          <el-radio-button value="table">表格</el-radio-button>
+          <el-radio-button value="card">卡片</el-radio-button>
+        </el-radio-group>
         <el-button v-if="showExportExcel" link type="primary" class="yk-table__export-btn"
           @click="openExportDialog()">
           ⬇ 导出 Excel
@@ -306,15 +349,17 @@ defineExpose(exposed);
       </div>
     </div>
 
-    <el-table ref="tableEl" v-loading="metaLoading || dataLoading || actionsLoading || customConfigLoading" :data="rows"
+    <!-- 表格视图：v-if 与卡片视图二选一；切回本视图后由 useSelection.restoreSelection
+         把跨页累计选中恢复到勾选列（选中状态以 rowKey Map 为准，不再用 reserve-selection） -->
+    <el-table v-if="viewMode === 'table'" ref="tableEl" v-loading="viewLoading" :data="rows"
       :row-key="rowKey" border @selection-change="onSelectionChange" @header-dragend="onColumnResize">
       <!-- 空数据提示：使用者经 #empty 插槽自定义；仅在使用者提供了插槽时才声明，
            否则保留 el-table 默认的「暂无数据」空态 -->
       <template v-if="$slots.empty" #empty>
         <slot name="empty" />
       </template>
-      <!-- 勾选列：reserve-selection 使翻页后选中按 rowKey 跨页保留；表头 checkbox 全选/取消全选当前页 -->
-      <el-table-column v-if="showCheckbox" type="selection" width="48" reserve-selection />
+      <!-- 勾选列：跨页保留由 useSelection 的 rowKey Map 受控维护，表头 checkbox 全选/取消全选当前页 -->
+      <el-table-column v-if="showCheckbox" type="selection" width="48" />
       <!-- 数据列：col.render 存在时优先用自定义渲染（返回字符串/VNode 均可，
            经函数式组件呈现），否则走默认的 propertyPath 取值显示 -->
       <el-table-column v-for="col in columns" :key="col.propertyPath" :prop="col.propertyPath" :label="col.displayName"
@@ -323,9 +368,24 @@ defineExpose(exposed);
           <component :is="() => col.render!(row, (row as Record<string, unknown>)[col.propertyPath])" />
         </template>
       </el-table-column>
-      <!-- 行操作列：内部自管 actions 加载与渲染 -->
+      <!-- 行操作列：内部自管 actions 加载与渲染（卡片视图不挂载，行操作仅属于表格视图） -->
       <RowActionsColumn v-if="props.rowActionsFunc" ref="rowActionsRef" :row-actions-func="props.rowActionsFunc" />
     </el-table>
+
+    <!-- 卡片视图：当前页每行一张卡片；卡片内容经 #card 插槽自定义（作用域为 { row, index }），
+         未提供插槽时默认把整行 JSON 序列化展示。checkbox 与表格视图共用同一套跨页选中状态 -->
+    <div v-else v-loading="viewLoading" class="yk-table__cards">
+      <div v-for="(row, index) in rows" :key="String(row[rowKey])" class="yk-table__card"
+        :class="{ 'is-selected': showCheckbox && isRowSelected(row) }">
+        <el-checkbox v-if="showCheckbox" class="yk-table__card-checkbox"
+          :model-value="isRowSelected(row)"
+          @change="onCardCheck(row, $event)" />
+        <slot name="card" :row="row" :index="index">
+          <pre class="yk-table__card-json">{{ JSON.stringify(row, null, 2) }}</pre>
+        </slot>
+      </div>
+      <el-empty v-if="!viewLoading && rows.length === 0" description="暂无数据" />
+    </div>
 
     <!-- 数据超过一页时自动显示的分页组件；sizes 支持用户切换每页条数。
          两种模式：totalCount 已知 → layout 含 total，显示「共 N 条」；
@@ -371,8 +431,62 @@ defineExpose(exposed);
   display: flex;
   align-items: center;
   gap: 12px;
-  /* 无论左侧选中提示是否存在，按钮组始终吸附工具栏右侧 */
+  /* 无论左侧选中提示是否存在，控件组始终吸附工具栏右侧 */
   margin-left: auto;
+}
+
+.yk-table__view-switch {
+  /* 与右侧文字按钮拉开距离 */
+  margin-right: 4px;
+}
+
+/* ---------------- 卡片视图 ---------------- */
+.yk-table__cards {
+  display: grid;
+  /* 自适应列宽：容器够宽时一行多张，窄屏自动降为单列 */
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  /* 加载遮罩始终有可挂载的高度，避免空容器遮罩塌陷 */
+  min-height: 120px;
+}
+
+.yk-table__card {
+  position: relative;
+  padding: 12px 14px;
+  border: 1px solid var(--el-border-color, #dcdfe6);
+  border-radius: 6px;
+  background: var(--el-bg-color, #fff);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.yk-table__card.is-selected {
+  border-color: var(--el-color-primary, #409eff);
+  /* inset 光晕勾边，比改 border-width 更不引发布局位移 */
+  box-shadow: 0 0 0 1px var(--el-color-primary, #409eff) inset;
+}
+
+.yk-table__card-checkbox {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 1;
+}
+
+.yk-table__card-json {
+  /* 右侧给悬浮 checkbox 留位 */
+  margin: 0;
+  padding-right: 24px;
+  max-height: 260px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* 空态占满整行，而非挤进单列格子 */
+.yk-table__cards :deep(.el-empty) {
+  grid-column: 1 / -1;
 }
 
 .yk-table__pagination {

@@ -179,16 +179,19 @@ const disabled = !isEnabled(action, row);
 
 ### `useSelection`
 
-Tracks rows selected via checkbox. Designed for tables with `reserve-selection` so selection persists across pages.
+Tracks checkbox selection in a UI-library-agnostic `Map` keyed by `rowKey`. The same state drives both a table view (el-table selection column in controlled mode — `restoreSelection` re-checks the current page after paging or remounting) and a card view (per-card checkbox via `isRowSelected` / `toggleRowSelection`), so selection persists across pages and across view switches.
 
 ```ts
-const tableEl = ref<{ clearSelection?: () => void } | null>(null);
+const tableEl = ref<{ clearSelection?: () => void; toggleRowSelection?: (row: unknown, selected?: boolean) => void } | null>(null);
 
 const {
-  selectedRows,      // Ref<unknown[]> — cross-page accumulated selection
-  onSelectionChange, // (selection: unknown[]) => void
-  clearSelection,    // () => void — clears all pages
-} = useSelection(tableEl);
+  selectedRows,       // ComputedRef<unknown[]> — cross-page accumulated selection
+  onSelectionChange,  // (selection: unknown[]) => void — el-table selection-change handler
+  isRowSelected,      // (row) => boolean — card checkbox model-value / selected style
+  toggleRowSelection, // (row, selected?) => void — card checkbox toggle (also syncs el-table)
+  restoreSelection,   // () => Promise<void> — re-apply accumulated selection to the current table page
+  clearSelection,     // () => void — clears all pages
+} = useSelection({ tableEl, rows, rowKey: toRef(props, "rowKey") });
 ```
 
 ## Relationship to other packages

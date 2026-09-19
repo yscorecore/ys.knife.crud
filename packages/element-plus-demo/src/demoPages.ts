@@ -19,6 +19,7 @@ import BigDataTablePage from "./pages/table/BigDataTablePage.vue";
 import BigDataNoTotalTablePage from "./pages/table/BigDataNoTotalTablePage.vue";
 import CustomSelectionBarTablePage from "./pages/table/CustomSelectionBarTablePage.vue";
 import CustomEntryButtonsTablePage from "./pages/table/CustomEntryButtonsTablePage.vue";
+import CardViewTablePage from "./pages/table/CardViewTablePage.vue";
 
 /**
  * Demo 页面注册表：导航按钮与 App 动态渲染共用的唯一数据源。
@@ -109,6 +110,11 @@ export const demoPages = [
     id: "table-custom-entry-buttons",
     label: "自定义列设置/导出按钮（openConfigDialog / openExportDialog）",
     component: CustomEntryButtonsTablePage,
+  },
+  {
+    id: "table-card-view",
+    label: "表格 / 卡片视图切换（viewMode + #card 插槽）",
+    component: CardViewTablePage,
   },
 ] as const satisfies readonly DemoPageDef[];
 

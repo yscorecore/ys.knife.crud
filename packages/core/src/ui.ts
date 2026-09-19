@@ -14,6 +14,24 @@ export interface RowActionsProps {
 export interface SelectionProps {
     showCheckbox?: boolean,
 }
+
+/**
+ * 表格的展示形态：
+ * - table：传统表格视图（默认）
+ * - card：卡片网格视图（卡片内容可经 #card 插槽自定义，默认 JSON 序列化展示整行）
+ */
+export type ViewMode = "table" | "card"
+
+/**
+ * 展示形态相关 props
+ */
+export interface ViewProps {
+    /** 展示形态，默认 "table"。配合 update:viewMode 事件可使用 v-model:view-mode 受控切换 */
+    readonly viewMode?: ViewMode;
+    /** 是否在工具栏内置「表格 / 卡片」切换控件，默认 true；
+     *  置 false 时由外部自行渲染切换控件（仍可用 v-model:view-mode 驱动） */
+    readonly showViewSwitch?: boolean;
+}
 /**
  * 自定义列的配置 props
  */
@@ -42,7 +60,7 @@ export interface DefaultProps {
 
 
 /** TableProps 是组件的「输入契约」：父组件通过 props 传入 */
-export interface TableProps extends RowActionsProps, SelectionProps, CustomConfigProps, ExportExcelProps, DefaultProps {
+export interface TableProps extends RowActionsProps, SelectionProps, ViewProps, CustomConfigProps, ExportExcelProps, DefaultProps {
 
 }
 
