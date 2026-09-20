@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import {
-  defineAsyncComponent,
   onMounted,
   ref,
-  watch,
-  type Component,
   type PropType,
 } from "vue";
-import type { FunctionNode, FunctionNodesFunc } from "@ys.knife.crud/core";
+import type {
+  FunctionNodesFunc,
+  MainPanelComponentMap,
+} from "@ys.knife.crud/core";
+import {
+  findNode,
+  isGroupNode,
+  useMainPanelNodes,
+  useMainPanelTabs,
+} from "@ys.knife.crud/vue";
 import MainPanelMenuNode from "./mainPanelMenuNode.vue";
 
 // 组件名统一带 ys 前缀：模板中以 <ys-main-panel>（或 <YsMainPanel>）使用，
@@ -16,12 +22,15 @@ defineOptions({ name: "YsMainPanel" });
 
 /**
  * YsMainPanel：左侧功能树 + 右侧主面板选项卡的管理后台布局骨架。
+ * 通用逻辑（功能树加载、选项卡状态、组件解析缓存）全部下沉到
+ * @ys.knife.crud/vue 的 useMainPanelNodes / useMainPanelTabs，本组件只负责
+ * el-menu / el-tabs 视图编排与折叠态。
  *
  * - nodesFunc：功能树数据加载函数（异步返回 FunctionNode[]，数据可来自后端接口）；
- *   children 非空为分组、否则为叶子。变化时自动重新加载
+ *   children 非空为分组、否则为叶子。变化时 composable 自动重新加载
  * - 叶子节点的 component 字段约定为组件路径字符串（如 "./admin-panels/DashboardPanel.vue"）；
  *   组件解析所需的「路径 → 异步加载器」映射由 componentMap prop 提供（消费方经
- *   import.meta.glob 生成，key 即路径字符串），组件内部经 defineAsyncComponent 加载并缓存
+ *   import.meta.glob 生成，key 即路径字符串）
  * - 点击叶子在主面板打开选项卡（已打开则仅激活、不重复创建），选项卡可关闭；
  *   已打开选项卡的组件保持挂载，切换时不丢失内部状态
  */
@@ -35,141 +44,44 @@ const props = defineProps({
    * 未提供时回退为运行时动态 import（仅 dev 可用，生产构建无法解析）。
    */
   componentMap: {
-    type: Object as PropType<Record<string, () => Promise<unknown>>>,
+    type: Object as PropType<MainPanelComponentMap>,
     default: undefined,
   },
   /** 初始打开并激活的叶子节点 key（功能树加载完成后应用，仅首次生效），默认不打开任何选项卡 */
   defaultActive: { type: String, default: "" },
 });
 
-/* ---------------- 菜单折叠（内部状态，非受控） ---------------- */
+/* ---------------- 菜单折叠（视图层内部状态，非受控） ---------------- */
 
 const menuCollapsed = ref(false);
 
-/* ---------------- 功能树加载 ---------------- */
+/* ---------------- 功能树加载（useMainPanelNodes） ---------------- */
 
-/** 功能树数据（nodesFunc 加载结果）与加载态 */
-const nodes = ref<FunctionNode[]>([]);
-const menuLoading = ref(false);
+const { nodes, menuLoading, loadNodes } = useMainPanelNodes(props);
 
-/** 分组节点判断：children 非空 */
-function isGroup(node: FunctionNode): boolean {
-  return !!(node.children && node.children.length > 0);
-}
+/* ---------------- 选项卡状态与组件解析（useMainPanelTabs） ---------------- */
 
-/** 深度优先查找节点 */
-function findNode(list: FunctionNode[], key: string): FunctionNode | undefined {
-  for (const node of list) {
-    if (node.key === key) return node;
-    const found = node.children ? findNode(node.children, key) : undefined;
-    if (found) return found;
-  }
-  return undefined;
-}
-
-/* ---------------- 选项卡状态 ---------------- */
-
-interface PanelTab {
-  /** 选项卡 key = 叶子节点 key */
-  key: string;
-  /** 选项卡文案（含 icon 前缀） */
-  label: string;
-  /** 要渲染的组件类型名称（空表示叶子未声明 component，渲染为空） */
-  componentName: string;
-  /** 渲染面板组件时经 v-bind 透传的节点级 props（未声明为 undefined） */
-  props: Record<string, unknown> | undefined;
-}
-
-const openTabs = ref<PanelTab[]>([]);
-const activeKey = ref("");
-
-/** 打开叶子对应的选项卡：已打开则仅激活（不重复创建） */
-function openTab(node: FunctionNode): void {
-  const label = (node.icon ? `${node.icon} ` : "") + node.label;
-  if (!openTabs.value.some((tab) => tab.key === node.key)) {
-    openTabs.value.push({
-      key: node.key,
-      label,
-      componentName: node.component ?? "",
-      props: node.props,
-    });
-    // 预热组件缓存，让首次渲染即命中 getComponent
-    if (node.component) getComponent(node.component);
-  }
-  activeKey.value = node.key;
-}
+const { openTabs, activeKey, openTab, removeTab, getComponent } = useMainPanelTabs(props);
 
 /** 功能树叶子被点击（el-menu select 只会由叶子触发） */
 function handleMenuSelect(key: string): void {
   const node = findNode(nodes.value, key);
-  if (node && !isGroup(node)) openTab(node);
+  if (node && !isGroupNode(node)) openTab(node);
 }
 
-/** 关闭选项卡：关闭的是当前 tab 时激活相邻的 tab（优先右侧，否则左侧） */
-function removeTab(key: string | number): void {
-  const target = String(key);
-  const index = openTabs.value.findIndex((tab) => tab.key === target);
-  if (index < 0) return;
-  openTabs.value.splice(index, 1);
-  if (activeKey.value === target) {
-    const next = openTabs.value[Math.min(index, openTabs.value.length - 1)];
-    activeKey.value = next?.key ?? "";
-  }
-}
-
-/* ---------------- 组件解析与缓存 ----------------
- * 叶子节点的 component 约定为组件路径字符串（如 "./admin-panels/DashboardPanel.vue"）。
- * 优先经 componentMap（消费方 import.meta.glob 的结果）查找异步加载器，
- * 内部用 defineAsyncComponent 包装并按路径缓存——同一路径只加载一次，
- * 选项卡反复关闭再打开不会重复发起加载。未提供 componentMap 时回退为运行时动态 import。 */
-
-const componentCache = new Map<string, Component>();
-
-function getComponent(name: string): Component | null {
-  if (!name) return null;
-  if (!componentCache.has(name)) {
-    const loader = props.componentMap?.[name];
-    componentCache.set(
-      name,
-      loader
-        ? defineAsyncComponent(() => loader().then((m) => (m as { default: Component }).default))
-        : // 未提供 componentMap 时的兜底：跳过 Vite 静态分析，按运行时动态 import 解析
-          defineAsyncComponent(() => import(/* @vite-ignore */ name).then((m) => m.default)),
-    );
-  }
-  return componentCache.get(name) ?? null;
-}
-
-/* ---------------- 功能树加载与初始选项卡 ---------------- */
+/* ---------------- 初始选项卡 ---------------- */
 
 /** defaultActive 仅在首次功能树加载完成后应用一次（后续 nodesFunc 重载不再重复打开） */
 let defaultApplied = false;
 
-async function loadNodes(): Promise<void> {
-  menuLoading.value = true;
-  try {
-    nodes.value = await props.nodesFunc();
-    if (!defaultApplied && props.defaultActive) {
-      const node = findNode(nodes.value, props.defaultActive);
-      if (node && !isGroup(node)) openTab(node);
-      defaultApplied = true;
-    }
-  } finally {
-    menuLoading.value = false;
+onMounted(async () => {
+  await loadNodes();
+  if (!defaultApplied && props.defaultActive) {
+    const node = findNode(nodes.value, props.defaultActive);
+    if (node && !isGroupNode(node)) openTab(node);
+    defaultApplied = true;
   }
-}
-
-onMounted(() => {
-  void loadNodes();
 });
-
-// nodesFunc 变化时重新加载功能树（已打开选项卡保留，key 命中的仍可继续激活）
-watch(
-  () => props.nodesFunc,
-  () => {
-    void loadNodes();
-  },
-);
 </script>
 
 <template>
@@ -194,7 +106,7 @@ watch(
         class="ys-main-panel__tabs" @tab-remove="removeTab">
         <el-tab-pane v-for="tab in openTabs" :key="tab.key" :name="tab.key">
           <template #label>{{ tab.label }}</template>
-          <component v-if="tab.componentName" :is="getComponent(tab.componentName)"
+          <component v-if="tab.componentPath" :is="getComponent(tab.componentPath)"
             v-bind="tab.props" />
         </el-tab-pane>
       </el-tabs>

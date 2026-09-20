@@ -165,3 +165,21 @@ export interface FunctionNode {
  * 异步返回功能树节点数组（数据可来自后端接口）。
  */
 export type FunctionNodesFunc = () => Promise<FunctionNode[]>
+
+/**
+ * 主面板组件路径 → 异步加载器的映射：由消费方经 import.meta.glob 生成，
+ * key 与 FunctionNode.component 取值一致（如 "./admin-panels/XxxPanel.vue"），
+ * value 为对应组件模块的异步加载函数。
+ */
+export type MainPanelComponentMap = Record<string, () => Promise<unknown>>
+
+/**
+ * YsMainPanel 的「输入契约」：功能树数据加载函数、组件路径映射与初始激活节点。
+ */
+export interface MainPanelProps {
+    readonly nodesFunc: FunctionNodesFunc;
+    /** 组件路径 → 异步加载器映射（消费方 import.meta.glob 生成）；缺省时组件内部回退为运行时动态 import */
+    readonly componentMap?: MainPanelComponentMap;
+    /** 初始打开并激活的叶子节点 key（功能树加载完成后应用，仅首次生效），默认不打开任何选项卡 */
+    readonly defaultActive?: string;
+}
