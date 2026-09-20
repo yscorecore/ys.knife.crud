@@ -19,6 +19,20 @@ export {
   YsFilterItemLayout,
 };
 
+// 枚举 FilterItem 的选项数据源类型:函数,返回 Promise<EnumOption[]>。
+// 类型与工厂函数(EnumOption/EnumOptionsSource/fromOptions/fromObjectItems/fromArray/fromBool)
+// 实际定义在 @ys.knife.crud/core(element-plus 这里只是 re-export 一份,便于使用方一处 import)。
+export type {
+  EnumOption,
+  EnumOptionsSource,
+} from "@ys.knife.crud/core";
+export {
+  fromOptions,
+  fromObjectItems,
+  fromArray,
+  fromBool,
+} from "@ys.knife.crud/core";
+
 // <script setup> 里的 interface 不是模块导出成员，用实例类型提取 props
 export type YsTableProps = InstanceType<typeof YsTable>["$props"];
 export type YsMainPanelProps = InstanceType<typeof YsMainPanel>["$props"];

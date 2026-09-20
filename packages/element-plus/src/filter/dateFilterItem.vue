@@ -43,13 +43,11 @@ const props = defineProps({
 
 const { value, filter: filterInfo, reset } = useDateFilterItem(props);
 
-/* api 透传给 YsFilterItemLayout（:api="api"），由 layout 在 onMounted 注册到 panel。 */
+/* api 透传给 YsFilterItemLayout（:api="api"），由 layout 在 onMounted 注册到 panel。
+ * value ref 只在模板内用于 v-model，不暴露到 api（panel 与 demo 均不消费 api.value）。 */
 const api = {
   get filter() {
     return filterInfo.value;
-  },
-  get value() {
-    return value.value;
   },
   reset,
 } as unknown as FilterItemApi;

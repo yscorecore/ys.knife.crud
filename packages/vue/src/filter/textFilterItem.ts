@@ -15,8 +15,8 @@ import type { FilterInfo, Operator } from "ys.knife.query.js";
  * - 非空时 filterInfo 返回 filter(propertyPath, op, con(value))；
  *   con 把原始值包装成 Constant（ys.knife.query.js 的标准右值类型）
  *
- * 返回结构供 TextFilterItem.vue 组装成 FilterItemApi（filter/value 是 getter 读 computed.value，
- * 使 panel 端的 filter computed 能 track 到本 item 的 value 变化）。
+ * 返回结构供 TextFilterItem.vue 组装成 FilterItemApi（filter 是 getter 读 computed.value，
+ * 使 panel 端的 filter computed 能 track 到本 item 的 value 变化）；value ref 留给模板 v-model 用。
  */
 
 /**

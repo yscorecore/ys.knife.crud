@@ -49,15 +49,13 @@ const props = defineProps({
 
 const { value, filter: filterInfo, reset } = useTextFilterItem(props);
 
-/* 组装稳定 API 对象：filter/value 是 getter，每次调用读最新 computed.value，
+/* 组装稳定 API 对象：filter 是 getter，每次调用读最新 computed.value，
  * 使 panel 端的 filter computed 能 track 到本 item 的 value 变化。
+ * value ref 只在模板内用于 v-model，不暴露到 api（panel 与 demo 均不消费 api.value）。
  * api 透传给 YsFilterItemLayout（:api="api"），由 layout 在 onMounted 注册到 panel。 */
 const api = {
   get filter() {
     return filterInfo.value;
-  },
-  get value() {
-    return value.value;
   },
   reset,
 } as unknown as FilterItemApi;

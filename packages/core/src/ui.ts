@@ -197,8 +197,6 @@ export interface FilterItemApi {
      * panel 端聚合时直接跳过 null，不参与 createAnd。
      */
     readonly filter: FilterInfo | null;
-    /** 当前控件值（date 为 [start,end]，其余为单值）；供外部（含 demo）读取做客户端过滤 */
-    readonly value: unknown;
     reset(): void;
 }
 export interface FilterPanelProps {

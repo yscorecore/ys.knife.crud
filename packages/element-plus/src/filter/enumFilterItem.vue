@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, type PropType } from "vue";
-import type { FilterItemApi, Operator } from "@ys.knife.crud/core";
+import type { EnumOption, EnumOptionsSource, FilterItemApi, Operator } from "@ys.knife.crud/core";
 import { useEnumFilterItem, type EnumFilterItemProps } from "@ys.knife.crud/vue";
 import YsFilterItemLayout from "./filterItemLayout.vue";
 
@@ -12,16 +12,17 @@ defineOptions({ name: "YsEnumFilterItem" });
  *
  * 设计原则：每个具体 FilterItem 组件只负责自己的一种类型，不做 type 工厂分支。
  *
- * - 渲染 el-select（clearable）；选项来自异步 dataFunc 返回的数组
+ * - 渲染 el-select（clearable）；选项来自 optionsSource() 返回的 {label, value}[] 数组
  * - multiple=false（默认）：单选模式，使用声明方指定的 op（常为 Equals）
  * - multiple=true：多选模式，op 自动派生：
  *   - 0 项 → filterInfo 返回 null（panel 端聚合时跳过）
  *   - 1 项 → Operator.Equals（自动）
  *   - 2+ 项 → Operator.In（自动）
- * - keyProperty：选项对象中作为「选中值」的属性名（送入 v-model 与 filter）
- * - valueProperty：选项对象中作为「显示文本」的属性名（el-option :label）
- * - onMounted 调 dataFunc 加载选项，存入 options ref；loading 状态控制 el-select loading
- *   （panel 注册/反注册由 YsFilterItemLayout 接管，传 api prop；本组件 onMounted 只管加载选项）
+ * - optionsSource：函数类型，返回 Promise<EnumOption[]>；使用方在数据源里把字段
+ *   提取成 {label, value} 结构,组件端用 opt.value 作选中值、opt.label 作显示文本,
+ *   不用再传 keyProperty/valueProperty
+ * - onMounted 调 optionsSource() 加载选项,存入 options ref；loading 状态控制 el-select loading
+ *   （panel 注册/反注册由 YsFilterItemLayout 接管,传 api prop；本组件 onMounted 只管加载选项）
  *
  * 跨包类型解析：api 对象用 as unknown as FilterItemApi 绕过结构性比较（同其他 FilterItem）。
  * 模板 v-model 绑定 union 类型 ref（单值 | 数组）el-select 静态类型不兼容，
@@ -49,17 +50,13 @@ const props = defineProps({
   /** 占位文本 */
   placeholder: { type: String, required: false },
   /**
-   * 异步数据源：返回选项对象数组；onMounted 调用一次。
-   * 选项对象结构由声明方决定，配合 keyProperty/valueProperty 提取字段
+   * 选项数据源:函数类型,返回 Promise<EnumOption[]>。
+   * 使用方在 dataFunc 里把字段提取成 {label, value} 结构,
+   * 组件端直接用 opt.value 作选中值、opt.label 作显示文本,
+   * 不用再传 keyProperty/valueProperty。
+   * 详见 enumOptionsSource.ts 的 EnumOptionsSource / EnumOption 注释。
    */
-  dataFunc: {
-    type: Function as PropType<() => Promise<Record<string, unknown>[]>>,
-    required: true,
-  },
-  /** 选项对象中作为「选中值」的属性名（送入 v-model 与 filter，作为 con 包装的值） */
-  keyProperty: { type: String, required: true },
-  /** 选项对象中作为「显示文本」的属性名（el-option :label，经 String() 强制转字符串） */
-  valueProperty: { type: String, required: true },
+  optionsSource: { type: Function as PropType<EnumOptionsSource>, required: true },
   /** 是否可清空，默认 true */
   clearable: { type: Boolean, default: true },
   /** 是否多选；默认 false。多选时 2+ 项用 In，1 项用 Equals，0 项返回 null */
@@ -79,30 +76,28 @@ const selectValue = computed({
   },
 });
 
-/* 选项数据 + loading 状态：dataFunc 在 onMounted 调用一次，结果存入 options ref。
+/* 选项数据 + loading 状态：optionsSource() 在 onMounted 调用一次，结果存入 options ref。
  * 不在 composable 中处理，因为 loading 状态、错误处理都是 UI 层关注点。
  * layout 的 onMounted 先于本组件 onMounted 执行（子先于父），register 已先发生。 */
-const options = ref<Record<string, unknown>[]>([]);
+const options = ref<EnumOption[]>([]);
 const loading = ref(false);
 
 onMounted(async () => {
   loading.value = true;
   try {
-    options.value = await props.dataFunc();
+    options.value = await props.optionsSource();
   } finally {
     loading.value = false;
   }
 });
 
-/* 组装稳定 API 对象：filter/value 是 getter，每次调用读最新 computed.value，
+/* 组装稳定 API 对象：filter 是 getter，每次调用读最新 computed.value，
  * 使 panel 端的 filter computed 能 track 到本 item 的 value 变化。
+ * value ref 只在模板内用于 v-model，不暴露到 api（panel 与 demo 均不消费 api.value）。
  * api 透传给 YsFilterItemLayout（:api="api"），由 layout 在 onMounted 注册到 panel。 */
 const api = {
   get filter() {
     return filterInfo.value;
-  },
-  get value() {
-    return value.value;
   },
   reset,
 } as unknown as FilterItemApi;
@@ -121,9 +116,9 @@ defineExpose(api);
     >
       <el-option
         v-for="opt in options"
-        :key="String(opt[keyProperty])"
-        :value="opt[keyProperty] as string | number"
-        :label="String(opt[valueProperty])"
+        :key="String(opt.value)"
+        :value="opt.value"
+        :label="opt.label"
       />
     </el-select>
   </YsFilterItemLayout>
