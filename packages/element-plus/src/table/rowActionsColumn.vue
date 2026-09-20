@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { type PropType } from "vue";
+import { computed, type PropType } from "vue";
 import type { Action } from "@ys.knife.crud/core";
 import { visibleActions, isEnabled } from "@ys.knife.crud/vue";
 
@@ -17,10 +17,18 @@ const props = defineProps({
   /** 行操作列表（由 Table 的 useRowActions 加载）；为空时不渲染操作列 */
   actions: { type: Array as PropType<Action<unknown>[]>, required: true, default: () => [] },
 });
+
+/** 操作列最小宽度：按按钮数估算（2 字 link 按钮 ≈34px + 12px 间距 + 单元格左右内边距 24px + 余量 6px），
+ *  防止 fit 布局把列压窄导致按钮换行、各行行高不齐；宽屏下仍参与剩余空间分配 */
+const actionsMinWidth = computed(() =>
+  props.actions.length === 0
+    ? undefined
+    : props.actions.length * 34 + (props.actions.length - 1) * 12 + 30,
+);
 </script>
 
 <template>
-  <el-table-column v-if="props.actions.length > 0" label="操作" fixed="right">
+  <el-table-column v-if="props.actions.length > 0" label="操作" fixed="right" :min-width="actionsMinWidth">
     <template #default="{ row }">
       <el-button
         v-for="action in visibleActions(props.actions, row)"

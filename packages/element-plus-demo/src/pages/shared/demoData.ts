@@ -119,13 +119,13 @@ export const exportRows: UserRow[] = Array.from({ length: 300 }, (_, i) => ({
   secret: `e${i + 1}`,
 }));
 
-/** 大数据全功能演示用的 10000 行（pageSize=20 → 500 页）。
- *  工厂函数：行操作删除会 splice，每次进入页面拿全新一份，不污染其他演示 */
-export function createBigRows(): UserRow[] {
-  return Array.from({ length: 10_000 }, (_, i) => ({
+/** 大数据/长耗时导出演示用的数据工厂：行操作删除会 splice，
+ *  每次进入页面拿全新一份，不污染其他演示 */
+export function createBigRows(count = 10_000, prefix = "BigUser"): UserRow[] {
+  return Array.from({ length: count }, (_, i) => ({
     id: i + 1,
-    name: `BigUser${i + 1}`,
-    email: `big${i + 1}@example.com`,
+    name: `${prefix}${i + 1}`,
+    email: `${prefix.toLowerCase()}${i + 1}@example.com`,
     age: 18 + (i % 45),
     secret: `b${i + 1}`,
   }));

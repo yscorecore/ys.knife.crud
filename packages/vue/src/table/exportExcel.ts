@@ -1,4 +1,4 @@
-import { computed, ref, type Ref } from "vue";
+import { computed, onScopeDispose, ref, type Ref } from "vue";
 import {
   createConsoleExportApiFunc,
   type Column,
@@ -76,6 +76,10 @@ export function useExportExcel({
   const exporting = ref(false);
   const exportFetched = ref(0);
   const exportTotal = ref(0);
+  /** 服务端是否已带回真实 totalCount：初始的 exportTotal 来自界面分页 total，
+   *  在接口不返回 totalCount 时只是估算值（随翻页增长），不能当作「已知总数」，
+   *  否则进度会显示「已加载 9500 / 61 条」这类荒谬分母 */
+  const exportTotalKnown = ref(false);
   /** 取消标记：每页返回后检查，兼容忽略 AbortSignal 的 dataFun */
   let exportCancelled = false;
   let exportAbort: AbortController | null = null;
@@ -86,9 +90,34 @@ export function useExportExcel({
   /** 取消时已写入的数据行数（不含表头） */
   const exportCancelledRows = ref(0);
 
+  /** 剩余时间估算：本轮导出起始时刻 + 500ms 节拍（两页请求之间也让 ETA 持续倒数） */
+  let exportStartedAt = 0;
+  let etaTimer: ReturnType<typeof setInterval> | null = null;
+  const etaNow = ref(0);
+  onScopeDispose(stopEtaTimer);
+
+  function stopEtaTimer(): void {
+    if (etaTimer != null) {
+      clearInterval(etaTimer);
+      etaTimer = null;
+    }
+  }
+
+  /** 预计剩余秒数：总数已知且已加载至少一页后按「已耗时速率」外推；
+   *  总数未知、尚未开始加载或剩余不足 1 秒时为 null（不显示） */
+  const exportEtaSeconds = computed<number | null>(() => {
+    if (!exportTotalKnown.value || exportFetched.value === 0) return null;
+    const elapsed = (etaNow.value - exportStartedAt) / 1000;
+    if (elapsed < 0.5) return null; // 样本太短，速率不稳定
+    const remaining = exportTotal.value - exportFetched.value;
+    if (remaining <= 0) return null;
+    return Math.max(1, Math.ceil(remaining / (exportFetched.value / elapsed)));
+  });
+
   /** 导出进度百分比：totalCount 未知时按已加载条数滚动到 99% 封顶 */
   const exportPercent = computed(() => {
-    if (exportTotal.value > 0) return Math.min(100, Math.round((exportFetched.value / exportTotal.value) * 100));
+    if (exportTotalKnown.value && exportTotal.value > 0)
+      return Math.min(100, Math.round((exportFetched.value / exportTotal.value) * 100));
     return exportFetched.value > 0 ? 99 : 0;
   });
 
@@ -141,6 +170,13 @@ export function useExportExcel({
     exportCancelled = false;
     exportFetched.value = 0;
     exportTotal.value = total.value;
+    exportTotalKnown.value = false; // 界面 total 可能是估算值，等响应确认
+    exportStartedAt = Date.now();
+    etaNow.value = exportStartedAt;
+    stopEtaTimer();
+    etaTimer = setInterval(() => {
+      etaNow.value = Date.now();
+    }, 500);
     exportAbort = new AbortController();
     const api = newExportApi();
     const sheet = exportSheetName();
@@ -152,7 +188,10 @@ export function useExportExcel({
         const res = await props.dataFun({ limit, offset }, exportAbort.signal);
         await api.renderRows(sheet, (res.items as Record<string, unknown>[]).map(exportRowValues));
         exportFetched.value += res.items.length;
-        if (res.totalCount != null) exportTotal.value = res.totalCount;
+        if (res.totalCount != null) {
+          exportTotal.value = res.totalCount;
+          exportTotalKnown.value = true;
+        }
         if (exportCancelled || !res.hasNext || res.items.length === 0) break;
         offset += limit;
       }
@@ -160,6 +199,7 @@ export function useExportExcel({
       if (!exportCancelled) throw e;
     } finally {
       exporting.value = false;
+      stopEtaTimer();
       exportAbort = null;
     }
     if (!exportCancelled) {
@@ -208,6 +248,8 @@ export function useExportExcel({
     exporting,
     exportFetched,
     exportTotal,
+    exportTotalKnown,
+    exportEtaSeconds,
     exportPercent,
     exportCancelledVisible,
     exportCancelledRows,

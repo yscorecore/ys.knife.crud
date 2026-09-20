@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { toRef } from "vue";
+import { computed, toRef } from "vue";
 import { useExportExcel } from "@ys.knife.crud/vue";
 import type {
   Column,
@@ -45,6 +45,8 @@ const {
   exporting,
   exportFetched,
   exportTotal,
+  exportTotalKnown,
+  exportEtaSeconds,
   exportPercent,
   exportCancelledVisible,
   exportCancelledRows,
@@ -62,6 +64,16 @@ const {
   total: toRef(props, "total"),
   exportPageSize: toRef(props, "exportPageSize"),
   hasMorePage: toRef(props, "hasMorePage"),
+});
+
+/** 剩余时间文案：不足 1 分钟显示「N 秒」，否则「M 分 S 秒」；总数未知时不显示 */
+const exportEtaText = computed(() => {
+  const s = exportEtaSeconds.value;
+  if (s == null) return null;
+  if (s < 60) return `${s} 秒`;
+  const m = Math.floor(s / 60);
+  const r = s % 60;
+  return r > 0 ? `${m} 分 ${r} 秒` : `${m} 分`;
 });
 
 defineExpose({ openExportDialog: onExportClick });
@@ -96,11 +108,12 @@ defineExpose({ openExportDialog: onExportClick });
     :close-on-click-modal="false"
     :show-close="false"
   >
-    <!-- 进度百分比：totalCount 未知时分母按估算值走，百分比滚动到 99% 封顶，
-         待响应带回真实 totalCount 后收敛为精确值 -->
+    <!-- 进度：总数已知 → 精确百分比 + 「已加载 N / M 条」；
+         未知（接口只给 hasNext）→ 99% 封顶、不带分母。已加载至少一页且总数已知时，
+         按当前速率外推预计剩余时间（随节拍持续倒数，加载完成后隐藏） -->
     <el-progress :percentage="exportPercent" />
     <p class="export-progress-text">
-      已加载 {{ exportFetched }} / {{ exportTotal }} 条
+      已加载 {{ exportFetched }}<template v-if="exportTotalKnown"> / {{ exportTotal }}</template> 条<template v-if="exportEtaText">，预计剩余约 {{ exportEtaText }}</template>
     </p>
     <template #footer>
       <el-button class="export-cancel" @click="cancelExport">取消</el-button>

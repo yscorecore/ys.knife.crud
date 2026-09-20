@@ -17,6 +17,7 @@ import CsvExportTablePage from "./pages/table/CsvExportTablePage.vue";
 import ExternalControlTablePage from "./pages/table/ExternalControlTablePage.vue";
 import BigDataTablePage from "./pages/table/BigDataTablePage.vue";
 import BigDataNoTotalTablePage from "./pages/table/BigDataNoTotalTablePage.vue";
+import LongExportTablePage from "./pages/table/LongExportTablePage.vue";
 import CustomSelectionBarTablePage from "./pages/table/CustomSelectionBarTablePage.vue";
 import CustomEntryButtonsTablePage from "./pages/table/CustomEntryButtonsTablePage.vue";
 import CardViewTablePage from "./pages/table/CardViewTablePage.vue";
@@ -103,6 +104,11 @@ export const demoPages = [
     id: "table-big-data-no-total",
     label: "大数据全功能表格（10000 行，不返回总条数）",
     component: BigDataNoTotalTablePage,
+  },
+  {
+    id: "table-long-export-eta",
+    label: "长耗时导出（预计剩余时间倒数）",
+    component: LongExportTablePage,
   },
   {
     id: "table-custom-selection-bar",

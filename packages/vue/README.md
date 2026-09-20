@@ -111,6 +111,8 @@ const {
   exporting,              // Ref<boolean>
   exportFetched,          // Ref<number>
   exportTotal,            // Ref<number> — starts from the caller-provided total
+  exportTotalKnown,       // Ref<boolean> — true only after a response carries a real totalCount
+  exportEtaSeconds,       // ComputedRef<number | null> — estimated seconds remaining, null when unknown
   exportPercent,          // ComputedRef<number> — capped at 99% until real totalCount arrives
   exportCancelledVisible, // Ref<boolean>
   exportCancelledRows,    // Ref<number>
@@ -136,7 +138,7 @@ defineExpose({ openExportDialog: onExportClick });
 
 > **Why `toRef`?** Vue auto-unwraps `Ref` values passed as props, so `props.tableName` is `string | undefined`, not `Ref<string | undefined>`. `toRef(props, "tableName")` re-wraps it into a `Ref` that the composable can read via `.value`, preserving reactivity. The `columns`/`currentRows`/`total`/`exportPageSize`/`hasMorePage` options accept `Ref<T>` (not strictly `ComputedRef<T>`), so both `computed()` results and `toRef()` wrappers work.
 
-> **Unknown total.** During "export all", `exportTotal` is seeded from the caller-provided `total` (an estimate when the API omits `totalCount`). The percentage then scrolls with the loaded count, capped at 99%; once a page response carries a real `totalCount` it replaces the estimate and the bar converges to the exact percentage. The stream still terminates correctly on `hasNext: false`.
+> **Unknown total.** During "export all", `exportTotal` is seeded from the caller-provided `total` (an estimate when the API omits `totalCount`), but `exportTotalKnown` only turns true once a page response carries a real `totalCount`. Until then the percentage scrolls with the loaded count, capped at 99%, and `exportEtaSeconds` stays `null` (no remaining-time estimate is possible against a moving denominator); after that the bar converges to the exact percentage and `exportEtaSeconds` extrapolates the remaining time from the observed fetch rate (recomputed on a 500ms tick so it counts down between page requests). The stream still terminates correctly on `hasNext: false`.
 
 The parent component then only wires data inputs and calls `openExportDialog()`:
 
