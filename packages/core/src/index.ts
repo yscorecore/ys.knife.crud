@@ -23,7 +23,9 @@ export {
   OrderByInfo,
   SelectInfo,
   AggInfo,
-
+  // 单条件 FilterInfo 工厂函数（vue 包的 useFilterItem 用这些构造每个 item 的 FilterInfo）
+  filter,
+  emptyFilter,
 } from "ys.knife.query.js";
 
 export type { PageReq, PagedList,PageFunc } from "ys.knife.query.js";

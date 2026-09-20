@@ -37,7 +37,8 @@
     "clean": "rimraf dist"
   },
   "dependencies": {
-    "@ys.knife.crud/core": "workspace:*"
+    "@ys.knife.crud/core": "workspace:*",
+    "ys.knife.query.js": "^0.0.24"
   },
   "peerDependencies": {
     "vue": "^3.5.0"

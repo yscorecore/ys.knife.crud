@@ -22,6 +22,7 @@ import CustomEntryButtonsTablePage from "./pages/table/CustomEntryButtonsTablePa
 import CardViewTablePage from "./pages/table/CardViewTablePage.vue";
 import LoadingTablePage from "./pages/table/LoadingTablePage.vue";
 import AdminLayoutPage from "./pages/table/AdminLayoutPage.vue";
+import FilterPanelPage from "./pages/filter/FilterPanelPage.vue";
 
 /**
  * Demo 页面注册表：导航按钮与 App 动态渲染共用的唯一数据源。
@@ -127,6 +128,11 @@ export const demoPages = [
     id: "table-admin-layout",
     label: "管理系统布局（功能树 + 主面板选项卡）",
     component: AdminLayoutPage,
+  },
+  {
+    id: "filter-panel",
+    label: "查询条件面板（FilterPanel + TextFilterItem）",
+    component: FilterPanelPage,
   },
 ] as const satisfies readonly DemoPageDef[];
 

@@ -150,6 +150,9 @@ importers:
       '@ys.knife.crud/core':
         specifier: workspace:*
         version: link:../core
+      ys.knife.query.js:
+        specifier: ^0.0.24
+        version: 0.0.24
     devDependencies:
       '@types/node':
         specifier: ^22.10.5

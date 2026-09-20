@@ -1,6 +1,6 @@
 import type { Meta, MetaFunc } from "./meta"
 import type { PageFunc } from "./page"
-import type { PagedList } from "ys.knife.query.js"
+import { type PagedList,type FilterInfo, Operator } from "ys.knife.query.js"
 import type { Action, RowActionsFunc } from "./action"
 import type { loadCustomConfigFunc as loadCustomConfigFunc, saveCustomConfigFunc } from "./customConfig"
 import type { ExportApiFunc } from "./export"
@@ -182,4 +182,49 @@ export interface MainPanelProps {
     readonly componentMap?: MainPanelComponentMap;
     /** 初始打开并激活的叶子节点 key（功能树加载完成后应用，仅首次生效），默认不打开任何选项卡 */
     readonly defaultActive?: string;
+}
+/**
+ * 单字段查询条件的通用 props 契约。各具体类型（Text/Number/Date/Bool...）的 FilterItem
+ * 组件在此基础上各自扩展（如 number 的 min/max、date 的 valueFormat 等），不再共用 type 字段：
+ * 由各具体 FilterItem 组件声明（如 <ys-text-filter-item>），使用方在 filterPanel 插槽里
+ * 直接选用要渲染哪些 item 组件，不在一个组件内做 type 工厂分支。
+ *
+ * op 由声明方指定（文本常 Contains、数字常 Equals/Between、日期常 Between）。
+ */
+export interface FilterItemProps {
+    /** 显示标签（渲染在控件左侧） */
+    readonly label: string;
+    /** 运算符；由声明方指定，不同类型有不同默认（文本常 Contains、数字常 Equals/Between） */
+    readonly op: Operator;
+    /** 实体属性路径（FilterInfo.left），如 "name" / "user.age" */
+    readonly propertyPath: string;
+    /** 初始值；类型由具体 FilterItem 组件决定（文本为 string、日期区间为 [start,end] 等） */
+    readonly defaultValue?: unknown;
+    /** 可选占位文本 */
+    readonly placeholder?: string;
+}
+export interface FilterItemApi {
+    /**
+     * 当前值构造出的 FilterInfo；值为空时返回 null（表示「无查询条件」），
+     * panel 端聚合时直接跳过 null，不参与 createAnd。
+     */
+    readonly filter: FilterInfo | null;
+    /** 当前控件值（date 为 [start,end]，其余为单值）；供外部（含 demo）读取做客户端过滤 */
+    readonly value: unknown;
+    reset(): void;
+}
+export interface FilterPanelProps {
+    /** 是否渲染内置「搜索」按钮，默认 true。false 时外部自实现按钮经 ref 取 filter 触发 */
+    readonly showSearch?: boolean;
+    /** 是否渲染内置「重置」按钮，默认 true */
+    readonly showReset?: boolean;
+    /** 搜索按钮文案，默认 "搜索" */
+    readonly searchButtonText?: string;
+    /** 重置按钮文案，默认 "重置" */
+    readonly resetButtonText?: string;
+}
+export interface FilterPanelApi {
+    /** 聚合所有已注册 FilterItem 的 FilterInfo；全部为空时返回 emptyFilter() */
+    readonly filter: FilterInfo;
+    reset(): void;
 }
