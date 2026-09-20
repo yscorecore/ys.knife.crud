@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { inject, onBeforeUnmount, onMounted, type PropType } from "vue";
+import { type PropType } from "vue";
 import type { FilterItemApi } from "@ys.knife.crud/core";
-import { FilterPanelKey, useDateRangeFilterItem, type DateRangeFilterItemProps } from "@ys.knife.crud/vue";
+import { useDateRangeFilterItem, type DateRangeFilterItemProps } from "@ys.knife.crud/vue";
+import YsFilterItemLayout from "./filterItemLayout.vue";
 
 // 组件名统一带 ys 前缀：模板中以 <ys-date-range-filter-item>（或 <YsDateRangeFilterItem>）使用。
 defineOptions({ name: "YsDateRangeFilterItem" });
@@ -16,8 +17,7 @@ defineOptions({ name: "YsDateRangeFilterItem" });
  * - valueFormat 默认 'YYYY-MM-DD'，v-model 绑定 [start, end] 字符串数组
  * - disabledDate prop 支持外部传入禁用规则，限制可选范围
  *   （例如只能选最近 30 天内、不能选未来日期等；类型为 (date: Date) => boolean）
- * - onMounted 时 inject panel 的 register 函数注册自己的 FilterItemApi 到面板；
- *   onBeforeUnmount 调反注册。面板端 filter computed 自动响应子 item 值变化
+ * - panel 注册/反注册由 YsFilterItemLayout 接管（传 api prop），本组件不再写 inject 样板
  *
  * 跨包类型解析：api 对象用 as unknown as FilterItemApi 绕过结构性比较（同 textFilterItem）。
  */
@@ -50,6 +50,7 @@ const props = defineProps({
 
 const { value, filter: filterInfo, reset } = useDateRangeFilterItem(props);
 
+/* api 透传给 YsFilterItemLayout（:api="api"），由 layout 在 onMounted 注册到 panel。 */
 const api = {
   get filter() {
     return filterInfo.value;
@@ -60,52 +61,21 @@ const api = {
   reset,
 } as unknown as FilterItemApi;
 
-const register = inject(FilterPanelKey, null);
-let unregister: (() => void) | null = null;
-onMounted(() => {
-  if (register) unregister = register(api);
-});
-onBeforeUnmount(() => {
-  unregister?.();
-});
-
 defineExpose(api);
 </script>
 
 <template>
-  <div class="yk-filter-item">
-    <label class="yk-filter-item__label">{{ label }}</label>
-    <div class="yk-filter-item__control">
-      <el-date-picker
-        v-model="value"
-        type="daterange"
-        :start-placeholder="startPlaceholder"
-        :end-placeholder="endPlaceholder"
-        :value-format="valueFormat"
-        :disabled-date="disabledDate"
-        clearable
-      />
-    </div>
-  </div>
+  <YsFilterItemLayout :label="label" :api="api" :min-width="240">
+    <el-date-picker
+      v-model="value"
+      type="daterange"
+      :start-placeholder="startPlaceholder"
+      :end-placeholder="endPlaceholder"
+      :value-format="valueFormat"
+      :disabled-date="disabledDate"
+      clearable
+    />
+  </YsFilterItemLayout>
 </template>
 
-<style scoped>
-.yk-filter-item {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 0 0 auto;
-  min-width: 240px;
-}
-
-.yk-filter-item__label {
-  font-size: 12px;
-  color: var(--el-text-color-secondary, #909399);
-  line-height: 1.4;
-}
-
-.yk-filter-item__control {
-  display: flex;
-  align-items: center;
-}
-</style>
+<style scoped></style>

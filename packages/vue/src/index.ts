@@ -21,3 +21,4 @@ export * from "./filter/filterPanel";
 export * from "./filter/textFilterItem";
 export * from "./filter/dateFilterItem";
 export * from "./filter/dateRangeFilterItem";
+export * from "./filter/enumFilterItem";

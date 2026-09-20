@@ -5,6 +5,8 @@ import YsFilterPanel from "./filter/filterPanel.vue";
 import YsTextFilterItem from "./filter/textFilterItem.vue";
 import YsDateFilterItem from "./filter/dateFilterItem.vue";
 import YsDateRangeFilterItem from "./filter/dateRangeFilterItem.vue";
+import YsEnumFilterItem from "./filter/enumFilterItem.vue";
+import YsFilterItemLayout from "./filter/filterItemLayout.vue";
 
 export {
   YsTable,
@@ -13,6 +15,8 @@ export {
   YsTextFilterItem,
   YsDateFilterItem,
   YsDateRangeFilterItem,
+  YsEnumFilterItem,
+  YsFilterItemLayout,
 };
 
 // <script setup> 里的 interface 不是模块导出成员，用实例类型提取 props
@@ -22,6 +26,8 @@ export type YsFilterPanelProps = InstanceType<typeof YsFilterPanel>["$props"];
 export type YsTextFilterItemProps = InstanceType<typeof YsTextFilterItem>["$props"];
 export type YsDateFilterItemProps = InstanceType<typeof YsDateFilterItem>["$props"];
 export type YsDateRangeFilterItemProps = InstanceType<typeof YsDateRangeFilterItem>["$props"];
+export type YsEnumFilterItemProps = InstanceType<typeof YsEnumFilterItem>["$props"];
+export type YsFilterItemLayoutProps = InstanceType<typeof YsFilterItemLayout>["$props"];
 
 /**
  * Vue 插件：app.use(YsCrudElementPlus) 全局注册后，模板里可直接写
@@ -38,6 +44,8 @@ const YsCrudElementPlus: Plugin = {
     app.component("YsTextFilterItem", YsTextFilterItem);
     app.component("YsDateFilterItem", YsDateFilterItem);
     app.component("YsDateRangeFilterItem", YsDateRangeFilterItem);
+    app.component("YsEnumFilterItem", YsEnumFilterItem);
+    app.component("YsFilterItemLayout", YsFilterItemLayout);
   },
 };
 

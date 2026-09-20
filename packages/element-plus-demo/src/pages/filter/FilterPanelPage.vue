@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { Operator } from "@ys.knife.crud/core";
-import { YsFilterPanel, YsTextFilterItem, YsDateFilterItem, YsDateRangeFilterItem } from "@ys.knife.crud/element-plus";
+import { YsFilterPanel, YsTextFilterItem, YsDateFilterItem, YsDateRangeFilterItem, YsEnumFilterItem } from "@ys.knife.crud/element-plus";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 
 defineEmits<{
@@ -36,12 +36,42 @@ function onSearch(): void {
 function onReset(): void {
   lastFilterString.value = "";
 }
+
+/**
+ * 枚举 FilterItem 异步数据源：模拟一次远程拉取，返回状态选项数组。
+ * 实际场景中可替换为 fetch/axios 调用；dataFunc 只在组件 onMounted 调用一次。
+ * - keyProperty: "code" → 选中值（送入 v-model 与 filter，作为 con 包装的值）
+ * - valueProperty: "name" → 显示文本（el-option :label）
+ */
+async function loadStatusOptions(): Promise<Record<string, unknown>[]> {
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  return [
+    { code: 1, name: "Active" },
+    { code: 2, name: "Inactive" },
+    { code: 3, name: "Pending" },
+    { code: 4, name: "Archived" },
+  ];
+}
+
+/**
+ * 枚举 FilterItem 多选模式异步数据源：返回标签选项数组。
+ * 多选模式下：1 项自动用 Equals，2+ 项自动用 In（声明方 op 被忽略）。
+ */
+async function loadTagOptions(): Promise<Record<string, unknown>[]> {
+  await new Promise((resolve) => setTimeout(resolve, 200));
+  return [
+    { id: "dev", label: "开发" },
+    { id: "design", label: "设计" },
+    { id: "pm", label: "产品" },
+    { id: "qa", label: "测试" },
+  ];
+}
 </script>
 
 <template>
   <DemoPageLayout
     title="查询条件面板（FilterPanel + TextFilterItem）"
-    hint="演示 YsFilterPanel 聚合多个 FilterItem 输出 FilterInfo：本期实现文本（YsTextFilterItem，op 可声明）、日期（YsDateFilterItem，op 可声明）、日期范围（YsDateRangeFilterItem，op 内部固定 Between，支持 disabledDate 范围限制）三种类型。多个非空 item 的 filter 经 panel 端 createAnd 聚合，全空时返回 emptyFilter()。"
+    hint="演示 YsFilterPanel 聚合多个 FilterItem 输出 FilterInfo：本期实现文本（YsTextFilterItem，op 可声明）、日期（YsDateFilterItem，op 可声明）、日期范围（YsDateRangeFilterItem，op 内部固定 Between，支持 disabledDate 范围限制）、枚举（YsEnumFilterItem，支持 single/multiple 模式，多选时 2+ 项自动用 In，1 项用 Equals，异步 dataFunc + keyProperty/valueProperty 提取选项字段）四种类型。多个非空 item 的 filter 经 panel 端 createAnd 聚合，全空时返回 emptyFilter()。"
     @back="$emit('back')"
   >
     <ys-filter-panel ref="panelRef" @search="onSearch" @reset="onReset">
@@ -75,6 +105,25 @@ function onReset(): void {
         start-placeholder="开始日期"
         end-placeholder="结束日期"
         :disabled-date="disabledDateFn"
+      />
+      <ys-enum-filter-item
+        label="状态（equals）"
+        property-path="status"
+        :op="Operator.Equals"
+        :data-func="loadStatusOptions"
+        key-property="code"
+        value-property="name"
+        placeholder="选择状态"
+      />
+      <ys-enum-filter-item
+        label="标签（in，多选）"
+        property-path="tags"
+        :op="Operator.In"
+        :data-func="loadTagOptions"
+        key-property="id"
+        value-property="label"
+        placeholder="选择标签（可多选）"
+        multiple
       />
     </ys-filter-panel>
 
