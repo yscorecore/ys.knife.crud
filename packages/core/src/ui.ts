@@ -150,7 +150,8 @@ export interface FunctionNode {
     readonly label: string;
     /** 可选图标（emoji 等字符），渲染在叶子菜单与分组标题前缀处 */
     readonly icon?: string;
-    /** 叶子节点对应的组件类型名称，由 YsMainPanel 的 resolveComponent prop 解析 */
+    /** 叶子节点对应的组件路径字符串（如 "./admin-panels/DashboardPanel.vue"），
+     *  由 YsMainPanel 内部经动态 import 解析加载 */
     readonly component?: string;
     /** 叶子节点渲染面板组件时经 v-bind 透传的 props（静态声明，随节点定义；
      *  同一 component 类型可配合不同 props 与 key 开启多个实例） */

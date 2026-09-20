@@ -19,8 +19,9 @@ defineOptions({ name: "YsMainPanel" });
  *
  * - nodesFunc：功能树数据加载函数（异步返回 FunctionNode[]，数据可来自后端接口）；
  *   children 非空为分组、否则为叶子。变化时自动重新加载
- * - resolveComponent：叶子节点的组件类型名称 → 组件的解析函数；
- *   可同步返回组件，也可返回 Promise<Component>（动态 import 异步加载）
+ * - 叶子节点的 component 字段约定为组件路径字符串（如 "./admin-panels/DashboardPanel.vue"）；
+ *   组件解析所需的「路径 → 异步加载器」映射由 componentMap prop 提供（消费方经
+ *   import.meta.glob 生成，key 即路径字符串），组件内部经 defineAsyncComponent 加载并缓存
  * - 点击叶子在主面板打开选项卡（已打开则仅激活、不重复创建），选项卡可关闭；
  *   已打开选项卡的组件保持挂载，切换时不丢失内部状态
  */
@@ -28,13 +29,14 @@ const props = defineProps({
   /** 功能树数据加载函数：异步返回功能树节点数组 */
   nodesFunc: { type: Function as PropType<FunctionNodesFunc>, required: true },
   /**
-   * 组件解析函数：按叶子节点的组件类型名称返回组件。
-   * 同步返回 Component，或返回 Promise<Component>（内部经 defineAsyncComponent
-   * 异步渲染，加载期间选项卡内容为空、完成后自动显示）。
+   * 组件路径 → 异步加载器的映射，由消费方经 import.meta.glob 生成，例如：
+   *   const panels = import.meta.glob("./admin-panels/*.vue");
+   * 叶子节点的 component 字段取值须与该映射的 key 一致（如 "./admin-panels/DashboardPanel.vue"）。
+   * 未提供时回退为运行时动态 import（仅 dev 可用，生产构建无法解析）。
    */
-  resolveComponent: {
-    type: Function as PropType<(name: string) => Component | Promise<Component>>,
-    required: true,
+  componentMap: {
+    type: Object as PropType<Record<string, () => Promise<unknown>>>,
+    default: undefined,
   },
   /** 初始打开并激活的叶子节点 key（功能树加载完成后应用，仅首次生效），默认不打开任何选项卡 */
   defaultActive: { type: String, default: "" },
@@ -116,19 +118,23 @@ function removeTab(key: string | number): void {
 }
 
 /* ---------------- 组件解析与缓存 ----------------
- * 按组件类型名称缓存解析结果：同步组件直接缓存；Promise 包装为
- * defineAsyncComponent 后缓存——同一名称只 resolve/加载一次，
- * 选项卡反复关闭再打开不会重复发起加载。 */
+ * 叶子节点的 component 约定为组件路径字符串（如 "./admin-panels/DashboardPanel.vue"）。
+ * 优先经 componentMap（消费方 import.meta.glob 的结果）查找异步加载器，
+ * 内部用 defineAsyncComponent 包装并按路径缓存——同一路径只加载一次，
+ * 选项卡反复关闭再打开不会重复发起加载。未提供 componentMap 时回退为运行时动态 import。 */
 
 const componentCache = new Map<string, Component>();
 
 function getComponent(name: string): Component | null {
   if (!name) return null;
   if (!componentCache.has(name)) {
-    const resolved = props.resolveComponent(name);
+    const loader = props.componentMap?.[name];
     componentCache.set(
       name,
-      resolved instanceof Promise ? defineAsyncComponent(() => resolved) : resolved,
+      loader
+        ? defineAsyncComponent(() => loader().then((m) => (m as { default: Component }).default))
+        : // 未提供 componentMap 时的兜底：跳过 Vite 静态分析，按运行时动态 import 解析
+          defineAsyncComponent(() => import(/* @vite-ignore */ name).then((m) => m.default)),
     );
   }
   return componentCache.get(name) ?? null;
