@@ -23,6 +23,57 @@ export function findNode(list: FunctionNode[], key: string): FunctionNode | unde
 }
 
 /**
+ * 收集功能树中所有分组节点的 key（深度优先）。
+ * 纯函数：搜索过滤后用于 el-menu 的 default-openeds，让命中分组一次性全部展开。
+ */
+export function collectGroupKeys(list: FunctionNode[]): string[] {
+  const keys: string[] = [];
+  for (const node of list) {
+    if (isGroupNode(node)) {
+      keys.push(node.key);
+      keys.push(...collectGroupKeys(node.children!));
+    }
+  }
+  return keys;
+}
+
+/**
+ * 按关键词模糊过滤功能树：
+ * - 匹配规则：关键词两端裁空白后按空白拆成多个 token（大小写不敏感），
+ *   叶子 label 同时包含全部 token 才算命中；单个 token 时即「子串包含」
+ * - 分组节点自身 label 命中时，保留其整棵子树；
+ *   否则只要后代有命中，保留该分组作为祖先链（children 替换为过滤结果）
+ * - 关键词为空时原样返回
+ *
+ * 纯函数：不修改入参节点（命中祖先链时浅拷贝分组节点挂接过滤后的 children）。
+ */
+export function filterNodesByKeyword(list: FunctionNode[], keyword: string): FunctionNode[] {
+  const tokens = keyword.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return list;
+  const matches = (label: string): boolean => {
+    const text = label.toLowerCase();
+    return tokens.every((t) => text.includes(t));
+  };
+  const walk = (nodes: FunctionNode[]): FunctionNode[] => {
+    const result: FunctionNode[] = [];
+    for (const node of nodes) {
+      if (isGroupNode(node)) {
+        if (matches(node.label)) {
+          result.push(node); // 分组自身命中：整组保留
+          continue;
+        }
+        const children = walk(node.children!);
+        if (children.length > 0) result.push({ ...node, children }); // 祖先链保留
+      } else if (matches(node.label)) {
+        result.push(node);
+      }
+    }
+    return result;
+  };
+  return walk(list);
+}
+
+/**
  * 主面板功能树加载逻辑：功能树数据与加载态、加载动作，
  * 以及 nodesFunc 变化时自动重新加载。
  *

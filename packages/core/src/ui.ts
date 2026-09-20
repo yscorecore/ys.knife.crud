@@ -182,6 +182,18 @@ export interface MainPanelProps {
     readonly componentMap?: MainPanelComponentMap;
     /** 初始打开并激活的叶子节点 key（功能树加载完成后应用，仅首次生效），默认不打开任何选项卡 */
     readonly defaultActive?: string;
+    /**
+     * 是否在侧栏顶部渲染内置的功能搜索框（默认 true）。
+     * 置 false 时不渲染内置搜索框，外部可经 v-model:menu-keyword 自行实现搜索入口；
+     * 侧栏折叠为 64px 时内置搜索框也自动隐藏。
+     */
+    readonly showMenuSearch?: boolean;
+    /**
+     * 功能搜索关键词（受控）：对功能树叶子 label 做大小写不敏感的模糊匹配，
+     * 命中叶子的祖先分组链保留并自动展开；为空字符串时显示完整功能树。
+     * 与 `update:menuKeyword` 事件配合可使用 v-model:menu-keyword 双向绑定。
+     */
+    readonly menuKeyword?: string;
 }
 /**
  * 单字段查询条件的统一 expose 契约。各具体类型 FilterItem 组件

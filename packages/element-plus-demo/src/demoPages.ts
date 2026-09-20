@@ -23,6 +23,7 @@ import CustomEntryButtonsTablePage from "./pages/table/CustomEntryButtonsTablePa
 import CardViewTablePage from "./pages/table/CardViewTablePage.vue";
 import LoadingTablePage from "./pages/table/LoadingTablePage.vue";
 import AdminLayoutPage from "./pages/table/AdminLayoutPage.vue";
+import AdminExternalSearchPage from "./pages/table/AdminExternalSearchPage.vue";
 import FilterPanelPage from "./pages/filter/FilterPanelPage.vue";
 
 /**
@@ -134,6 +135,11 @@ export const demoPages = [
     id: "table-admin-layout",
     label: "管理系统布局（功能树 + 主面板选项卡）",
     component: AdminLayoutPage,
+  },
+  {
+    id: "table-admin-external-search",
+    label: "主面板外置功能搜索（showMenuSearch=false + v-model）",
+    component: AdminExternalSearchPage,
   },
   {
     id: "filter-panel",

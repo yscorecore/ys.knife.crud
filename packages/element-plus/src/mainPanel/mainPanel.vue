@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import {
+  computed,
   onMounted,
   ref,
+  watch,
   type PropType,
 } from "vue";
 import type {
@@ -9,6 +11,8 @@ import type {
   MainPanelComponentMap,
 } from "@ys.knife.crud/core";
 import {
+  collectGroupKeys,
+  filterNodesByKeyword,
   findNode,
   isGroupNode,
   useMainPanelNodes,
@@ -49,11 +53,45 @@ const props = defineProps({
   },
   /** 初始打开并激活的叶子节点 key（功能树加载完成后应用，仅首次生效），默认不打开任何选项卡 */
   defaultActive: { type: String, default: "" },
+  /** 是否渲染侧栏顶部内置的功能搜索框（默认 true）；false 时外部可自行实现并绑定 v-model:menu-keyword */
+  showMenuSearch: { type: Boolean, default: true },
+  /** 功能搜索关键词（受控）：与 update:menuKeyword 配合支持 v-model:menu-keyword */
+  menuKeyword: { type: String, default: "" },
 });
+
+const emit = defineEmits<{
+  (e: "update:menuKeyword", value: string): void;
+}>();
 
 /* ---------------- 菜单折叠（视图层内部状态，非受控） ---------------- */
 
 const menuCollapsed = ref(false);
+
+/* ---------------- 功能搜索（内置 UI 可关；关键词 v-model 受控，单一数据源） ---------------- */
+
+/** 未绑定时的内部关键词：prop 变化同步进来，输入时同时写内部值并派发 update 事件，
+ *  保证「未绑定 v-model 也能用」与「外部受控」两条路径一致 */
+const innerKeyword = ref(props.menuKeyword);
+watch(
+  () => props.menuKeyword,
+  (v) => {
+    innerKeyword.value = v;
+  },
+);
+const menuSearchKeyword = computed({
+  get: () => innerKeyword.value,
+  set: (v) => {
+    innerKeyword.value = v;
+    emit("update:menuKeyword", v);
+  },
+});
+
+/** 是否处于搜索态（trim 后非空） */
+const searching = computed(() => menuSearchKeyword.value.trim().length > 0);
+/** 搜索过滤后的功能树（命中叶子 + 祖先分组链） */
+const filteredNodes = computed(() => filterNodesByKeyword(nodes.value, menuSearchKeyword.value));
+/** 过滤树中的全部分组 key：搜索态菜单挂载时作为 default-openeds 一次性展开 */
+const filteredGroupKeys = computed(() => collectGroupKeys(filteredNodes.value));
 
 /* ---------------- 功能树加载（useMainPanelNodes） ---------------- */
 
@@ -88,12 +126,37 @@ onMounted(async () => {
   <div class="ys-main-panel">
     <!-- 左侧功能树：内置折叠按钮（折叠后仅显示 icon，分组经悬浮 popup 逐级展开） -->
     <aside class="ys-main-panel__aside" :class="{ 'is-collapsed': menuCollapsed }">
+      <!-- 顶部行：折叠按钮 + 功能搜索框同一行，搜索框不单独占高、不挤压菜单；
+           折叠到 64px 时无空间自动隐藏，showMenuSearch=false 时由外部自行实现入口 -->
       <div class="ys-main-panel__aside-header">
         <button class="ys-main-panel__collapse-btn" type="button"
           :title="menuCollapsed ? '展开菜单' : '折叠菜单'"
           @click="menuCollapsed = !menuCollapsed">☰</button>
+        <el-input v-if="props.showMenuSearch && !menuCollapsed" v-model="menuSearchKeyword"
+          class="ys-main-panel__aside-search" size="small" clearable placeholder="搜索功能"
+          aria-label="搜索功能">
+          <template #prefix>
+            <svg class="ys-main-panel__search-icon" viewBox="0 0 1024 1024" width="14" height="14"
+              aria-hidden="true">
+              <path fill="currentColor"
+                d="M909.098 839.904l-181.22-181.248a341.5 341.5 0 1 0-47.734 48.58l180.56 180.588a33.92 0 0 0 48.394-47.92zM454.4 745.6a291.2 291.2 0 1 1 291.2-291.2 291.2 291.2 0 0 1-291.2 291.2z" />
+            </svg>
+          </template>
+        </el-input>
       </div>
-      <el-menu :default-active="activeKey" :collapse="menuCollapsed" class="ys-main-panel__menu"
+      <!-- 搜索态：渲染过滤树，:key 含关键词使菜单按关键词重挂载，
+           default-openeds 命中分组一次性全部展开（default-openeds 仅在挂载时生效） -->
+      <el-menu v-if="searching" :key="'search-' + menuSearchKeyword" :default-active="activeKey"
+        :default-openeds="filteredGroupKeys" :collapse="menuCollapsed" class="ys-main-panel__menu"
+        v-loading="menuLoading" element-loading-background="transparent"
+        @select="handleMenuSelect">
+        <main-panel-menu-node v-for="node in filteredNodes" :key="node.key" :node="node" />
+        <div v-if="filteredNodes.length === 0 && !menuLoading" class="ys-main-panel__menu-empty">
+          未找到匹配的功能
+        </div>
+      </el-menu>
+      <!-- 普通态：完整功能树，展开状态由 el-menu 内部维护 -->
+      <el-menu v-else :default-active="activeKey" :collapse="menuCollapsed" class="ys-main-panel__menu"
         v-loading="menuLoading" element-loading-background="transparent"
         @select="handleMenuSelect">
         <main-panel-menu-node v-for="node in nodes" :key="node.key" :node="node" />
@@ -145,8 +208,27 @@ onMounted(async () => {
 .ys-main-panel__aside-header {
   flex-shrink: 0;
   display: flex;
-  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
   padding: 8px;
+}
+
+/* 功能搜索框：与折叠按钮同处顶部一行，填满剩余宽度，不额外占行高 */
+.ys-main-panel__aside-search {
+  flex: 1;
+  min-width: 0;
+}
+
+.ys-main-panel__search-icon {
+  color: var(--el-text-color-placeholder, #a8abb2);
+}
+
+/* 搜索无结果提示 */
+.ys-main-panel__menu-empty {
+  padding: 12px;
+  text-align: center;
+  color: var(--el-text-color-placeholder, #a8abb2);
+  font-size: 0.88em;
 }
 
 .ys-main-panel__aside.is-collapsed .ys-main-panel__aside-header {
