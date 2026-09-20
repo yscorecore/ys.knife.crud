@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { inject, onBeforeUnmount, onMounted, type PropType } from "vue";
-import type { FilterItemApi, FilterItemProps, Operator } from "@ys.knife.crud/core";
-import { FilterPanelKey, useTextFilterItem } from "@ys.knife.crud/vue";
+import type { FilterItemApi, Operator } from "@ys.knife.crud/core";
+import { FilterPanelKey, useTextFilterItem, type TextFilterItemProps } from "@ys.knife.crud/vue";
 
 // 组件名统一带 ys 前缀：模板中以 <ys-text-filter-item>（或 <YsTextFilterItem>）使用，
 // 同时保证全局注册（app.component）与 devtools 中名称稳定。
@@ -40,7 +40,7 @@ const props = defineProps({
   propertyPath: { type: String, required: true },
   /** 初始值；缺省为空字符串 */
   defaultValue: {
-    type: String as PropType<FilterItemProps["defaultValue"]>,
+    type: String as PropType<TextFilterItemProps["defaultValue"]>,
     required: false,
   },
   /** 占位文本 */

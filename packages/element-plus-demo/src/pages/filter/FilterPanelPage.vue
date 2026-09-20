@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { Operator } from "@ys.knife.crud/core";
-import { YsFilterPanel, YsTextFilterItem } from "@ys.knife.crud/element-plus";
+import { YsFilterPanel, YsTextFilterItem, YsDateFilterItem, YsDateRangeFilterItem } from "@ys.knife.crud/element-plus";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 
 defineEmits<{
@@ -13,6 +13,19 @@ const panelRef = ref<{ filter: { toString(): string; isEmpty(): boolean }; reset
 
 /** 最近一次搜索时捕获的 FilterInfo（toString 展示用）；与 panel.filter 实时联动可分开演示 */
 const lastFilterString = ref<string>("");
+
+/**
+ * 日期范围 disabledDate：禁用未来日期与 30 天前的日期，演示「只能选最近 30 天内」范围限制。
+ * el-date-picker 的 disabled-date 接收 Date 返回 boolean（true=禁用）。
+ */
+function disabledDateFn(d: Date): boolean {
+  const now = new Date();
+  const thirtyAgo = new Date(now.getTime() - 30 * 86400 * 1000);
+  // 30 天前的 0 点作下界，今天 23:59:59 作上界；超过该区间禁用
+  thirtyAgo.setHours(0, 0, 0, 0);
+  now.setHours(23, 59, 59, 999);
+  return d < thirtyAgo || d > now;
+}
 
 function onSearch(): void {
   // search 事件携带聚合 FilterInfo；多个非空 item 经 panel 端 createAnd 聚合
@@ -28,7 +41,7 @@ function onReset(): void {
 <template>
   <DemoPageLayout
     title="查询条件面板（FilterPanel + TextFilterItem）"
-    hint="演示 YsFilterPanel 聚合多个 YsTextFilterItem 输出 FilterInfo：本期只实现文本类型 FilterItem（el-input），但每个 item 可声明不同 op。多个非空 item 的 filter 经 panel 端 createAnd 聚合，全空时返回 emptyFilter()。"
+    hint="演示 YsFilterPanel 聚合多个 FilterItem 输出 FilterInfo：本期实现文本（YsTextFilterItem，op 可声明）、日期（YsDateFilterItem，op 可声明）、日期范围（YsDateRangeFilterItem，op 内部固定 Between，支持 disabledDate 范围限制）三种类型。多个非空 item 的 filter 经 panel 端 createAnd 聚合，全空时返回 emptyFilter()。"
     @back="$emit('back')"
   >
     <ys-filter-panel ref="panelRef" @search="onSearch" @reset="onReset">
@@ -49,6 +62,19 @@ function onReset(): void {
         property-path="city"
         :op="Operator.Equals"
         placeholder="输入完整城市名（如 Beijing）"
+      />
+      <ys-date-filter-item
+        label="生日（equals）"
+        property-path="birthDate"
+        :op="Operator.Equals"
+        placeholder="选择生日"
+      />
+      <ys-date-range-filter-item
+        label="创建时间（between）"
+        property-path="createdAt"
+        start-placeholder="开始日期"
+        end-placeholder="结束日期"
+        :disabled-date="disabledDateFn"
       />
     </ys-filter-panel>
 

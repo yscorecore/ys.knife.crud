@@ -184,25 +184,13 @@ export interface MainPanelProps {
     readonly defaultActive?: string;
 }
 /**
- * 单字段查询条件的通用 props 契约。各具体类型（Text/Number/Date/Bool...）的 FilterItem
- * 组件在此基础上各自扩展（如 number 的 min/max、date 的 valueFormat 等），不再共用 type 字段：
- * 由各具体 FilterItem 组件声明（如 <ys-text-filter-item>），使用方在 filterPanel 插槽里
- * 直接选用要渲染哪些 item 组件，不在一个组件内做 type 工厂分支。
+ * 单字段查询条件的统一 expose 契约。各具体类型 FilterItem 组件
+ * （Text/Date/DateRange/Number/Bool...）props 字段各不相同（如 daterange 不需要 op、
+ * date 需要 valueFormat、number 可能需要 min/max），因此 core 不再定义通用 FilterItemProps；
+ * 每个 composable 各自定义并导出自己的 props 类型，element-plus 组件从 vue 包 import 它。
  *
- * op 由声明方指定（文本常 Contains、数字常 Equals/Between、日期常 Between）。
+ * 唯一约束：所有 FilterItem 组件都 expose 这个 FilterItemApi，使 panel 端能统一聚合。
  */
-export interface FilterItemProps {
-    /** 显示标签（渲染在控件左侧） */
-    readonly label: string;
-    /** 运算符；由声明方指定，不同类型有不同默认（文本常 Contains、数字常 Equals/Between） */
-    readonly op: Operator;
-    /** 实体属性路径（FilterInfo.left），如 "name" / "user.age" */
-    readonly propertyPath: string;
-    /** 初始值；类型由具体 FilterItem 组件决定（文本为 string、日期区间为 [start,end] 等） */
-    readonly defaultValue?: unknown;
-    /** 可选占位文本 */
-    readonly placeholder?: string;
-}
 export interface FilterItemApi {
     /**
      * 当前值构造出的 FilterInfo；值为空时返回 null（表示「无查询条件」），
