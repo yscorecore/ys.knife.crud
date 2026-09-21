@@ -54,6 +54,9 @@ importers:
       '@ys.knife.crud/vue':
         specifier: workspace:*
         version: link:../vue
+      dayjs:
+        specifier: ^1.11.23
+        version: 1.11.23
       element-plus:
         specifier: ^2.7.0
         version: 2.14.5(vue@3.5.42(typescript@5.9.3))

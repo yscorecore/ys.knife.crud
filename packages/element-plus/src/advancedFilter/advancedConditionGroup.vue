@@ -19,8 +19,9 @@ import {
  *
  * 在 <script setup> 配合 defineOptions({ name }) 下，模板可直接自引用
  * <YsAdvancedConditionGroup> 实现任意深度嵌套。context（columns / 选项缓存 /
- * valueFormat / composable api）由顶层 YsAdvancedFilterPanel 经 provide/inject
+ * composable api）由顶层 YsAdvancedFilterPanel 经 provide/inject
  * 注入（详见 advancedFilterContext.ts），避免每层递归显式透传。
+ * 日期字段的 value-format 由 Column.displayFormat 提供（本组件按行选中字段查 column 取用）。
  *
  * children 遍历按类型分流：
  * - 叶子（AdvancedCondition）：渲染字段下拉 + 操作符下拉 + 值控件 + 删除按钮
@@ -81,6 +82,16 @@ const isGroup = isConditionGroup;
 // 给 v-else 分支加 cast 的辅助：把 child 当 leaf 取出，避免 Volar narrow 不生效
 function asLeaf(node: AdvancedConditionNode): AdvancedCondition {
   return node as AdvancedCondition;
+}
+
+// 按字段路径查 Column（用于取 displayFormat 等列元数据）
+function columnOf(propertyPath: string): Column | undefined {
+  return ctx.columns.find((c) => c.propertyPath === propertyPath);
+}
+
+// 日期字段的 value-format：优先用 Column.displayFormat，缺省回落 YYYY-MM-DD
+function valueFormatOf(propertyPath: string): string {
+  return columnOf(propertyPath)?.displayFormat ?? "YYYY-MM-DD";
 }
 </script>
 
@@ -155,7 +166,7 @@ function asLeaf(node: AdvancedConditionNode): AdvancedCondition {
             :options-loading="
               ctx.loadingMap.value[asLeaf(child).propertyPath] === true
             "
-            :value-format="ctx.valueFormat"
+            :value-format="valueFormatOf(asLeaf(child).propertyPath)"
             :class="[
               'yk-adv-group__value',
               { 'is-invalid': ctx.api.isConditionEmpty(asLeaf(child)) },

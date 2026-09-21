@@ -42,7 +42,8 @@
   },
   "dependencies": {
     "@ys.knife.crud/core": "workspace:*",
-    "@ys.knife.crud/vue": "workspace:*"
+    "@ys.knife.crud/vue": "workspace:*",
+    "dayjs": "^1.11.23"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",

@@ -54,8 +54,6 @@ const props = defineProps({
   searchButtonText: { type: String, default: "查询" },
   /** 重置按钮文案，默认 "重置" */
   resetButtonText: { type: String, default: "重置" },
-  /** el-date-picker value-format，默认 'YYYY-MM-DD' */
-  valueFormat: { type: String, default: "YYYY-MM-DD" },
 });
 
 const emit = defineEmits<{
@@ -120,7 +118,6 @@ provide(ADVANCED_FILTER_KEY, {
   columns: props.columns,
   optionsMap,
   loadingMap,
-  valueFormat: props.valueFormat,
   api: advApi,
 } satisfies AdvancedFilterContext);
 

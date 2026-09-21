@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, type PropType } from "vue";
+import { computed, ref, type PropType } from "vue";
 import type { AdvancedFieldType, AdvancedOperator, EnumOption } from "@ys.knife.crud/core";
+import dayjs from "dayjs";
 
 /**
  * YsAdvancedValueEditor：高级查询条件行里的「值」控件。
@@ -143,6 +144,31 @@ const boolOptions: EnumOption[] = [
   { label: "是", value: true },
   { label: "否", value: false },
 ];
+
+/* ---- 日期区间快捷选项：固定「最近 7/30/90 天」+ 自定义 N 天 ---- */
+function recentRange(days: number): [Date, Date] {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(start.getDate() - days);
+  return [start, end];
+}
+
+const dateRangeShortcuts = [
+  { text: "最近 7 天", value: () => recentRange(7) },
+  { text: "最近 30 天", value: () => recentRange(30) },
+  { text: "最近 90 天", value: () => recentRange(90) },
+];
+
+const recentDays = ref(7);
+function applyRecentDays(): void {
+  const n = recentDays.value;
+  if (!n || n < 1) return;
+  const [start, end] = recentRange(n);
+  dateRangeValue.value = [
+    dayjs(start).format(props.valueFormat),
+    dayjs(end).format(props.valueFormat),
+  ];
+}
 </script>
 
 <template>
@@ -179,16 +205,37 @@ const boolOptions: EnumOption[] = [
     class="yk-advanced-value-editor"
   />
 
-  <!-- date：区间直接用 daterange，单值用 date -->
-  <el-date-picker
+  <!-- date：区间用 daterange（带「最近 N 天」快捷选项），单值用 date -->
+  <div
     v-else-if="fieldType === 'date' && isRange"
-    v-model="dateRangeValue"
-    type="daterange"
-    :value-format="valueFormat"
-    start-placeholder="开始日期"
-    end-placeholder="结束日期"
-    class="yk-advanced-value-editor"
-  />
+    class="yk-advanced-value-editor yk-advanced-value-editor--daterange"
+  >
+    <el-date-picker
+      v-model="dateRangeValue"
+      type="daterange"
+      :value-format="valueFormat"
+      start-placeholder="开始日期"
+      end-placeholder="结束日期"
+      :shortcuts="dateRangeShortcuts"
+      class="yk-advanced-value-editor__daterange-picker"
+    />
+    <el-popover trigger="click" placement="bottom" :width="240">
+      <template #reference>
+        <el-button class="yk-advanced-value-editor__recent-trigger">最近 N 天</el-button>
+      </template>
+      <div class="yk-advanced-value-editor__recent-pop">
+        <span>最近</span>
+        <el-input-number
+          v-model="recentDays"
+          :min="1"
+          :controls="false"
+          class="yk-advanced-value-editor__recent-input"
+        />
+        <span>天</span>
+        <el-button type="primary" size="small" @click="applyRecentDays">应用</el-button>
+      </div>
+    </el-popover>
+  </div>
   <el-date-picker
     v-else-if="fieldType === 'date'"
     v-model="dateValue"
@@ -254,6 +301,28 @@ const boolOptions: EnumOption[] = [
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* 日期区间 + 最近 N 天按钮 */
+.yk-advanced-value-editor--daterange {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.yk-advanced-value-editor__daterange-picker {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.yk-advanced-value-editor__recent-trigger {
+  flex: 0 0 auto;
+}
+.yk-advanced-value-editor__recent-pop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.yk-advanced-value-editor__recent-input {
+  width: 80px;
 }
 
 .yk-advanced-value-editor__num {
