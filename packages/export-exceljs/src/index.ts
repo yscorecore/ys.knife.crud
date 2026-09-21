@@ -51,7 +51,7 @@ class ExcelJsExportApi implements ExportApi {
       usedNames.add(name);
       const sheet = this.workbook.addWorksheet(name);
       sheet.columns = columns.map((c, i) => ({
-        width: this.options.columnWidths?.[key]?.[i] ?? Math.max(10, c.displayName.length * 2),
+        width: this.options.columnWidths?.[key]?.[i] ?? Math.max(10, (c.displayName?.length ?? 0) * 2),
       }));
       sheet.addRow(columns.map((c) => c.displayName));
       this.sheets.set(key, sheet);
@@ -76,7 +76,11 @@ class ExcelJsExportApi implements ExportApi {
     return Promise.resolve();
   }
 
-  /** 收尾：writeBuffer 生成 xlsx 字节并触发浏览器下载 */
+  /** 收尾：writeBuffer 生成 xlsx 字节并触发浏览器下载。
+   *  关键点：a.click() 触发的下载是异步的，立即 revokeObjectURL 会让浏览器
+   *  读不到 blob 内容而回退到「另存为」对话框（或下载失败）。需延迟释放，
+   *  让浏览器有足够时间开始读取 blob。同时把 <a> 挂到 DOM 再 click，
+   *  部分浏览器（如旧版 Firefox）对未挂载的 anchor 的 click 行为不一致。 */
   async download(fileName: string): Promise<void> {
     const workbook = this.workbook;
     if (!workbook) throw new Error("ExcelJsExportApi: renderHeader 尚未调用或已 cancel");
@@ -88,8 +92,13 @@ class ExcelJsExportApi implements ExportApi {
     const a = document.createElement("a");
     a.href = url;
     a.download = fileName;
+    a.style.display = "none";
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+    // 延迟释放 blob URL：a.click() 触发的下载是异步的，立即 revoke 可能让浏览器
+    // 读不到 blob 内容而回退到「另存为」对话框（或下载失败）。1 秒足够浏览器开始读取。
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
     // 下载完成后释放引用
     this.workbook = null;
     this.sheets.clear();
