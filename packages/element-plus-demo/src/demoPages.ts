@@ -3,6 +3,7 @@ import EmptyTablePage from "./pages/table/EmptyTablePage.vue";
 import ConstTablePage from "./pages/table/ConstTablePage.vue";
 import ActionsTablePage from "./pages/table/ActionsTablePage.vue";
 import ListTablePage from "./pages/table/ListTablePage.vue";
+import SearchTablePage from "./pages/table/SearchTablePage.vue";
 import PagedTablePage from "./pages/table/PagedTablePage.vue";
 import UnknownTotalTablePage from "./pages/table/UnknownTotalTablePage.vue";
 import CheckboxTablePage from "./pages/table/CheckboxTablePage.vue";
@@ -50,6 +51,11 @@ export const demoPages = [
     component: ActionsTablePage,
   },
   { id: "table-list", label: "异步列表表格（listData）", component: ListTablePage },
+  {
+    id: "table-search-panel",
+    label: "搜索面板 + 表格（样式预览，数据不联动）",
+    component: SearchTablePage,
+  },
   { id: "table-paged", label: "分页表格（25 行数据自动分页）", component: PagedTablePage },
   {
     id: "table-unknown-total",
