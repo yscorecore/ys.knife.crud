@@ -7,6 +7,9 @@ import YsDateFilterItem from "./filter/dateFilterItem.vue";
 import YsDateRangeFilterItem from "./filter/dateRangeFilterItem.vue";
 import YsEnumFilterItem from "./filter/enumFilterItem.vue";
 import YsFilterItemLayout from "./filter/filterItemLayout.vue";
+import YsAdvancedFilterPanel from "./advancedFilter/advancedFilterPanel.vue";
+import YsAdvancedValueEditor from "./advancedFilter/advancedValueEditor.vue";
+import YsAdvancedConditionGroup from "./advancedFilter/advancedConditionGroup.vue";
 
 export {
   YsTable,
@@ -17,6 +20,9 @@ export {
   YsDateRangeFilterItem,
   YsEnumFilterItem,
   YsFilterItemLayout,
+  YsAdvancedFilterPanel,
+  YsAdvancedValueEditor,
+  YsAdvancedConditionGroup,
 };
 
 // 枚举 FilterItem 的选项数据源类型:函数,返回 Promise<EnumOption[]>。
@@ -42,6 +48,9 @@ export type YsDateFilterItemProps = InstanceType<typeof YsDateFilterItem>["$prop
 export type YsDateRangeFilterItemProps = InstanceType<typeof YsDateRangeFilterItem>["$props"];
 export type YsEnumFilterItemProps = InstanceType<typeof YsEnumFilterItem>["$props"];
 export type YsFilterItemLayoutProps = InstanceType<typeof YsFilterItemLayout>["$props"];
+export type YsAdvancedFilterPanelProps = InstanceType<typeof YsAdvancedFilterPanel>["$props"];
+export type YsAdvancedValueEditorProps = InstanceType<typeof YsAdvancedValueEditor>["$props"];
+export type YsAdvancedConditionGroupProps = InstanceType<typeof YsAdvancedConditionGroup>["$props"];
 
 /**
  * Vue 插件：app.use(YsCrudElementPlus) 全局注册后，模板里可直接写
@@ -60,6 +69,9 @@ const YsCrudElementPlus: Plugin = {
     app.component("YsDateRangeFilterItem", YsDateRangeFilterItem);
     app.component("YsEnumFilterItem", YsEnumFilterItem);
     app.component("YsFilterItemLayout", YsFilterItemLayout);
+    app.component("YsAdvancedFilterPanel", YsAdvancedFilterPanel);
+    app.component("YsAdvancedValueEditor", YsAdvancedValueEditor);
+    app.component("YsAdvancedConditionGroup", YsAdvancedConditionGroup);
   },
 };
 

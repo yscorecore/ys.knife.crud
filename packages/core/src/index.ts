@@ -49,3 +49,6 @@ export * from "./export";
 // enumOptionsSource.ts 混合导出（fromOptions/fromObjectItems/fromArray/fromBool 是值，
 // EnumOptionsSource/EnumOption 是类型）→ 用 export *
 export * from "./enumOptionsSource";
+// advancedFilter.ts 混合导出（OPERATOR_LABELS/FIELD_TYPE_OPERATORS/推断函数是值，
+// AdvancedCondition/AdvancedCombinator/AdvancedFieldType 是类型）→ 用 export *
+export * from "./advancedFilter";

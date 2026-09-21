@@ -25,6 +25,7 @@ import LoadingTablePage from "./pages/table/LoadingTablePage.vue";
 import AdminLayoutPage from "./pages/table/AdminLayoutPage.vue";
 import AdminExternalSearchPage from "./pages/table/AdminExternalSearchPage.vue";
 import FilterPanelPage from "./pages/filter/FilterPanelPage.vue";
+import AdvancedFilterPanelPage from "./pages/filter/AdvancedFilterPanelPage.vue";
 
 /**
  * Demo 页面注册表：导航按钮与 App 动态渲染共用的唯一数据源。
@@ -145,6 +146,11 @@ export const demoPages = [
     id: "filter-panel",
     label: "查询条件面板（FilterPanel + TextFilterItem）",
     component: FilterPanelPage,
+  },
+  {
+    id: "filter-advanced-panel",
+    label: "高级查询面板（任意嵌套 AND/OR 组合）",
+    component: AdvancedFilterPanelPage,
   },
 ] as const satisfies readonly DemoPageDef[];
 
