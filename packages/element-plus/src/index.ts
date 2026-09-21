@@ -52,6 +52,9 @@ export type YsAdvancedFilterPanelProps = InstanceType<typeof YsAdvancedFilterPan
 export type YsAdvancedValueEditorProps = InstanceType<typeof YsAdvancedValueEditor>["$props"];
 export type YsAdvancedConditionGroupProps = InstanceType<typeof YsAdvancedConditionGroup>["$props"];
 
+// 高级查询面板的已存查询预设类型（v-model:quick-queries / v-model:saved-queries 用）
+export type { SavedQuery } from "./advancedFilter/advancedFilterContext";
+
 /**
  * Vue 插件：app.use(YsCrudElementPlus) 全局注册后，模板里可直接写
  * <ys-table> / <ys-main-panel> / <ys-filter-panel> / <ys-text-filter-item> /

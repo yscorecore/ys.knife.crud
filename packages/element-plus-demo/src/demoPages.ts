@@ -26,6 +26,7 @@ import AdminLayoutPage from "./pages/table/AdminLayoutPage.vue";
 import AdminExternalSearchPage from "./pages/table/AdminExternalSearchPage.vue";
 import FilterPanelPage from "./pages/filter/FilterPanelPage.vue";
 import AdvancedFilterPanelPage from "./pages/filter/AdvancedFilterPanelPage.vue";
+import SwitchableFilterPage from "./pages/filter/SwitchableFilterPage.vue";
 
 /**
  * Demo 页面注册表：导航按钮与 App 动态渲染共用的唯一数据源。
@@ -151,6 +152,11 @@ export const demoPages = [
     id: "filter-advanced-panel",
     label: "高级查询面板（任意嵌套 AND/OR 组合）",
     component: AdvancedFilterPanelPage,
+  },
+  {
+    id: "filter-switchable",
+    label: "可切换查询面板（简单 ↔ 高级）",
+    component: SwitchableFilterPage,
   },
 ] as const satisfies readonly DemoPageDef[];
 
