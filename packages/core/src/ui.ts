@@ -93,6 +93,10 @@ export interface TableApi {
     reload(): void
     /** 清空全部选中（含其他页的选中） */
     clearSelection(): void
+    /** 选中当前页所有行（其他页已选中不受影响），供外部自定义选中提示条调用 */
+    selectAllOnPage(): void
+    /** 反选当前页行（其他页已选中不受影响），供外部自定义选中提示条调用 */
+    invertSelectionOnPage(): void
     /**
      * 打开内置列设置对话框。showCustomConfig=false（不渲染内置「⚙ 列设置」按钮）、
      * 外部自实现按钮时经此入口打开面板。

@@ -394,6 +394,8 @@ const exposed = {
   rows,
   reload,
   clearSelection,
+  selectAllOnPage,
+  invertSelectionOnPage,
   openConfigDialog,
   openExportDialog,
 } satisfies ExposedShape;

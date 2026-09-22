@@ -1,10 +1,14 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, ref } from "vue";
+import { ElMessage } from "element-plus";
 import {
   type Column,
   type EnumOption,
   type EnumOptionsSource,
   Operator,
+  constData,
+  type TableApi,
+  type ViewMode,
 } from "@ys.knife.crud/core";
 import {
   type SavedQuery,
@@ -13,8 +17,12 @@ import {
   YsDateFilterItem,
   YsDateRangeFilterItem,
   YsEnumFilterItem,
+  YsTable,
 } from "@ys.knife.crud/element-plus";
+import { createExcelJsExportApiFunc } from "@ys.knife.crud/export-exceljs";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
+import { manyRows, metaFun } from "../shared/demoData";
+import { useLocalCustomConfig } from "../shared/useLocalCustomConfig";
 
 defineEmits<{
   (e: "back"): void;
@@ -99,12 +107,95 @@ const advancedColumns: Column[] = [
 const advancedOptionSources: Record<string, EnumOptionsSource> = {
   status: loadStatusOptions,
 };
+
+/* ---------------- 全功能表格 ---------------- */
+
+/** 25 行数据 + pageSize=10 → 3 页，可演示跨页勾选与「导出所有」 */
+const dataFun = constData(manyRows);
+
+const tableRef = ref<TableApi | null>(null);
+
+/** 列设置持久化（独立 localStorage key，与其它演示页互不覆盖） */
+const { loadCustomConfigFun, saveCustomConfigFun } = useLocalCustomConfig(
+  "yk-crud-demo-switchable-filter-table",
+);
+
+/** 真实导出实现（ExcelJS），外部下拉按钮调 openExportDialog 后产出 xlsx */
+const exportorFunc = createExcelJsExportApiFunc();
+
+/** 是否显示 checkbox 列：由下拉菜单里的「勾选行」开关控制 */
+const showCheckbox = ref(true);
+
+/** 当前视图模式：由下拉菜单切换（v-model:view-mode 受控驱动表格） */
+const viewMode = ref<ViewMode>("table");
+
+/** 跨页累计选中数（模板 ref 自动解包 selectedRows） */
+const selectedCount = computed(() => tableRef.value?.selectedRows.length ?? 0);
+
+/** 下拉菜单命令分派：列设置 / 导出 / 视图切换 / 勾选行开关 */
+function onTableCommand(command: string): void {
+  switch (command) {
+    case "config":
+      tableRef.value?.openConfigDialog();
+      break;
+    case "export":
+      tableRef.value?.openExportDialog();
+      break;
+    case "view-table":
+      viewMode.value = "table";
+      break;
+    case "view-card":
+      viewMode.value = "card";
+      break;
+    case "view-list":
+      viewMode.value = "list";
+      break;
+    case "toggle-checkbox":
+      showCheckbox.value = !showCheckbox.value;
+      // 关闭勾选列时清空累计选中，避免隐藏状态下残留选择影响导出范围
+      if (!showCheckbox.value) tableRef.value?.clearSelection();
+      break;
+  }
+}
+
+/* ---------------- 命令面板上的测试命令 ---------------- */
+
+/** 刷新：重新加载表格元数据与数据 */
+function onRefresh(): void {
+  tableRef.value?.reload();
+  ElMessage.success("已刷新表格数据");
+}
+
+/** 查看选中：提示当前跨页累计选中条数 */
+function onViewSelected(): void {
+  const n = tableRef.value?.selectedRows.length ?? 0;
+  if (n === 0) {
+    ElMessage.warning("当前未选中任何行");
+    return;
+  }
+  ElMessage.info(`当前已跨页选中 ${n} 行`);
+}
+
+/** 新增（测试命令，仅演示命令面板入口，不做真实新增） */
+function onAdd(): void {
+  ElMessage.info("测试命令：新增（演示入口）");
+}
+
+/** 批量删除（测试命令）：无选中时拦截提示，有选中时给出条数反馈 */
+function onBatchDelete(): void {
+  const n = tableRef.value?.selectedRows.length ?? 0;
+  if (n === 0) {
+    ElMessage.warning("请先勾选要删除的行");
+    return;
+  }
+  ElMessage.success(`测试命令：批量删除 ${n} 行（演示入口，未真实删除）`);
+}
 </script>
 
 <template>
   <DemoPageLayout
-    title="可切换查询面板（简单 ↔ 高级）"
-    hint="YsFilterPanel 开启 enableAdvancedFilter + showQuickQuery 后，简单模式底部也显示「快速查询」标签（与高级模式保存的预设共享 v-model:quick-queries）；切到高级模式编辑条件→点「保存」命名预设→切回简单模式→点标签即可直接触发查询，无需再切到高级模式。两种模式都经同一对 search/reset 事件向外分发 FilterInfo，外部无感。"
+    title="搜索面板 + 全功能表格（简单/高级 + 快速查询）"
+    hint="YsFilterPanel 开启 enableAdvancedFilter + showQuickQuery：简单模式底部显示「快速查询」按钮（与高级模式保存的预设共享 v-model:quick-queries），切到高级模式编辑条件→保存命名预设→切回简单模式点按钮直接查询。下方表格隐藏了全部内置命令按钮（列设置/导出/视图切换/选中提示条），命令收敛到右上角图标下拉按钮；勾选行后选中提示条以流式布局追加到命令面板左侧，支持全选（当前页）/反选（当前页）/清空（含跨页）。"
     @back="$emit('back')"
   >
     <ys-filter-panel
@@ -159,6 +250,148 @@ const advancedOptionSources: Record<string, EnumOptionsSource> = {
       />
     </ys-filter-panel>
 
+    <!-- 表格命令面板：流式布局。左侧组（测试命令 + 选中提示条）整组吸附右侧；
+         表格操作下拉单独恒居最右，纯图标触发。宽度不足时整体自动换行仍保持右对齐 -->
+    <div class="switchable-filter-page__commands">
+      <!-- 左侧命令组：测试命令按钮（文字+图标）+ 选中提示条跟随其后；
+           整组 margin-left:auto 推到右侧，但让出最右位置给表格操作下拉 -->
+      <div class="page-commands__group">
+        <el-button class="page-cmd-btn-text" @click="onRefresh">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="21 12 21 4 13 4" />
+            <polyline points="3 12 3 20 11 20" />
+            <path d="M21 4l-7.2 7.2a4 4 0 0 1-5.6 0L3 8" />
+          </svg>
+          <span>刷新</span>
+        </el-button>
+        <el-button class="page-cmd-btn-text" @click="onViewSelected">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
+            <circle cx="12" cy="12" r="3" />
+          </svg>
+          <span>查看选中</span>
+        </el-button>
+        <el-button type="primary" class="page-cmd-btn-text" @click="onAdd">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          <span>新增</span>
+        </el-button>
+        <el-button type="danger" plain class="page-cmd-btn-text" @click="onBatchDelete">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6" />
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+            <line x1="10" y1="11" x2="10" y2="17" />
+            <line x1="14" y1="11" x2="14" y2="17" />
+          </svg>
+          <span>批量删除</span>
+        </el-button>
+
+        <!-- 自定义选中提示条：仅勾选列开启且有选中时出现，作为流式条目追加到命令组末尾 -->
+        <div v-if="showCheckbox && selectedCount > 0" class="page-selection-bar">
+          <span class="page-selection-bar__count">已选择 {{ selectedCount }} 条</span>
+          <span class="page-selection-bar__sep">|</span>
+          <el-button link type="primary" class="page-selection-bar__btn"
+            @click="tableRef?.selectAllOnPage()">全选</el-button>
+          <el-button link type="primary" class="page-selection-bar__btn"
+            @click="tableRef?.invertSelectionOnPage()">反选</el-button>
+          <span class="page-selection-bar__sep">|</span>
+          <el-button link type="primary" class="page-selection-bar__btn"
+            @click="tableRef?.clearSelection()">清空</el-button>
+        </div>
+      </div>
+
+      <!-- 表格操作下拉：纯图标触发（sliders 图标），单独恒居命令面板最右侧。
+           注意 trigger 必须是 el-dropdown 的直接元素——中间再嵌 el-tooltip 会让
+           popper 拿不到定位引用（菜单错位到视口左上角），故提示用原生 title；
+           列设置 / 导出 Excel 菜单项带图标，视图与勾选行项用 ✓ 标记当前状态 -->
+      <el-dropdown class="page-commands__table-action" trigger="click" placement="bottom-end" @command="onTableCommand">
+        <el-button class="page-cmd-btn" title="表格操作" aria-label="表格操作">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <circle cx="9" cy="6" r="2.4" fill="var(--el-bg-color, #fff)" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <circle cx="15" cy="12" r="2.4" fill="var(--el-bg-color, #fff)" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+            <circle cx="9" cy="18" r="2.4" fill="var(--el-bg-color, #fff)" />
+          </svg>
+        </el-button>
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="config">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                class="page-commands__menu-icon">
+                <circle cx="12" cy="12" r="3" />
+                <path
+                  d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+              列设置
+            </el-dropdown-item>
+            <el-dropdown-item command="export">
+              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                class="page-commands__menu-icon">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              导出 Excel
+            </el-dropdown-item>
+            <el-dropdown-item command="view-table" divided>
+              <span class="page-commands__check">{{ viewMode === "table" ? "✓" : "" }}</span>表格视图
+            </el-dropdown-item>
+            <el-dropdown-item command="view-card">
+              <span class="page-commands__check">{{ viewMode === "card" ? "✓" : "" }}</span>卡片视图
+            </el-dropdown-item>
+            <el-dropdown-item command="view-list">
+              <span class="page-commands__check">{{ viewMode === "list" ? "✓" : "" }}</span>列表视图
+            </el-dropdown-item>
+            <el-dropdown-item command="toggle-checkbox" divided>
+              <span class="page-commands__check">{{ showCheckbox ? "✓" : "" }}</span>勾选行
+            </el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
+    </div>
+
+    <!-- 全功能表格：内置命令按钮全部关闭（showSelectionBar/showCustomConfig/showExportExcel
+         均为 false，viewSwitchModes 保持默认空数组），命令全部由上方下拉按钮驱动；
+         checkbox 列与视图模式由外部 ref 受控 -->
+    <ys-table
+      ref="tableRef"
+      :meta-fun="metaFun"
+      :data-fun="dataFun"
+      :page-size="10"
+      :show-checkbox="showCheckbox"
+      :show-selection-bar="false"
+      :show-custom-config="false"
+      :show-export-excel="false"
+      v-model:view-mode="viewMode"
+      :load-custom-config-fun="loadCustomConfigFun"
+      :save-custom-config-fun="saveCustomConfigFun"
+      :exportor-func="exportorFunc"
+    >
+      <template #card="{ row }">
+        <div class="user-card">
+          <div class="user-card__name">{{ row.name }} <span class="user-card__id">#{{ row.id }}</span></div>
+          <div class="user-card__meta">{{ row.email }} · {{ row.age }} 岁</div>
+        </div>
+      </template>
+      <template #list="{ row }">
+        <div class="user-card">
+          <span class="user-card__name">{{ row.name }}</span>
+          <span class="user-card__meta">{{ row.email }} · {{ row.age }} 岁 · #{{ row.id }}</span>
+        </div>
+      </template>
+    </ys-table>
+
     <div class="switchable-filter-page__info">
       <p>
         当前模式：<code>{{ panelRef?.mode?.value ?? "simple" }}</code>
@@ -178,6 +411,118 @@ const advancedOptionSources: Record<string, EnumOptionsSource> = {
 </template>
 
 <style scoped>
+.switchable-filter-page__commands {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 12px 0;
+}
+
+/* 命令组：测试命令按钮（文字+图标）+ 选中提示条。
+   从左侧依次流式布局；表格操作下拉单独 margin-left:auto 推到面板最右端。
+   宽度不足时整组自动换行，表格操作下拉恒居最右 */
+.page-commands__group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+/* 文字+图标命令按钮：图标与文字间留 4px 间距，svg 不撑大按钮行高 */
+.page-cmd-btn-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.page-cmd-btn-text svg {
+  display: block;
+  flex-shrink: 0;
+}
+
+/* 纯图标命令按钮：方形统一尺寸，仅用于最右侧的表格操作下拉触发 */
+.page-cmd-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  padding: 0;
+}
+
+.page-cmd-btn svg {
+  display: block;
+}
+
+/* 表格操作下拉：margin-left:auto 把它推到命令面板最右端，
+   即使上面 .page-commands__group 因换行变多行，它仍恒定居最右 */
+.page-commands__table-action {
+  margin-left: auto;
+}
+
+/* 下拉项里的行内图标与文字对齐 */
+.page-commands__menu-icon {
+  margin-right: 6px;
+  vertical-align: -2px;
+}
+
+/* 下拉项里的选中标记列：固定宽度，文案不随勾选状态左右抖动 */
+.page-commands__check {
+  display: inline-block;
+  width: 1.2em;
+  color: var(--el-color-primary, #409eff);
+  font-weight: 700;
+}
+
+/* 自定义选中提示条（样式与内置 SelectionBar 对齐，作为流式条目追加到命令面板） */
+.page-selection-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px;
+  background: #ecf5ff;
+  border: 1px solid #d9ecff;
+  border-radius: 4px;
+  font-size: 0.92em;
+  line-height: 1;
+  color: #409eff;
+}
+
+.page-selection-bar__count {
+  line-height: 1;
+}
+
+.page-selection-bar__sep {
+  color: #a0cfff;
+  line-height: 1;
+}
+
+.page-selection-bar__btn {
+  font-size: inherit;
+  line-height: 1;
+  padding: 0;
+  height: auto;
+  min-height: 0;
+}
+
+/* 卡片 / 列表视图的简单内容 */
+.user-card__name {
+  font-weight: 600;
+}
+
+.user-card__id {
+  margin-left: 4px;
+  color: #909399;
+  font-weight: 400;
+  font-size: 0.85em;
+}
+
+.user-card__meta {
+  margin-top: 4px;
+  color: #909399;
+  font-size: 12px;
+}
+
 .switchable-filter-page__info {
   margin-top: 16px;
   padding: 12px 16px;

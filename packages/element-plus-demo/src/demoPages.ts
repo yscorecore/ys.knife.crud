@@ -161,7 +161,7 @@ export const demoPages = [
   },
   {
     id: "filter-switchable",
-    label: "可切换查询面板（简单 ↔ 高级）",
+    label: "搜索面板 + 全功能表格（简单/高级 + 快速查询）",
     component: SwitchableFilterPage,
   },
 ] as const satisfies readonly DemoPageDef[];
