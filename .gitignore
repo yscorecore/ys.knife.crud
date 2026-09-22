@@ -25,6 +25,8 @@ pnpm-lock.yaml.*
 .idea/
 .vscode/*
 !.vscode/extensions.json
+# Trae IDE 工作目录（设计草稿、技能定义等工具产物，非项目交付物）
+.trae/
 # 调试/诊断临时文件（_ 前缀碎屑，勿提交）
 _*.txt
 _*.log
