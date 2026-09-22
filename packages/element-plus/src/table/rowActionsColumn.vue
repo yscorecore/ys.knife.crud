@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, type PropType } from "vue";
-import type { Action } from "@ys.knife.crud/core";
+import type { Action, TableApi } from "@ys.knife.crud/core";
 import { visibleActions, isEnabled } from "@ys.knife.crud/vue";
 
 /**
@@ -16,6 +16,8 @@ import { visibleActions, isEnabled } from "@ys.knife.crud/vue";
 const props = defineProps({
   /** 行操作列表（由 Table 的 useRowActions 加载）；为空时不渲染操作列 */
   actions: { type: Array as PropType<Action<unknown>[]>, required: true, default: () => [] },
+  /** 当前表格实例（TableApi），传给 action.execute(row, table) 供行操作完成后调用 reload 等刷新 */
+  table: { type: Object as PropType<TableApi>, required: true },
 });
 
 /** 操作列最小宽度：按按钮数估算（2 字 link 按钮 ≈34px + 12px 间距 + 单元格左右内边距 24px + 余量 6px），
@@ -34,12 +36,22 @@ const actionsMinWidth = computed(() =>
         v-for="action in visibleActions(props.actions, row)"
         :key="action.name"
         link
-        type="primary"
+        :type="action.type ?? 'primary'"
         :disabled="!isEnabled(action, row)"
-        @click="action.execute(row)"
+        @click="action.execute(row, props.table)"
       >
+        <component v-if="action.icon" :is="action.icon" class="yk-row-action__icon" />
         {{ action.desc }}
       </el-button>
     </template>
   </el-table-column>
 </template>
+
+<style scoped>
+/* 行操作按钮图标对齐：el-button 内部 inline-flex，图标 svg 经 margin-right 与文字间隔，
+   vertical-align 微调使线性图标与文字基线视觉居中 */
+.yk-row-action__icon {
+  margin-right: 4px;
+  vertical-align: -2px;
+}
+</style>

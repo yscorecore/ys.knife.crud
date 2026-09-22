@@ -375,7 +375,7 @@ function cardMenuItemsCount(row: Record<string, unknown>): number {
 function onCardMenuAction(action: Action<unknown>): void {
   const row = cardMenu.value?.row;
   cardMenu.value = null;
-  if (row) void action.execute(row);
+  if (row) void action.execute(row, tableApi);
 }
 
 /** Esc 关闭菜单 */
@@ -401,6 +401,26 @@ const exposed = {
 } satisfies ExposedShape;
 
 defineExpose(exposed);
+
+/**
+ * TableApi 的「已解包视图」：exposed 是 Ref 形态（satisfies ExposedShape），
+ * 直接传入会拿到 Ref 对象而非值。这里经 getter 读 .value，方法直接复用，
+ * 供 action.execute(row, table) 与 RowActionsColumn :table 使用。
+ * getter 在 render/action 执行时才求值，读取 .value 仍响应式。
+ */
+const tableApi: TableApi = {
+  get meta() { return meta.value },
+  get paged() { return paged.value },
+  get currentPage() { return currentPage.value },
+  get selectedRows() { return selectedRows.value },
+  get rows() { return rows.value },
+  reload,
+  clearSelection,
+  selectAllOnPage,
+  invertSelectionOnPage,
+  openConfigDialog,
+  openExportDialog,
+}
 </script>
 
 <template>
@@ -460,7 +480,7 @@ defineExpose(exposed);
           </template>
         </el-table-column>
         <!-- 行操作列：actions 状态归 Table 所有（视图切换往返不丢失；卡片右键菜单共用） -->
-        <RowActionsColumn v-if="props.rowActionsFunc" :actions="actions" />
+        <RowActionsColumn v-if="props.rowActionsFunc" :actions="actions" :table="tableApi" />
       </el-table>
       <!-- 加载遮罩：三种视图共用 #loading 插槽；未提供插槽时渲染内置 spinner -->
       <transition name="yk-loading-fade">
@@ -550,6 +570,7 @@ defineExpose(exposed);
           <li v-for="action in cardMenuActions" :key="action.name" class="yk-table__context-menu-item"
             :class="{ 'is-disabled': !isEnabled(action, cardMenu.row) }"
             @click="isEnabled(action, cardMenu.row) && onCardMenuAction(action)">
+            <component v-if="action.icon" :is="action.icon" class="yk-table__context-menu-icon" />
             {{ action.desc }}
           </li>
         </ul>
@@ -782,6 +803,12 @@ defineExpose(exposed);
 .yk-table__context-menu-item.is-disabled:hover {
   background: transparent;
   color: var(--el-disabled-text-color, #a8abb2);
+}
+
+/* 右键菜单项图标：stroke 跟随 li 的 color（currentColor），hover 变蓝 / disabled 变灰自动联动 */
+.yk-table__context-menu-icon {
+  margin-right: 6px;
+  vertical-align: middle;
 }
 
 .yk-table__card-checkbox {

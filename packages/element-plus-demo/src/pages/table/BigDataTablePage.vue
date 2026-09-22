@@ -50,13 +50,14 @@ const rowActionsFunc: RowActionsFunc<UserRow> = constActions<UserRow>(
   {
     name: "delete",
     desc: "删除",
+    type: "danger",
     show: (item) => item.id !== 1,
-    execute: (item) => {
+    execute: (item, table) => {
       const i = rows.findIndex((r) => r.id === item.id);
       if (i >= 0) rows.splice(i, 1);
       ElMessage.success(`已删除：${item.name}`);
-      // action.execute 后组件不会自动 reload，显式刷新让总数与列表更新
-      void tableRef.value?.reload();
+      // action 完成后调用 table.reload() 刷新当前页（总数与列表实时更新）
+      table.reload();
       return Promise.resolve();
     },
   },
