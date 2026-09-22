@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, provide, ref } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, watch } from "vue";
 import type { PropType } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import type {
@@ -79,6 +79,13 @@ const props = defineProps({
     type: Function as PropType<(query: SavedQuery) => Promise<void | SavedQuery>>,
     required: false,
   },
+  /**
+   * 单行模式：开启后面板右上角显示展开/折叠按钮，折叠态（默认）放不下的 filter items
+   * 整体隐藏（display:none，不裁切、不可交互），但**不清除已填值**——隐藏的 FilterItem
+   * 仍注册在 panel，条件仍参与聚合查询。展开后恢复多行 wrap 布局。默认 false。
+   * 高级查询模式不受此属性影响（仍是多行）。
+   */
+  singleLine: { type: Boolean, default: false },
 });
 
 const emit = defineEmits<{
@@ -95,6 +102,15 @@ provide(FilterPanelKey, register);
 
 /** 当前查询模式：simple=固定条件插槽，advanced=内置高级查询面板 */
 const mode = ref<"simple" | "advanced">("simple");
+
+/* ---- 单行模式（singleLine）相关状态 ---- */
+/** 折叠态：true=单行（默认），false=展开恢复多行。仅 singleLine=true 时生效 */
+const collapsed = ref(true);
+/** 折叠态下被隐藏的 filter item 数量（用于 toggle 按钮 title 提示） */
+const hiddenCount = ref(0);
+/** filter items 包裹容器 ref（测量并控制子项显隐用）。
+ *  非单行模式该容器 display:contents 透明，子项参与根 flex；单行折叠态切 display:flex 可测量 */
+const itemsEl = ref<HTMLElement | null>(null);
 
 /** 内部 fallback 状态（quickQueries prop 未传时使用） */
 const internalQuickQueries = ref<SavedQuery[]>([]);
@@ -222,6 +238,62 @@ function switchToSimple(): void {
   mode.value = "simple";
 }
 
+/* ---------------- 单行模式（singleLine）折叠/展开与溢出测量 ---------------- */
+
+/** 切换折叠/展开。展开时先恢复所有 child 显示，折叠时 nextTick 后测量隐藏溢出项 */
+function toggleCollapse(): void {
+  collapsed.value = !collapsed.value;
+}
+
+/**
+ * 折叠态：测量 items 容器，放不下的 child 整体 display:none 隐藏（不裁切、不可交互）。
+ * 展开态或非单行模式：恢复所有 child 显示，清除动态 max-width。
+ *
+ * 实现要点：
+ * - items 容器在折叠态 flex:0 1 auto（不 grow 占满），JS 动态设 max-width = 容器宽 - actions宽 - gap，
+ *   让 actions 紧随其后同行（不居右）；其 clientWidth 即可用宽度，overflow:hidden 兜底裁切
+ * - actions flex-shrink:0 始终可见；saved 默认 width:100% 独立换行到第二行；toggle absolute 右上角
+ * - 被隐藏的 FilterItem 实例仍存活、值仍参与聚合查询（仅视觉隐藏）
+ */
+function measureAndHide(): void {
+  const container = itemsEl.value;
+  if (!container) return;
+  // 先恢复所有 child 显示，便于测量真实宽度
+  for (const child of Array.from(container.children)) {
+    (child as HTMLElement).style.display = "";
+  }
+  // 展开态或非单行模式：清除动态 max-width，无需隐藏
+  if (!props.singleLine || !collapsed.value) {
+    hiddenCount.value = 0;
+    container.style.maxWidth = "";
+    return;
+  }
+  // 折叠态：动态设 items 容器 max-width = 容器宽 - actions宽 - gap，
+  // 让 items 容器不占满，actions 紧随其后同行（不居右）；
+  // items 容器 clientWidth 即可用宽度，溢出的 child 由下方循环 display:none 隐藏
+  const actionsEl = container.nextElementSibling as HTMLElement | null;
+  const actionsWidth = actionsEl ? actionsEl.offsetWidth : 0;
+  const gap = 16; // 与 CSS .yk-filter-panel__items gap 一致
+  container.style.maxWidth = `calc(100% - ${actionsWidth + gap}px)`;
+  const available = container.clientWidth;
+  let accumulated = 0;
+  let hidden = 0;
+  for (const child of Array.from(container.children)) {
+    const el = child as HTMLElement;
+    const w = el.offsetWidth;
+    // 第一个 item 总是显示（即使超宽），后续超出则隐藏，避免全空
+    if (accumulated > 0 && accumulated + w + gap > available) {
+      el.style.display = "none";
+      hidden++;
+    } else {
+      accumulated += w + gap;
+    }
+  }
+  hiddenCount.value = hidden;
+}
+
+let resizeObserver: ResizeObserver | null = null;
+
 /* 快速查询标签操作 */
 function applyQuickQuery(sq: SavedQuery): void {
   if (mode.value === "advanced") {
@@ -246,6 +318,25 @@ async function removeQuickQuery(id: string): Promise<void> {
   await onSavedQueriesUpdate(quickQueriesState.value.filter((sq) => sq.id !== id));
 }
 
+/* ---------------- 单行模式生命周期：挂载时测量 + ResizeObserver 监听宽度变化 ---------------- */
+onMounted(() => {
+  if (!props.singleLine) return;
+  // 首次测量（slot 子项已挂载）
+  measureAndHide();
+  resizeObserver = new ResizeObserver(() => measureAndHide());
+  if (itemsEl.value) resizeObserver.observe(itemsEl.value);
+});
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
+  resizeObserver = null;
+});
+
+/** collapsed / singleLine 变化时，nextTick 后重新测量（DOM 已切换 display 模式） */
+watch([collapsed, () => props.singleLine], () => {
+  nextTick(measureAndHide);
+});
+
 /* ---------------- 暴露 API ---------------- */
 defineExpose({
   filter: currentFilter,
@@ -255,17 +346,40 @@ defineExpose({
 </script>
 
 <template>
-  <div class="yk-filter-panel" @keydown.enter="onRootEnter">
+  <div class="yk-filter-panel"
+    :class="{ 'is-single-line': singleLine, 'is-collapsed': singleLine && collapsed }"
+    @keydown.enter="onRootEnter">
     <!-- 简单模式：默认插槽 + 查询/重置/高级查询切换 + 快速查询标签 -->
     <template v-if="mode === 'simple'">
-      <slot />
+      <!-- 单行模式：右上角展开/折叠按钮（absolute 定位，恒在面板右上角）。
+           折叠态显示双下箭头（点击展开），展开态显示双上箭头（点击折叠）；
+           title 提示当前被隐藏的条件数 -->
+      <el-button v-if="singleLine" link class="yk-filter-panel__toggle"
+        :aria-label="collapsed ? '展开更多条件' : '折叠'"
+        :title="collapsed ? (hiddenCount ? `展开（${hiddenCount} 个条件被隐藏）` : '展开') : '折叠'"
+        @click="toggleCollapse">
+        <svg v-if="collapsed" viewBox="0 0 24 24" width="16" height="16" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="6 9 12 15 18 9" />
+          <polyline points="6 14 12 20 18 14" />
+        </svg>
+        <svg v-else viewBox="0 0 24 24" width="16" height="16" fill="none"
+          stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="18 15 12 9 6 15" />
+          <polyline points="18 10 12 4 6 10" />
+        </svg>
+      </el-button>
+
+      <!-- filter items 容器：非单行模式 display:contents 透明（子项参与根 flex，保持原换行行为）；
+           单行折叠态切 display:flex 可测量溢出并隐藏超宽项 -->
+      <div class="yk-filter-panel__items" ref="itemsEl"><slot /></div>
       <div
         v-if="showSearch || showReset || enableAdvancedFilter"
         class="yk-filter-panel__actions"
       >
         <el-button v-if="showSearch" type="primary" @click="onSearch">{{ searchButtonText }}</el-button>
         <el-button v-if="showReset" @click="onReset">{{ resetButtonText }}</el-button>
-        <el-button v-if="enableAdvancedFilter" link type="primary" @click="switchToAdvanced">
+        <el-button v-if="enableAdvancedFilter && !(singleLine && collapsed)" link type="primary" @click="switchToAdvanced">
           高级查询
         </el-button>
       </div>
@@ -337,6 +451,58 @@ defineExpose({
   background: var(--el-bg-color, #fff);
   border: 1px solid var(--el-border-color, #dcdfe6);
   border-radius: 4px;
+  position: relative; /* 给单行模式 toggle 按钮 absolute 定位做参照 */
+}
+
+/* filter items 容器：非单行模式 display:contents 透明，子项直接参与根 flex 布局，
+   保持原有 wrap 换行行为不变；单行折叠态由 .is-single-line 规则切为 display:flex 可测量 */
+.yk-filter-panel__items {
+  display: contents;
+}
+
+/* 单行模式 toggle 按钮：右上角 absolute 定位，恒在面板右上角（折叠/展开态都在） */
+.yk-filter-panel__toggle {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  padding: 4px;
+  height: auto;
+  min-height: 0;
+}
+
+/* ---- 单行模式（singleLine=true）折叠态 ---- */
+/* 根容器允许换行：第一行放 items + actions，快速查询标签独立换行到下一行；
+   右侧留 padding 给 toggle 按钮避免遮挡 */
+.yk-filter-panel.is-single-line.is-collapsed {
+  flex-wrap: wrap;
+  padding-right: 40px;
+}
+/* items 容器切为 flex，与 actions 同行。
+   flex:0 1 auto 不主动占满（让 actions 紧随其后而非居右）；
+   max-width 默认预留 actions 空间避免首帧 actions 换行，JS 测量后精确覆盖为 容器宽-actions宽-gap。
+   overflow:hidden + JS 测量隐藏溢出的 filter item */
+.yk-filter-panel.is-single-line.is-collapsed .yk-filter-panel__items {
+  display: flex;
+  flex-wrap: nowrap;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  gap: 16px;
+  max-width: calc(100% - 160px); /* 默认预留 actions 空间，JS 精确覆盖 */
+}
+/* actions 跟 items 同行（flex-shrink:0 不被压缩）；
+   saved 保持默认 width:100%，独立换行到第二行（单行模式下快速查询独立成行） */
+.yk-filter-panel.is-single-line.is-collapsed .yk-filter-panel__actions {
+  flex-shrink: 0;
+}
+
+/* ---- 单行模式展开态：恢复多行 wrap，items 容器回到 display:contents ---- */
+.yk-filter-panel.is-single-line:not(.is-collapsed) {
+  flex-wrap: wrap;
+}
+.yk-filter-panel.is-single-line:not(.is-collapsed) .yk-filter-panel__items {
+  display: contents;
 }
 
 .yk-filter-panel__actions {

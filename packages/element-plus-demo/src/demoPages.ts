@@ -28,6 +28,7 @@ import AdminExternalSearchPage from "./pages/table/AdminExternalSearchPage.vue";
 import FilterPanelPage from "./pages/filter/FilterPanelPage.vue";
 import AdvancedFilterPanelPage from "./pages/filter/AdvancedFilterPanelPage.vue";
 import SwitchableFilterPage from "./pages/filter/SwitchableFilterPage.vue";
+import SingleLineFilterPage from "./pages/filter/SingleLineFilterPage.vue";
 
 /**
  * Demo 页面注册表：导航按钮与 App 动态渲染共用的唯一数据源。
@@ -163,6 +164,11 @@ export const demoPages = [
     id: "filter-switchable",
     label: "搜索面板 + 全功能表格（简单/高级 + 快速查询）",
     component: SwitchableFilterPage,
+  },
+  {
+    id: "filter-single-line",
+    label: "搜索面板单行模式（展开/折叠 + 全功能表格）",
+    component: SingleLineFilterPage,
   },
 ] as const satisfies readonly DemoPageDef[];
 
