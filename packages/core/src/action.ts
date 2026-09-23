@@ -32,3 +32,21 @@ export function constActions<T>(...actions: Action<T>[]): RowActionsFunc<T> {
 export function emptyActions<T>(): RowActionsFunc<T> {
     return constActions();
 }
+
+/**
+ * 表格级命令（区别于行级 Action<T>）：作用域是整个表格而非单行，
+ * execute 只接收 table，不接收 item。用于 commandBar 这类表级命令面板，
+ * 消费者传入 TableAction[] 数组即可数据驱动渲染按钮。
+ */
+export interface TableAction {
+    name: string,
+    desc: string,
+    /** 命令按钮图标（与 Action.icon 同构，渲染层用 <component :is> 兼容） */
+    icon?: unknown,
+    /** 命令按钮类型（对应 el-button type），缺省时渲染层按默认按钮处理 */
+    type?: ActionType,
+    /** 是否描边（plain）样式，对应 el-button plain；type 为 danger 等时差异明显 */
+    plain?: boolean,
+    /** 执行表级命令。table 为当前表格实例，可调用 reload/refresh 等刷新 */
+    execute(table: TableApi): Promise<void>
+}

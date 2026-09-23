@@ -1,6 +1,7 @@
 import type { App, Plugin } from "vue";
 import YsTable from "./table/table.vue";
-import YsTableActionMenuButton from "./table/tableActionMenuButton.vue";
+import YsTableActionMenuButton from "./commandBar/tableActionMenuButton.vue";
+import YsCommandBar from "./commandBar/commandBar.vue";
 import YsMainPanel from "./mainPanel/mainPanel.vue";
 import YsFilterPanel from "./filter/filterPanel.vue";
 import YsTextFilterItem from "./filter/textFilterItem.vue";
@@ -15,6 +16,7 @@ import YsAdvancedConditionGroup from "./advancedFilter/advancedConditionGroup.vu
 export {
   YsTable,
   YsTableActionMenuButton,
+  YsCommandBar,
   YsMainPanel,
   YsFilterPanel,
   YsTextFilterItem,
@@ -44,6 +46,7 @@ export {
 // <script setup> 里的 interface 不是模块导出成员，用实例类型提取 props
 export type YsTableProps = InstanceType<typeof YsTable>["$props"];
 export type YsTableActionMenuButtonProps = InstanceType<typeof YsTableActionMenuButton>["$props"];
+export type YsCommandBarProps = InstanceType<typeof YsCommandBar>["$props"];
 export type YsMainPanelProps = InstanceType<typeof YsMainPanel>["$props"];
 export type YsFilterPanelProps = InstanceType<typeof YsFilterPanel>["$props"];
 export type YsTextFilterItemProps = InstanceType<typeof YsTextFilterItem>["$props"];
@@ -69,6 +72,7 @@ const YsCrudElementPlus: Plugin = {
   install(app: App) {
     app.component("YsTable", YsTable);
     app.component("YsTableActionMenuButton", YsTableActionMenuButton);
+    app.component("YsCommandBar", YsCommandBar);
     app.component("YsMainPanel", YsMainPanel);
     app.component("YsFilterPanel", YsFilterPanel);
     app.component("YsTextFilterItem", YsTextFilterItem);

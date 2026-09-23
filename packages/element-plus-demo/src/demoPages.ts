@@ -5,6 +5,7 @@ import ActionsTablePage from "./pages/table/ActionsTablePage.vue";
 import ListTablePage from "./pages/table/ListTablePage.vue";
 import SearchTablePage from "./pages/table/SearchTablePage.vue";
 import PagedTablePage from "./pages/table/PagedTablePage.vue";
+import FooterTablePage from "./pages/table/FooterTablePage.vue";
 import UnknownTotalTablePage from "./pages/table/UnknownTotalTablePage.vue";
 import CheckboxTablePage from "./pages/table/CheckboxTablePage.vue";
 import CustomTablePage from "./pages/table/CustomTablePage.vue";
@@ -58,6 +59,7 @@ export const demoPages = [
     component: SearchTablePage,
   },
   { id: "table-paged", label: "分页表格（25 行数据自动分页）", component: PagedTablePage },
+  { id: "table-footer", label: "底部插槽表格（#footer 插槽 + 分页）", component: FooterTablePage },
   {
     id: "table-unknown-total",
     label: "未知总条数（totalCount=null + 导出进度 99% 封顶）",

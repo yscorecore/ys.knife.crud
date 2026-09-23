@@ -677,14 +677,22 @@ const tableApi: TableApi = {
       </template>
     </teleport>
 
-    <!-- 数据超过一页时自动显示的分页组件；sizes 支持用户切换每页条数。
-         两种模式：totalCount 已知 → layout 含 total，显示「共 N 条」；
-         未知 → 隐藏「共 N 条」，total 绑定 hasNext 推导的估算值，
-         仅驱动页码与上一页/下一页按钮状态（有下一页时可点） -->
-    <el-pagination v-if="showPagination" class="yk-table__pagination"
-      :layout="totalKnown ? 'total, sizes, prev, pager, next' : 'sizes, prev, pager, next'"
-      :total="total" :page-sizes="pageSizes" :page-size="innerPageSize" :current-page="currentPage"
-      @current-change="onPageChange" @size-change="onSizeChange" />
+    <!-- 底部栏：左侧 footer 插槽（占剩余空间，可放统计/自定义内容）+ 右侧分页组件。
+         align-items:center 使分页垂直居中对齐左侧插槽；插槽内容过高时撑大底部栏高度。
+         分页优先占右侧，footer 插槽取剩余空间；无分页且无 footer 插槽时不渲染整个底部栏 -->
+    <div v-if="showPagination || $slots.footer" class="yk-table__footer">
+      <div class="yk-table__footer-extra">
+        <slot name="footer" />
+      </div>
+      <!-- 数据超过一页时自动显示的分页组件；sizes 支持用户切换每页条数。
+           两种模式：totalCount 已知 → layout 含 total，显示「共 N 条」；
+           未知 → 隐藏「共 N 条」，total 绑定 hasNext 推导的估算值，
+           仅驱动页码与上一页/下一页按钮状态（有下一页时可点） -->
+      <el-pagination v-if="showPagination" class="yk-table__pagination"
+        :layout="totalKnown ? 'total, sizes, prev, pager, next' : 'sizes, prev, pager, next'"
+        :total="total" :page-sizes="pageSizes" :page-size="innerPageSize" :current-page="currentPage"
+        @current-change="onPageChange" @size-change="onSizeChange" />
+    </div>
 
     <!-- 导出 Excel 对话框组（范围选择 / 进度 / 取消询问）—— 内部自管 useExportExcel。
          始终挂载（与列设置面板一致）：showExportExcel 只控制内置按钮显隐，
@@ -935,8 +943,22 @@ const tableApi: TableApi = {
   grid-column: 1 / -1;
 }
 
-.yk-table__pagination {
+/* 底部栏：左侧 footer 插槽 + 右侧分页，flex 布局；分页垂直居中对齐左侧插槽内容 */
+.yk-table__footer {
+  display: flex;
+  align-items: center;
   margin-top: 12px;
+  gap: 12px;
+}
+
+/* 左侧 footer 插槽区域：占剩余空间，min-width:0 防止内容撑破 flex 布局 */
+.yk-table__footer-extra {
+  flex: 1;
+  min-width: 0;
+}
+
+.yk-table__pagination {
+  flex-shrink: 0;
   justify-content: flex-end;
 }
 </style>
