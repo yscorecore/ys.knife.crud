@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, toRef, watch, type PropType, type Ref } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, toRef, useSlots, watch, type PropType, type Ref } from "vue";
 import type {
   Action,
   Column,
@@ -41,6 +41,12 @@ const props = defineProps({
   pageSizes: { type: Array as PropType<number[]>, default: () => [10, 20, 50, 100] },
   /** 为 true 时第一列显示 checkbox（表头含全选/取消全选），默认 false */
   showCheckbox: { type: Boolean, default: false },
+  /**
+   * 是否允许拖动表头列边界调整列宽（透传 el-table-column 的 resizable），默认 true。
+   * 受控与非受控皆可：用 v-model:column-resizable 时由父级驱动；不绑定时可经
+   * TableApi.setColumnResizable 切换（组件内部维护状态，同时照常派发 update 事件）。
+   */
+  columnResizable: { type: Boolean, default: true },
   /**
    * 是否渲染内置的跨页选中提示条（「已选 N 项 · 清空」），默认 true。
    * 为 false 时不渲染内置提示条（选中仍按 rowKey 跨页累计，selectedRows/clearSelection
@@ -93,8 +99,12 @@ type PagedResult = Awaited<ReturnType<CoreTableProps["dataFun"]>>;
 /** 对外事件：data-loaded 在每次 dataFun 成功返回后触发，携带本次加载的分页结果 */
 const emit = defineEmits<{
   (e: "data-loaded", paged: PagedResult): void;
-  /** 内置视图切换控件切换时触发，配合 viewMode prop 做 v-model:view-mode */
+  /** 视图模式切换时触发，配合 viewMode prop 做 v-model:view-mode */
   (e: "update:viewMode", mode: ViewMode): void;
+  /** 选择列显隐切换时触发，配合 showCheckbox prop 做 v-model:show-checkbox */
+  (e: "update:showCheckbox", show: boolean): void;
+  /** 列宽拖动开关切换时触发，配合 columnResizable prop 做 v-model:column-resizable */
+  (e: "update:columnResizable", resizable: boolean): void;
 }>();
 
 /* ---------------- 默认状态（useDefault） ----------------
@@ -257,6 +267,14 @@ async function reload(): Promise<void> {
   loadData();
 }
 
+/**
+ * 仅刷新当前页数据：直接重发当前页码 / 每页条数下的 dataFun 请求，
+ * 保留分页、筛选与选中状态，不重载 meta / 行操作 / 列自定义配置。
+ */
+function refresh(): void {
+  loadData();
+}
+
 onMounted(reload);
 // metaFun 变化的监听已内聚在 useDefault 中
 // 外部 pageSize 变化：走与用户下拉切换同一路径——持久化为默认值、回第一页、重新加载
@@ -300,6 +318,69 @@ const viewSwitchLabels: Record<ViewMode, string> = {
 watch(currentViewMode, (mode) => {
   if (mode === "table") void restoreSelection();
 });
+
+/**
+ * 内部实际生效的选择列显隐，模式与 currentViewMode 一致：
+ * - 父级用 v-model:show-checkbox（受控）：set 时 emit，父级回写 prop，watch 再同步回来；
+ * - 父级只给初始值或不传（非受控）：经 TableApi.setSelectable 直接改本地态即可生效，
+ *   同时照常 emit update:showCheckbox。
+ */
+const innerShowCheckbox = ref(props.showCheckbox);
+watch(() => props.showCheckbox, (show) => {
+  innerShowCheckbox.value = show;
+});
+const currentShowCheckbox = computed<boolean>({
+  get: () => innerShowCheckbox.value,
+  set: (show) => {
+    innerShowCheckbox.value = show;
+    emit("update:showCheckbox", show);
+    // 关闭选择列时清空累计选中，避免隐藏状态下残留选择影响导出范围
+    if (!show) clearSelection();
+  },
+});
+
+/** TableApi 入口：切换视图模式（受控 / 非受控均由 currentViewMode setter 统一处理） */
+function setViewMode(mode: ViewMode): void {
+  currentViewMode.value = mode;
+}
+
+/** TableApi 入口：切换行可选择状态（选择列显隐；setter 内含关闭时清空选中） */
+function setSelectable(selectable: boolean): void {
+  currentShowCheckbox.value = selectable;
+}
+
+/**
+ * 内部实际生效的列宽拖动开关，模式与 currentShowCheckbox 一致：
+ * - 父级用 v-model:column-resizable（受控）：set 时 emit，父级回写 prop，watch 再同步；
+ * - 非受控：经 TableApi.setColumnResizable 直接改本地态即可生效，同时照常 emit。
+ */
+const innerColumnResizable = ref(props.columnResizable);
+watch(() => props.columnResizable, (resizable) => {
+  innerColumnResizable.value = resizable;
+});
+const currentColumnResizable = computed<boolean>({
+  get: () => innerColumnResizable.value,
+  set: (resizable) => {
+    innerColumnResizable.value = resizable;
+    emit("update:columnResizable", resizable);
+  },
+});
+
+/** TableApi 入口：切换列宽拖动开关 */
+function setColumnResizable(resizable: boolean): void {
+  currentColumnResizable.value = resizable;
+}
+
+/**
+ * 父组件已提供的插槽名列表。slots 是响应式 proxy，Object.keys 在 computed 内
+ * 调用会被追踪；外部菜单据此决定「卡片 / 列表视图」入口是否显示
+ *（没提供 #card/#list 插槽时切过去只有 JSON 兜底，不应暴露入口）。
+ */
+const slots = useSlots();
+// 过滤内部 "_" 标记（normalizeSlot 标记位），只保留真实具名插槽
+const slotNames = computed<string[]>(() =>
+  Object.keys(slots).filter((name) => name !== "_" && typeof slots[name] === "function"),
+);
 
 /* ---------------- 暴露 API ---------------- */
 
@@ -390,9 +471,17 @@ const exposed = {
   meta,
   paged,
   currentPage,
+  viewMode: currentViewMode,
+  selectable: currentShowCheckbox,
+  columnResizable: currentColumnResizable,
+  slotNames,
   selectedRows,
   rows,
   reload,
+  refresh,
+  setViewMode,
+  setSelectable,
+  setColumnResizable,
   clearSelection,
   selectAllOnPage,
   invertSelectionOnPage,
@@ -412,9 +501,17 @@ const tableApi: TableApi = {
   get meta() { return meta.value },
   get paged() { return paged.value },
   get currentPage() { return currentPage.value },
+  get viewMode() { return currentViewMode.value },
+  get selectable() { return currentShowCheckbox.value },
+  get columnResizable() { return currentColumnResizable.value },
+  get slotNames() { return slotNames.value },
   get selectedRows() { return selectedRows.value },
   get rows() { return rows.value },
   reload,
+  refresh,
+  setViewMode,
+  setSelectable,
+  setColumnResizable,
   clearSelection,
   selectAllOnPage,
   invertSelectionOnPage,
@@ -431,12 +528,12 @@ const tableApi: TableApi = {
          表头不会上下抖动（与入口控件常驻时的表现对齐）。
          showSelectionBar=false 时左侧提示条不渲染（由外部自行实现），右侧控件组照常 -->
     <div
-      v-if="(showCheckbox && showSelectionBar) || viewSwitchModes.length > 0 || showCustomConfig || showExportExcel"
+      v-if="(currentShowCheckbox && showSelectionBar) || viewSwitchModes.length > 0 || showCustomConfig || showExportExcel"
       class="yk-table__toolbar">
       <!-- 跨页选中提示：选中按 rowKey 跨页累计，可能来自其他页，给用户一个总览与清空入口。
            无选中时 SelectionBar 不渲染任何元素，右侧控件组靠 margin-left:auto 自行贴右，
            不依赖占位元素 -->
-      <SelectionBar v-if="showCheckbox && showSelectionBar" :count="selectedRows.length"
+      <SelectionBar v-if="currentShowCheckbox && showSelectionBar" :count="selectedRows.length"
         @clear="clearSelection" @select-all="selectAllOnPage" @invert="invertSelectionOnPage" />
       <div class="yk-table__toolbar-actions">
         <el-button v-if="showExportExcel" link type="primary" class="yk-table__export-btn"
@@ -469,18 +566,21 @@ const tableApi: TableApi = {
         <template v-if="$slots.empty" #empty>
           <slot name="empty" />
         </template>
-        <!-- 勾选列：跨页保留由 useSelection 的 rowKey Map 受控维护，表头 checkbox 全选/取消全选当前页 -->
-        <el-table-column v-if="showCheckbox" type="selection" width="48" />
+        <!-- 勾选列：跨页保留由 useSelection 的 rowKey Map 受控维护，表头 checkbox 全选/取消全选当前页。
+             不绑 resizable——EP 对 type=selection 固定宽列默认不可拖，显式绑 true 反而会放开 -->
+        <el-table-column v-if="currentShowCheckbox" type="selection" width="48" />
         <!-- 数据列：col.render 存在时优先用自定义渲染（返回字符串/VNode 均可，
-             经函数式组件呈现），否则走默认的 propertyPath 取值显示 -->
+             经函数式组件呈现），否则走默认的 propertyPath 取值显示。
+             resizable 跟随列宽拖动开关（el-table-column 默认 true，需显式透传才能关） -->
         <el-table-column v-for="col in columns" :key="col.propertyPath" :prop="col.propertyPath" :label="col.displayName"
-          :width="col.width" show-overflow-tooltip>
+          :width="col.width" :resizable="currentColumnResizable" show-overflow-tooltip>
           <template v-if="col.render" #default="{ row }">
             <component :is="() => col.render!(row, (row as Record<string, unknown>)[col.propertyPath])" />
           </template>
         </el-table-column>
         <!-- 行操作列：actions 状态归 Table 所有（视图切换往返不丢失；卡片右键菜单共用） -->
-        <RowActionsColumn v-if="props.rowActionsFunc" :actions="actions" :table="tableApi" />
+        <RowActionsColumn v-if="props.rowActionsFunc" :actions="actions" :table="tableApi"
+          :resizable="currentColumnResizable" />
       </el-table>
       <!-- 加载遮罩：三种视图共用 #loading 插槽；未提供插槽时渲染内置 spinner -->
       <transition name="yk-loading-fade">
@@ -498,12 +598,12 @@ const tableApi: TableApi = {
     <div v-else-if="currentViewMode === 'card'" class="yk-table__cards">
       <div v-for="(row, index) in rows" :key="String(row[rowKey])" class="yk-table__card"
         :class="{
-          'is-selected': showCheckbox && isRowSelected(row),
+          'is-selected': currentShowCheckbox && isRowSelected(row),
           'has-actions': actions.length > 0,
         }"
         :title="actions.length > 0 ? '右键查看行操作' : undefined"
         @contextmenu="onCardContextMenu($event, row)">
-        <el-checkbox v-if="showCheckbox" class="yk-table__card-checkbox"
+        <el-checkbox v-if="currentShowCheckbox" class="yk-table__card-checkbox"
           :model-value="isRowSelected(row)"
           @change="onCardCheck(row, $event)" />
         <slot name="card" :row="row" :index="index">
@@ -531,12 +631,12 @@ const tableApi: TableApi = {
     <div v-else class="yk-table__list">
       <div v-for="(row, index) in rows" :key="String(row[rowKey])" class="yk-table__list-item"
         :class="{
-          'is-selected': showCheckbox && isRowSelected(row),
+          'is-selected': currentShowCheckbox && isRowSelected(row),
           'has-actions': actions.length > 0,
         }"
         :title="actions.length > 0 ? '右键查看行操作' : undefined"
         @contextmenu="onCardContextMenu($event, row)">
-        <el-checkbox v-if="showCheckbox" class="yk-table__list-item-checkbox"
+        <el-checkbox v-if="currentShowCheckbox" class="yk-table__list-item-checkbox"
           :model-value="isRowSelected(row)"
           @change="onCardCheck(row, $event)" />
         <div class="yk-table__list-item-body">
@@ -595,7 +695,7 @@ const tableApi: TableApi = {
       :data-fun="props.dataFun" :export-page-size="props.exportPageSize" :total="total"
       :exportor-func="props.exportorFunc"
       :table-name="meta?.displayName ?? '数据'" :columns="columns" :has-more-page="showPagination"
-      :export-selected="props.showCheckbox" />
+      :export-selected="currentShowCheckbox" />
 
     <!-- 列设置对话框（内部自管 useCustomConfig；始终挂载，columns 也来自它——
          customConfig 的 width 直接写在 col.width 上，表格读 col.width 即可；

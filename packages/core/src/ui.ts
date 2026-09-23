@@ -16,6 +16,15 @@ export interface SelectionProps {
 }
 
 /**
+ * 列宽拖动相关 props
+ */
+export interface ColumnResizeProps {
+    /** 是否允许拖动表头列边界调整列宽（el-table-column resizable），默认 true。
+     *  仅表格视图生效；受控（v-model:column-resizable）与非受控模式均可切换 */
+    readonly columnResizable?: boolean;
+}
+
+/**
  * 表格的展示形态：
  * - table：传统表格视图（默认）
  * - card：卡片网格视图（卡片内容可经 #card 插槽自定义，默认 JSON 序列化展示整行）
@@ -63,7 +72,7 @@ export interface DefaultProps {
 
 
 /** TableProps 是组件的「输入契约」：父组件通过 props 传入 */
-export interface TableProps extends RowActionsProps, SelectionProps, ViewProps, CustomConfigProps, ExportExcelProps, DefaultProps {
+export interface TableProps extends RowActionsProps, SelectionProps, ColumnResizeProps, ViewProps, CustomConfigProps, ExportExcelProps, DefaultProps {
 
 }
 
@@ -85,12 +94,45 @@ export interface TableApi {
     readonly paged: PagedList<unknown> | null
     /** 当前页码（1 基） */
     readonly currentPage: number
+    /** 当前生效的展示形态（受控 / 非受控模式下均反映实际值） */
+    readonly viewMode: ViewMode
+    /** 表格行当前是否可选择（选择列是否显示；受控 / 非受控模式下均反映实际值） */
+    readonly selectable: boolean
+    /** 当前是否允许拖动表头列边界调整列宽（受控 / 非受控模式下均反映实际值） */
+    readonly columnResizable: boolean
+    /**
+     * 父组件当前已提供的插槽名列表（如 "card" / "list"）。
+     * 外部操作菜单据此决定是否显示「卡片视图 / 列表视图」入口——
+     * 未提供对应插槽时切换过去只有 JSON 兜底，不应暴露入口。
+     */
+    readonly slotNames: readonly string[]
     /** checkbox 列当前选中的行（跨页累计，reserve-selection） */
     readonly selectedRows: unknown[]
     /** 当前页的行数据（dataFun 返回的 PagedList.items；挂载前为空数组） */
     readonly rows: unknown[]
-    /** 重新加载元数据、数据与行操作 */
+    /** 重新加载元数据、数据与行操作（会回到第一页） */
     reload(): void
+    /**
+     * 仅刷新当前页数据：保留当前页码、每页条数与筛选状态，
+     * 不重新加载元数据 / 行操作 / 列自定义配置，也不回到第一页。
+     * 适用于「数据刚被外部改动、只想重拉当前列表」的场景。
+     */
+    refresh(): void
+    /**
+     * 切换展示形态。受控（v-model:view-mode）与非受控（仅初始值/不传）模式均可：
+     * 内部更新实际视图并照常派发 update:viewMode。
+     */
+    setViewMode(mode: ViewMode): void
+    /**
+     * 切换表格行的可选择状态（选择列显隐）。受控（v-model:show-checkbox）与非受控
+     * 模式均可：内部更新实际状态并照常派发 update:showCheckbox；关闭时自动清空累计选中。
+     */
+    setSelectable(selectable: boolean): void
+    /**
+     * 切换列宽拖动开关（表头列边界是否可拖）。受控（v-model:column-resizable）
+     * 与非受控模式均可：内部更新实际状态并照常派发 update:columnResizable。
+     */
+    setColumnResizable(resizable: boolean): void
     /** 清空全部选中（含其他页的选中） */
     clearSelection(): void
     /** 选中当前页所有行（其他页已选中不受影响），供外部自定义选中提示条调用 */

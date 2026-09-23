@@ -18,6 +18,8 @@ const props = defineProps({
   actions: { type: Array as PropType<Action<unknown>[]>, required: true, default: () => [] },
   /** 当前表格实例（TableApi），传给 action.execute(row, table) 供行操作完成后调用 reload 等刷新 */
   table: { type: Object as PropType<TableApi>, required: true },
+  /** 操作列宽是否可拖动（跟随表格的列宽拖动开关），默认 true */
+  resizable: { type: Boolean, default: true },
 });
 
 /** 操作列最小宽度：按按钮数估算（2 字 link 按钮 ≈34px + 12px 间距 + 单元格左右内边距 24px + 余量 6px），
@@ -30,7 +32,8 @@ const actionsMinWidth = computed(() =>
 </script>
 
 <template>
-  <el-table-column v-if="props.actions.length > 0" label="操作" fixed="right" :min-width="actionsMinWidth">
+  <el-table-column v-if="props.actions.length > 0" label="操作" fixed="right" :min-width="actionsMinWidth"
+    :resizable="props.resizable">
     <template #default="{ row }">
       <el-button
         v-for="action in visibleActions(props.actions, row)"
