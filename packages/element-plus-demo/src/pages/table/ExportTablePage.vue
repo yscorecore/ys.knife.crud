@@ -24,11 +24,12 @@ const exportorFunc = createExcelJsExportApiFunc();
 <template>
   <DemoPageLayout
     title="导出 Excel 表格"
-    hint="showExportExcel 开启后右上出现「⬇ 导出 Excel」：可选导出选中 / 当前页 / 所有数据（只有一页或无勾选列时对应选项自动隐藏，仅剩一个选项时不弹框直接导出）。导出列与界面所见一致（显隐 + 顺序 + 列宽）；「导出所有」会循环请求数据并显示进度条，可中途取消。"
+    hint="表格不内置导出入口，由上方外部按钮调 tableRef.openExportDialog() 打开导出对话框：可选导出选中 / 当前页 / 所有数据（只有一页或无勾选列时对应选项自动隐藏，仅剩一个选项时不弹框直接导出）。导出列与界面所见一致（显隐 + 顺序 + 列宽）；「导出所有」会循环请求数据并显示进度条，可中途取消。"
     @back="$emit('back')"
   >
     <template #toolbar>
       <el-button type="primary" @click="showSelection">查看选中</el-button>
+      <el-button type="success" @click="tableRef?.openExportDialog()">⬇ 导出 Excel</el-button>
     </template>
 
     <ys-table
@@ -37,7 +38,6 @@ const exportorFunc = createExcelJsExportApiFunc();
       :data-fun="dataFun"
       :page-size="10"
       show-checkbox
-      show-export-excel
       :exportor-func="exportorFunc"
     />
   </DemoPageLayout>

@@ -17,6 +17,7 @@ import {
   type EnumOptionsSource,
   type RowActionsFunc,
   type TableApi,
+  type ViewMode,
 } from "@ys.knife.crud/core";
 import {
   YsTable,
@@ -41,6 +42,9 @@ const dataFun = constData(manyRows);
 
 const tableRef = ref<TableApi | null>(null);
 const { showSelection } = useSelectionViewer(tableRef);
+
+// 视图模式由外部 radio 受控驱动（v-model:view-mode）
+const viewMode = ref<ViewMode>("table");
 
 /** 跨页累计选中行数（expose 的 selectedRows 经 computed 访问，避免模板深层 ref 解包问题） */
 const selectedCount = computed(() => (tableRef.value?.selectedRows ?? []).length);
@@ -158,13 +162,22 @@ const advancedOptionSources: Record<string, EnumOptionsSource> = { status: loadS
       />
     </ys-filter-panel>
 
-    <!-- 命令面板：全局操作按钮（搜索面板与表格之间的操作条） -->
+    <!-- 命令面板：左侧全局操作按钮，右侧视图切换 / 列设置 / 导出（全部为外部入口，经 TableApi 驱动） -->
     <div class="search-table-page__command-bar">
       <div class="search-table-page__command-left">
         <el-button type="primary" @click="onCreate">新增</el-button>
         <el-button type="danger" plain @click="onBatchDelete">批量删除</el-button>
         <el-button @click="showSelection">查看选中</el-button>
         <el-button @click="onRefresh">刷新</el-button>
+      </div>
+      <div class="search-table-page__command-right">
+        <el-radio-group v-model="viewMode" size="small">
+          <el-radio-button value="table">表格</el-radio-button>
+          <el-radio-button value="card">卡片</el-radio-button>
+          <el-radio-button value="list">列表</el-radio-button>
+        </el-radio-group>
+        <el-button type="primary" plain @click="tableRef?.openConfigDialog()">⚙ 列设置</el-button>
+        <el-button type="success" @click="tableRef?.openExportDialog()">⬇ 导出 Excel</el-button>
       </div>
     </div>
 
@@ -174,14 +187,11 @@ const advancedOptionSources: Record<string, EnumOptionsSource> = { status: loadS
         ref="tableRef"
         :meta-fun="metaFun"
         :data-fun="dataFun"
+        v-model:view-mode="viewMode"
         :page-size="10"
         show-checkbox
-        :show-selection-bar="false"
-        :view-switch-modes="['table', 'card', 'list']"
-        show-custom-config
         :load-custom-config-fun="loadCustomConfigFun"
         :save-custom-config-fun="saveCustomConfigFun"
-        show-export-excel
         :export-page-size="100"
         :exportor-func="exportorFunc"
         :row-actions-func="rowActionsFunc"
@@ -238,6 +248,12 @@ const advancedOptionSources: Record<string, EnumOptionsSource> = { status: loadS
 }
 
 .search-table-page__command-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-table-page__command-right {
   display: flex;
   align-items: center;
   gap: 8px;

@@ -67,11 +67,13 @@ const rowActionsFunc: RowActionsFunc<UserRow> = constActions<UserRow>(
 <template>
   <DemoPageLayout
     title="大数据全功能表格（10000 行，不返回总条数）"
-    hint="同样是 10000 行全功能，但接口不返回 totalCount，只给 hasNext：分页器隐藏「共 N 条」，按「当前 offset + 本页条数 + 1」估算总数驱动页码——初始只有少量页码，往后翻逐步增长，直到最后一页才收敛为真实的 10000。勾选、行操作、列设置、导出与上一页完全一致（列设置 / 导出入口均在表格右上角）；导出所有时真实总数未知：进度文案只显示「已加载 N 条」不带分母、百分比滚到 99% 封顶、不显示预计剩余时间（靠 hasNext=false 正确终止）。"
+    hint="同样是 10000 行全功能，但接口不返回 totalCount，只给 hasNext：分页器隐藏「共 N 条」，按「当前 offset + 本页条数 + 1」估算总数驱动页码——初始只有少量页码，往后翻逐步增长，直到最后一页才收敛为真实的 10000。勾选、行操作、列设置、导出与上一页完全一致（列设置 / 导出入口均在上方外部按钮）；导出所有时真实总数未知：进度文案只显示「已加载 N 条」不带分母、百分比滚到 99% 封顶、不显示预计剩余时间（靠 hasNext=false 正确终止）。"
     @back="$emit('back')"
   >
     <template #toolbar>
       <el-button type="primary" @click="showSelection">查看选中</el-button>
+      <el-button type="primary" plain @click="tableRef?.openConfigDialog()">⚙ 列设置</el-button>
+      <el-button type="success" @click="tableRef?.openExportDialog()">⬇ 导出 Excel</el-button>
     </template>
 
     <ys-table
@@ -80,10 +82,8 @@ const rowActionsFunc: RowActionsFunc<UserRow> = constActions<UserRow>(
       :data-fun="dataFun"
       :page-size="20"
       show-checkbox
-      show-custom-config
       :load-custom-config-fun="loadCustomConfigFun"
       :save-custom-config-fun="saveCustomConfigFun"
-      show-export-excel
       :export-page-size="500"
       :exportor-func="exportorFunc"
       :row-actions-func="rowActionsFunc"

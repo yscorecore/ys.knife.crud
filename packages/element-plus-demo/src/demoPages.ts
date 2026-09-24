@@ -70,16 +70,16 @@ export const demoPages = [
     label: "可勾选表格（showCheckbox + 分页）",
     component: CheckboxTablePage,
   },
-  { id: "table-custom", label: "自定义列表格（showCustomConfig）", component: CustomTablePage },
+  { id: "table-custom", label: "自定义列表格（外部列设置入口）", component: CustomTablePage },
   {
     id: "table-combo",
-    label: "可勾选 + 自定义列表格（showCheckbox + showCustomConfig）",
+    label: "可勾选 + 自定义列表格（showCheckbox + 外部列设置）",
     component: ComboTablePage,
   },
-  { id: "table-export", label: "导出 Excel（showExportExcel）", component: ExportTablePage },
+  { id: "table-export", label: "导出 Excel（外部导出入口）", component: ExportTablePage },
   {
     id: "table-custom-export",
-    label: "自定义列 + 导出 Excel（showCustomConfig + showExportExcel）",
+    label: "自定义列 + 导出 Excel（外部列设置 + 外部导出）",
     component: CustomExportTablePage,
   },
   {
@@ -124,7 +124,7 @@ export const demoPages = [
   },
   {
     id: "table-custom-selection-bar",
-    label: "自定义选中提示条（showSelectionBar=false）",
+    label: "自定义选中提示条（外部实现选中条）",
     component: CustomSelectionBarTablePage,
   },
   {

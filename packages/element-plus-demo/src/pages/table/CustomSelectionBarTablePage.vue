@@ -21,8 +21,8 @@ const selectedRows = computed<UserRow[]>(
 
 <template>
   <DemoPageLayout
-    title="自定义选中提示条（showSelectionBar=false）"
-    hint="showSelectionBar=false 时表格不再渲染内置的「已选 N 项 · 清空」提示条，但跨页选中累计照常（selectedRows / clearSelection 仍可用）。下面是外部自行实现的提示条——样式完全自定义（深色卡片、姓名标签），常驻占位以避免表格抖动；可跨页勾选后观察姓名标签累计，点清空调 ref.clearSelection()。"
+    title="自定义选中提示条（外部实现）"
+    hint="表格不渲染任何内置选中提示条，跨页选中累计与操作方法照常暴露（selectedRows / clearSelection 等）。下面是外部自行实现的提示条——样式完全自定义（深色卡片、姓名标签），常驻占位以避免表格抖动；可跨页勾选后观察姓名标签累计，点清空调 tableRef.clearSelection()。"
     @back="$emit('back')"
   >
     <!-- 外部自定义选中提示条：常驻渲染（无选中时为灰色态），样式与布局由外部决定 -->
@@ -52,7 +52,6 @@ const selectedRows = computed<UserRow[]>(
       :data-fun="dataFun"
       :page-size="10"
       show-checkbox
-      :show-selection-bar="false"
     />
   </DemoPageLayout>
 </template>

@@ -22,8 +22,8 @@ import { useCustomConfig } from "@ys.knife.crud/vue";
  * 「用户默认分页大小」状态（defaultPageSize），父组件通过读取此属性
  * 获取加载到的保存值、通过调用 updateDefaultPageSize(size) 写入新值。
  *
- * 一旦挂载即应用自定义配置（不再接收 showCustomConfig 标志），
- * 是否显示「⚙ 列设置」入口由父组件 Table 的 showCustomConfig 控制。
+ * 一旦挂载即应用自定义配置；Table 不渲染「⚙ 列设置」入口，由外部经
+ * TableApi.openConfigDialog() 打开本面板。
  */
 const props = defineProps({
   /** 加载自定义配置（含列设置与用户默认分页大小；返回 null 按空配置处理） */
@@ -35,17 +35,15 @@ const props = defineProps({
 });
 
 /* ---------------- 自管桥接（useCustomConfig） ----------------
- * useCustomConfig 仍按 CustomConfigProps 形状读取 props，本组件不再向父组件
- * 收取 showCustomConfig（一旦挂载即应用自定义配置），这里构造一个 always-true
- * 的合成 props。用 getter 让 loadCustomConfigFun/saveCustomConfigFun 仍能
- * 响应父组件传入 prop 的变化（watch/computed 经 getter 读到最新值）。
+ * useCustomConfig 按 CustomConfigProps 形状（loadCustomConfigFun/saveCustomConfigFun）
+ * 读取 props。用 getter 包一层使其能响应父组件传入 prop 的变化
+ * （watch/computed 经 getter 读到最新值）。
  *
  * defaultPageSize 与 updateDefaultPageSize 也内聚在 useCustomConfig 内：
  * defaultPageSize 是「用户默认分页大小」状态（saveConfigDialog 读、
  * loadCustomConfigs 加载后写回），updateDefaultPageSize 是用户切换每页
  * 条数时的「更新状态 + 持久化」组合动作——父组件经 defineExpose 透传。 */
 const customConfigProps: CustomConfigProps = {
-  get showCustomConfig() { return true; },
   get loadCustomConfigFun() { return props.loadCustomConfigFun; },
   get saveCustomConfigFun() { return props.saveCustomConfigFun; },
 };

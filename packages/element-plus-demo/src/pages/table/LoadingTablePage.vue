@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { listData } from "@ys.knife.crud/core";
+import { ref } from "vue";
+import { listData, type ViewMode } from "@ys.knife.crud/core";
 import { YsTable } from "@ys.knife.crud/element-plus";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 import { manyRows, metaFun, type UserRow } from "../shared/demoData";
@@ -7,6 +8,10 @@ import { manyRows, metaFun, type UserRow } from "../shared/demoData";
 defineEmits<{
   (e: "back"): void;
 }>();
+
+// 两张表各自独立的视图模式（外部 radio 经 v-model:view-mode 受控驱动）
+const viewMode1 = ref<ViewMode>("table");
+const viewMode2 = ref<ViewMode>("table");
 
 // 模拟 2 秒慢接口：listData 包装后，每次 dataFun 调用（首载、翻页、改每页条数、reload）
 // 都会重新调用 listFunc，等待 2s 后再分页切片返回，让 loading 遮罩停留足够久便于观察
@@ -21,25 +26,39 @@ const dataFun = listData<UserRow>(
 <template>
   <DemoPageLayout
     title="加载中效果（三视图 loading 遮罩 + #loading 插槽）"
-    hint="dataFun 模拟 2 秒慢接口（listData 包装），首载与每次翻页都会触发 loading。上方表格未提供 #loading 插槽：三视图显示内置 spinner 遮罩——表格视图遮罩盖住表格体，卡片 / 列表视图盖住整个视图区域（翻页时旧数据仍在遮罩下，首载无数据时容器有 min-height 保底）。下方表格提供了 #loading 插槽：三种视图的遮罩中央都渲染自定义内容，可用右上角切换控件逐个对比。"
+    hint="dataFun 模拟 2 秒慢接口（listData 包装），首载与每次翻页都会触发 loading。上方表格未提供 #loading 插槽：三视图显示内置 spinner 遮罩——表格视图遮罩盖住表格体，卡片 / 列表视图盖住整个视图区域（翻页时旧数据仍在遮罩下，首载无数据时容器有 min-height 保底）。下方表格提供了 #loading 插槽：三种视图的遮罩中央都渲染自定义内容，可用每个表格上方的外部切换控件（v-model:view-mode）逐个对比。"
     @back="$emit('back')"
   >
-    <h4 class="loading-demo__caption">默认 loading（内置 spinner）</h4>
+    <div class="loading-demo__head">
+      <h4 class="loading-demo__caption">默认 loading（内置 spinner）</h4>
+      <el-radio-group v-model="viewMode1" size="small">
+        <el-radio-button value="table">表格</el-radio-button>
+        <el-radio-button value="card">卡片</el-radio-button>
+        <el-radio-button value="list">列表</el-radio-button>
+      </el-radio-group>
+    </div>
     <ys-table
       :meta-fun="metaFun"
       :data-fun="dataFun"
+      v-model:view-mode="viewMode1"
       :page-size="10"
       show-checkbox
-      :view-switch-modes="['table', 'card', 'list']"
     />
 
-    <h4 class="loading-demo__caption">自定义 loading（#loading 插槽，三种视图共用）</h4>
+    <div class="loading-demo__head">
+      <h4 class="loading-demo__caption">自定义 loading（#loading 插槽，三种视图共用）</h4>
+      <el-radio-group v-model="viewMode2" size="small">
+        <el-radio-button value="table">表格</el-radio-button>
+        <el-radio-button value="card">卡片</el-radio-button>
+        <el-radio-button value="list">列表</el-radio-button>
+      </el-radio-group>
+    </div>
     <ys-table
       :meta-fun="metaFun"
       :data-fun="dataFun"
+      v-model:view-mode="viewMode2"
       :page-size="10"
       show-checkbox
-      :view-switch-modes="['table', 'card', 'list']"
     >
       <template #loading>
         <div class="loading-demo__custom">
@@ -52,14 +71,22 @@ const dataFun = listData<UserRow>(
 </template>
 
 <style scoped>
+.loading-demo__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 8px 0;
+}
+
 .loading-demo__caption {
-  margin: 4px 0 8px;
+  margin: 0;
   font-size: 14px;
   font-weight: 600;
   color: var(--el-text-color-secondary, #909399);
 }
 
-.loading-demo__caption + * {
+/* 每个表格区块（标题/切换控件 + 表格）之间留间距 */
+.loading-demo__head + .yk-table {
   margin-bottom: 24px;
 }
 

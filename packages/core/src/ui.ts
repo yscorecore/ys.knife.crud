@@ -37,27 +37,19 @@ export type ViewMode = "table" | "card" | "list"
  * 展示形态相关 props
  */
 export interface ViewProps {
-    /** 展示形态，默认 "table"。配合 update:viewMode 事件可使用 v-model:view-mode 受控切换 */
+    /** 展示形态，默认 "table"。配合 update:viewMode 事件可使用 v-model:view-mode 受控切换。
+     *  Table 不内置任何视图切换控件——切换入口（按钮 / radio / 菜单）一律由外部实现，
+     *  经 v-model:view-mode 或 TableApi.setViewMode 驱动 */
     readonly viewMode?: ViewMode;
-    /** 内置视图切换控件要显示的模式集合，默认 []（不渲染内置切换控件）。
-     *  非空时在工具栏渲染切换控件，且只包含数组中列出的模式（按数组顺序），
-     *  如 ["table", "card", "list"]；保持默认空数组即完全由外部自控（仍可用 v-model:view-mode 驱动） */
-    readonly viewSwitchModes?: ViewMode[];
 }
 /**
  * 自定义列的配置 props
  */
 export interface CustomConfigProps {
-    /** 为 true 时渲染内置「⚙ 列设置」按钮；false 时不渲染内置按钮——外部可自实现按钮，
-     *  经 TableApi.openConfigDialog() 打开内置面板（面板始终挂载） */
-    readonly showCustomConfig: boolean;
     readonly loadCustomConfigFun?: loadCustomConfigFunc;
     readonly saveCustomConfigFun?: saveCustomConfigFunc;
 }
 export interface ExportExcelProps {
-    /** 为 true 时渲染内置「⬇ 导出 Excel」按钮；false 时不渲染内置按钮——外部可自实现按钮，
-     *  经 TableApi.openExportDialog() 打开内置对话框（对话框始终挂载） */
-    readonly showExportExcel: boolean;
     /** 可选。导出实现工厂；缺省使用 core 的控制台假实现（createConsoleExportApiFunc，只打日志不产出文件） */
     readonly exportorFunc?: ExportApiFunc;
     readonly exportPageSize?: number;
@@ -140,13 +132,11 @@ export interface TableApi {
     /** 反选当前页行（其他页已选中不受影响），供外部自定义选中提示条调用 */
     invertSelectionOnPage(): void
     /**
-     * 打开内置列设置对话框。showCustomConfig=false（不渲染内置「⚙ 列设置」按钮）、
-     * 外部自实现按钮时经此入口打开面板。
+     * 打开内置列设置对话框。Table 不渲染入口按钮——由外部自实现按钮经此入口打开面板。
      */
     openConfigDialog(): void
     /**
-     * 打开内置导出 Excel 对话框。showExportExcel=false（不渲染内置「⬇ 导出 Excel」按钮）、
-     * 外部自实现按钮时经此入口打开对话框。
+     * 打开内置导出 Excel 对话框。Table 不渲染入口按钮——由外部自实现按钮经此入口打开对话框。
      */
     openExportDialog(): void
 }

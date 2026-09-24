@@ -11,7 +11,6 @@ import { useDefault, useRowActions, useSelection, visibleActions, isEnabled } fr
 import ExportExcelDialog from "./exportExcelDialog.vue";
 import ColumnConfigDialog from "./columnConfigDialog.vue";
 import RowActionsColumn from "./rowActionsColumn.vue";
-import SelectionBar from "./selectionBar.vue";
 
 // 组件名统一带 ys 前缀：模板中以 <ys-table>（或 <YsTable>）使用，
 // 同时保证全局注册（app.component）、递归组件与 devtools 中名称稳定。
@@ -47,28 +46,10 @@ const props = defineProps({
    * TableApi.setColumnResizable 切换（组件内部维护状态，同时照常派发 update 事件）。
    */
   columnResizable: { type: Boolean, default: true },
-  /**
-   * 是否渲染内置的跨页选中提示条（「已选 N 项 · 清空」），默认 true。
-   * 为 false 时不渲染内置提示条（选中仍按 rowKey 跨页累计，selectedRows/clearSelection
-   * 照常可用），由外部自行渲染自定义样式的提示条。
-   */
-  showSelectionBar: { type: Boolean, default: true },
-  /**
-   * 为 true 时渲染内置的「⚙ 列设置」入口按钮，默认 false。
-   * 设为 false 时不渲染内置按钮——外部可自实现按钮并经 expose 的
-   * openConfigDialog() 打开内置列设置面板（面板始终挂载）。
-   */
-  showCustomConfig: { type: Boolean, default: false },
   /** 加载自定义配置（含列设置与用户默认分页大小；返回 null 按空配置处理） */
   loadCustomConfigFun: { type: Function as PropType<NonNullable<CoreTableProps["loadCustomConfigFun"]>>, required: false },
   /** 保存自定义配置（含列设置与用户默认分页大小） */
   saveCustomConfigFun: { type: Function as PropType<NonNullable<CoreTableProps["saveCustomConfigFun"]>>, required: false },
-  /**
-   * 为 true 时渲染内置的「⬇ 导出 Excel」入口按钮，默认 false。
-   * 设为 false 时不渲染内置按钮——外部可自实现按钮并经 expose 的
-   * openExportDialog() 打开内置导出对话框（对话框始终挂载）。
-   */
-  showExportExcel: { type: Boolean, default: false },
   /** 导出「所有数据」时每次分页拉取的条数，默认 1000（独立于界面分页大小） */
   exportPageSize: { type: Number, default: 1000 },
   /** 导出实现工厂：每次导出调用它得到一个全新的 ExportApi 实例，组件只经该接口写文件。
@@ -80,17 +61,11 @@ const props = defineProps({
   /**
    * 展示形态，默认 "table"（表格视图）；设为 "card" 时以卡片网格渲染当前页行，
    * 设为 "list" 时以列表渲染（一行一条全宽，内容经 #list 插槽自定义）。
-   * 受控与非受控皆可：用 v-model:view-mode 时由父级驱动；不绑定时内置切换控件
-   * 自行切换（组件内部维护状态，同时照常派发 update:viewMode）。
+   * 受控与非受控皆可：用 v-model:view-mode 时由父级驱动；不绑定时可经
+   * TableApi.setViewMode 切换（组件内部维护状态，同时照常派发 update:viewMode）。
+   * Table 不内置任何视图切换控件，切换入口一律由外部实现。
    */
   viewMode: { type: String as PropType<ViewMode>, default: "table" },
-  /**
-   * 内置视图切换控件要显示的模式集合，默认 []（不渲染内置切换控件）。
-   * 非空时在工具栏渲染切换控件，且只包含数组中列出的模式（按数组顺序），
-   * 如 ["table", "card", "list"]。保持默认空数组即完全由外部自控
-   * （仍可经 v-model:view-mode 或监听 update:viewMode 驱动）。
-   */
-  viewSwitchModes: { type: Array as PropType<ViewMode[]>, default: () => [] },
 });
 
 /** 单次加载完成后的结果（PagedList）；组件对外事件基于此类型 */
@@ -307,13 +282,6 @@ const currentViewMode = computed<ViewMode>({
   },
 });
 
-/** 内置切换控件各模式的按钮文案（key 与 ViewMode 一致） */
-const viewSwitchLabels: Record<ViewMode, string> = {
-  table: "表格",
-  card: "卡片",
-  list: "列表",
-};
-
 // 卡片 → 表格：el-table 重新挂载后把累计选中恢复到勾选态（restoreSelection 内含 nextTick）
 watch(currentViewMode, (mode) => {
   if (mode === "table") void restoreSelection();
@@ -400,7 +368,7 @@ type ExposedShape = {
 
 /**
  * 打开内置列设置对话框——委托 ColumnConfigDialog 的 openDialog。
- * showCustomConfig=false（不渲染内置「⚙ 列设置」按钮）、外部自实现按钮时的打开入口。
+ * Table 不渲染入口按钮，由外部自实现按钮经此入口打开（如 YsCommandBar 下拉项）。
  */
 function openConfigDialog(): void {
   configDialogRef.value?.openDialog();
@@ -408,7 +376,7 @@ function openConfigDialog(): void {
 
 /**
  * 打开内置导出 Excel 对话框——委托 ExportExcelDialog 的 openExportDialog。
- * showExportExcel=false（不渲染内置「⬇ 导出 Excel」按钮）、外部自实现按钮时的打开入口。
+ * Table 不渲染入口按钮，由外部自实现按钮经此入口打开（如 YsCommandBar 下拉项）。
  */
 function openExportDialog(): void {
   exportDialogRef.value?.openExportDialog();
@@ -522,37 +490,10 @@ const tableApi: TableApi = {
 
 <template>
   <div class="yk-table">
-    <!-- 顶部工具栏：左侧为跨页选中提示（有选中时显示），右侧为视图切换 / 导出 / 列设置入口。
-         同一行节省纵向空间。启用任一能力即常驻渲染并保持固定行高——
-         仅勾选的表格里，选中提示的出现/消失不再增减这一行的高度，
-         表头不会上下抖动（与入口控件常驻时的表现对齐）。
-         showSelectionBar=false 时左侧提示条不渲染（由外部自行实现），右侧控件组照常 -->
-    <div
-      v-if="(currentShowCheckbox && showSelectionBar) || viewSwitchModes.length > 0 || showCustomConfig || showExportExcel"
-      class="yk-table__toolbar">
-      <!-- 跨页选中提示：选中按 rowKey 跨页累计，可能来自其他页，给用户一个总览与清空入口。
-           无选中时 SelectionBar 不渲染任何元素，右侧控件组靠 margin-left:auto 自行贴右，
-           不依赖占位元素 -->
-      <SelectionBar v-if="currentShowCheckbox && showSelectionBar" :count="selectedRows.length"
-        @clear="clearSelection" @select-all="selectAllOnPage" @invert="invertSelectionOnPage" />
-      <div class="yk-table__toolbar-actions">
-        <el-button v-if="showExportExcel" link type="primary" class="yk-table__export-btn"
-          @click="openExportDialog()">
-          ⬇ 导出 Excel
-        </el-button>
-        <el-button v-if="showCustomConfig" link type="primary" class="yk-table__config-btn"
-          @click="openConfigDialog()">
-          ⚙ 列设置
-        </el-button>
-        <!-- 内置视图切换控件：仅渲染 viewSwitchModes 中列出的模式（按数组顺序）；
-             默认空数组时不渲染，由外部经 v-model:view-mode 或监听 update:viewMode 自控 -->
-        <el-radio-group v-if="viewSwitchModes.length > 0" v-model="currentViewMode" size="small"
-          class="yk-table__view-switch">
-          <el-radio-button v-for="mode in viewSwitchModes" :key="mode" :value="mode">{{ viewSwitchLabels[mode]
-          }}</el-radio-button>
-        </el-radio-group>
-      </div>
-    </div>
+    <!-- 注意：Table 不再内置任何顶部工具栏（选中提示条 / 列设置 / 导出 / 视图切换）。
+         这些 UI 一律由外部实现——选中提示条可用 YsSelectionBar（或 YsCommandBar 内置），
+         列设置 / 导出对话框经 TableApi.openConfigDialog()/openExportDialog() 打开，
+         视图切换经 v-model:view-mode 或 TableApi.setViewMode() 驱动。 -->
 
     <!-- 表格视图：v-if 与卡片视图二选一；切回本视图后由 useSelection.restoreSelection
          把跨页累计选中恢复到勾选列（选中状态以 rowKey Map 为准，不再用 reserve-selection）。
@@ -695,8 +636,7 @@ const tableApi: TableApi = {
     </div>
 
     <!-- 导出 Excel 对话框组（范围选择 / 进度 / 取消询问）—— 内部自管 useExportExcel。
-         始终挂载（与列设置面板一致）：showExportExcel 只控制内置按钮显隐，
-         置 false 且外部自实现按钮时经 expose 的 openExportDialog() 打开。
+         始终挂载：Table 不渲染入口按钮，外部自实现按钮经 expose 的 openExportDialog() 打开。
          props 按相关性分组：数据管道 → 列定义 → 当前页快照 → 选择。
          total 传界面当前总数作为进度条初始分母；导出过程中响应带回 totalCount 时会修正 -->
     <ExportExcelDialog ref="exportDialogRef" :current-rows="rows" :selected-rows="selectedRows"
@@ -707,37 +647,14 @@ const tableApi: TableApi = {
 
     <!-- 列设置对话框（内部自管 useCustomConfig；始终挂载，columns 也来自它——
          customConfig 的 width 直接写在 col.width 上，表格读 col.width 即可；
-         不再接收 showCustomConfig/innerPageSize：前者由 Table 自身控制「⚙ 列设置」按钮显隐，
-         后者改为经 defineExpose 暴露 defaultPageSize/updateDefaultPageSize 由 Table 主动读写） -->
+         Table 不渲染入口按钮，外部经 openConfigDialog() 打开；
+         innerPageSize 经 defineExpose 暴露 defaultPageSize/updateDefaultPageSize 由 Table 主动读写） -->
     <ColumnConfigDialog ref="configDialogRef" :load-custom-config-fun="loadCustomConfigFun"
       :save-custom-config-fun="saveCustomConfigFun" :meta="meta" />
   </div>
 </template>
 
 <style scoped>
-.yk-table__toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  /* 固定行高（el-button 默认高度）：无选中且无入口按钮时也保留这一行，
-     选中提示出现/消失时表头不再上下移动 */
-  min-height: var(--el-component-size, 32px);
-  margin-bottom: 2px;
-}
-
-.yk-table__toolbar-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  /* 无论左侧选中提示是否存在，控件组始终吸附工具栏右侧 */
-  margin-left: auto;
-}
-
-.yk-table__view-switch {
-  /* 与左侧「列设置」文字入口拉开距离 */
-  margin-left: 4px;
-}
-
 /* ---------------- 卡片视图 ---------------- */
 .yk-table__cards {
   display: grid;

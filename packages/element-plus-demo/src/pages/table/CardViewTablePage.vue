@@ -16,15 +16,15 @@ const dataFun = constData(manyRows);
 const tableRef = ref<TableApi | null>(null);
 const { showSelection } = useSelectionViewer(tableRef);
 
-// v-model:view-mode 受控：本页不传 view-switch-modes（默认空数组，内置切换控件不渲染），
-// 由页面工具栏里的自定义控件驱动，演示「切换入口完全可由外部自定义」
+// v-model:view-mode 受控：Table 不内置视图切换控件，
+// 由页面工具栏里的自定义控件驱动，演示「切换入口完全由外部实现」
 const viewMode = ref<ViewMode>("card");
 </script>
 
 <template>
   <DemoPageLayout
     title="表格 / 卡片 / 列表视图切换（viewMode + #card / #list 插槽）"
-    hint="viewMode 支持 table（默认）/ card / list 三种形态，v-model:view-mode 受控切换；内置切换控件由 view-switch-modes 数组控制——默认空数组不渲染（本页即如此），由上方自定义控件驱动。卡片内容经 #card 插槽自定义（作用域 { row, index }），列表视图一行一条数据、占满整行宽度，行内容经 #list 插槽自定义（本页画了头像/姓名/邮箱/年龄的横向单行布局）；不提供插槽时默认把整行 JSON 序列化显示。三种视图的 checkbox 共用同一套跨页选中——在列表里勾选后翻页、切回表格/卡片视图，选中状态都保留。"
+    hint="viewMode 支持 table（默认）/ card / list 三种形态，v-model:view-mode 受控切换；Table 不内置切换控件，由上方自定义控件驱动。卡片内容经 #card 插槽自定义（作用域 { row, index }），列表视图一行一条数据、占满整行宽度，行内容经 #list 插槽自定义（本页画了头像/姓名/邮箱/年龄的横向单行布局）；不提供插槽时默认把整行 JSON 序列化显示。三种视图的 checkbox 共用同一套跨页选中——在列表里勾选后翻页、切回表格/卡片视图，选中状态都保留。"
     @back="$emit('back')"
   >
     <template #toolbar>

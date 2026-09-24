@@ -28,7 +28,7 @@ const exportorFunc = createExcelJsExportApiFunc();
 <template>
   <DemoPageLayout
     title="自定义入口按钮（openConfigDialog / openExportDialog）"
-    hint="showCustomConfig=false、showExportExcel=false：表格不渲染内置的「⚙ 列设置」「⬇ 导出 Excel」文字按钮，由页面在外部自实现按钮（此处用实心 / plain 按钮演示样式完全自定义）。按钮里只调 tableRef.openConfigDialog() / tableRef.openExportDialog()——打开的仍是表格内置对话框，全部逻辑（列显隐/顺序/宽度持久化、导出范围选择/进度/取消、导出列所见即所得）零改动复用。25 行 + pageSize=10，勾选后自定义导出按钮里还会出现「导出选中」范围。"
+    hint="表格不渲染任何内置命令入口，由页面在外部自实现按钮（此处用实心 / plain 按钮演示样式完全自定义）。按钮里只调 tableRef.openConfigDialog() / tableRef.openExportDialog()——打开的仍是表格内置对话框，全部逻辑（列显隐/顺序/宽度持久化、导出范围选择/进度/取消、导出列所见即所得）零改动复用。25 行 + pageSize=10，勾选后自定义导出按钮里还会出现「导出选中」范围。"
     @back="$emit('back')"
   >
     <template #toolbar>
@@ -46,10 +46,8 @@ const exportorFunc = createExcelJsExportApiFunc();
       :data-fun="dataFun"
       :page-size="10"
       show-checkbox
-      :show-custom-config="false"
       :load-custom-config-fun="loadCustomConfigFun"
       :save-custom-config-fun="saveCustomConfigFun"
-      :show-export-excel="false"
       :exportor-func="exportorFunc"
     />
   </DemoPageLayout>

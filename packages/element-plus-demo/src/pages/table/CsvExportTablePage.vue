@@ -78,10 +78,14 @@ const csvExportorFunc: ExportApiFunc = () => new CsvExportApi();
 <template>
   <DemoPageLayout
     title="自定义导出实现（exportorFunc → CSV）"
-    hint="showExportExcel 的导出格式由 exportorFunc 决定：组件只经 core 的 ExportApi 契约（renderHeader → renderRows → download/cancel）写数据，注入什么实现就产出什么格式。本页注入了一个手写的 CSV 导出器替代默认的 ExcelJS——点右上角「⬇ 导出 Excel」入口，选「导出所有」后实际下载到的是 .csv 文件（记事本/Excel 可直接打开；按钮文案不随实现变化），取消导出则走 cancel 不产出文件。"
+    hint="导出格式由 exportorFunc 决定：组件只经 core 的 ExportApi 契约（renderHeader → renderRows → download/cancel）写数据，注入什么实现就产出什么格式。本页注入了一个手写的 CSV 导出器替代默认的 ExcelJS——点上方外部「⬇ 导出 Excel」按钮（内部调 openExportDialog()），选「导出所有」后实际下载到的是 .csv 文件（记事本/Excel 可直接打开；按钮文案不随实现变化），取消导出则走 cancel 不产出文件。"
     @back="$emit('back')"
   >
-    <ys-table ref="tableRef" :meta-fun="metaFun" :data-fun="dataFun" :page-size="10" show-export-excel
+    <template #toolbar>
+      <el-button type="success" @click="tableRef?.openExportDialog()">⬇ 导出 Excel</el-button>
+    </template>
+
+    <ys-table ref="tableRef" :meta-fun="metaFun" :data-fun="dataFun" :page-size="10"
       :exportor-func="csvExportorFunc" />
   </DemoPageLayout>
 </template>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { h, type FunctionalComponent } from "vue";
-import { constActions, constData, type RowActionsFunc } from "@ys.knife.crud/core";
+import { h, ref, type FunctionalComponent } from "vue";
+import { constActions, constData, type RowActionsFunc, type ViewMode } from "@ys.knife.crud/core";
 import { YsTable } from "@ys.knife.crud/element-plus";
 import { ElMessage } from "element-plus";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
@@ -45,6 +45,9 @@ const DeleteIcon = makeIcon([
 const rows = createRows();
 const dataFun = constData(rows);
 
+// 视图切换入口由外部 radio 驱动（v-model:view-mode 受控）
+const viewMode = ref<ViewMode>("table");
+
 // 最后一列显示「编辑 / 删除」；首行（Alice）受保护，不显示删除按钮。
 // icon 演示：编辑用铅笔图标、删除用垃圾桶图标（type: danger 红色 + 图标）
 const rowActionsFunc: RowActionsFunc<UserRow> = constActions<UserRow>(
@@ -78,14 +81,22 @@ const rowActionsFunc: RowActionsFunc<UserRow> = constActions<UserRow>(
 <template>
   <DemoPageLayout
     title="带行操作的表格"
-    hint="表头 + const 数据 + 行操作：rowActionsFunc 由 constActions 提供，最后一列显示「编辑 / 删除」；首行因 show 条件不显示「删除」，删除后 Table 自动 reload。行操作按钮带 icon（铅笔 / 垃圾桶，函数式组件经 Action.icon 传入，渲染层 <component :is> 兼容）与 type（删除 danger 红色）。切到卡片或列表视图后，在卡片/列表行上点右键弹出同一套行操作菜单（内置切换控件由 view-switch-modes 指定显示哪些模式）。"
+    hint="表头 + const 数据 + 行操作：rowActionsFunc 由 constActions 提供，最后一列显示「编辑 / 删除」；首行因 show 条件不显示「删除」，删除后 Table 自动 reload。行操作按钮带 icon（铅笔 / 垃圾桶，函数式组件经 Action.icon 传入，渲染层 <component :is> 兼容）与 type（删除 danger 红色）。用上方外部切换控件（v-model:view-mode）切到卡片或列表视图后，在卡片/列表行上点右键弹出同一套行操作菜单。"
     @back="$emit('back')"
   >
+    <template #toolbar>
+      <el-radio-group v-model="viewMode" size="small">
+        <el-radio-button value="table">表格</el-radio-button>
+        <el-radio-button value="card">卡片</el-radio-button>
+        <el-radio-button value="list">列表</el-radio-button>
+      </el-radio-group>
+    </template>
+
     <ys-table
       :meta-fun="metaFun"
       :data-fun="dataFun"
+      v-model:view-mode="viewMode"
       :row-actions-func="rowActionsFunc"
-      :view-switch-modes="['table', 'card', 'list']"
     />
   </DemoPageLayout>
 </template>

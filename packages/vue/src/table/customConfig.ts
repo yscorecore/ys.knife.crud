@@ -25,11 +25,11 @@ function displayableColumns(columns: Column[]): Column[] {
  * 列自定义配置逻辑：管理列的显隐、顺序、宽度以及用户默认分页大小，
  * 并提供列设置面板的状态与操作。
  *
- * @param props  组件 props（只需 showCustomConfig / loadCustomConfigFun / saveCustomConfigFun）
+ * @param props  组件 props（只需 loadCustomConfigFun / saveCustomConfigFun）
  * @param meta   列元数据 ref（用于获取 showForDisplay=true 的候选列）
  */
 export function useCustomConfig(
-  props: CustomConfigProps,
+  props: Pick<CustomConfigProps, "loadCustomConfigFun" | "saveCustomConfigFun">,
   meta: Ref<Meta | null>,
 ) {
   /* ---------------- 状态 ---------------- */
@@ -59,12 +59,11 @@ export function useCustomConfig(
   /**
    * 最终显示的列，两层规则：
    * 1. 先看 meta：showForDisplay=true 的列才进入候选（也是列设置面板里可编辑的列）
-   * 2. showCustomConfig 开启时再应用 CustomConfig：visible=false 隐藏、order 调整顺序、
+   * 2. 再应用 CustomConfig：visible=false 隐藏、order 调整顺序、
    *    width 写到返回列对象上（表格组件直接读 col.width 设置列宽，不再单独查表）
    */
   const columns = computed(() => {
     const sorted = displayableColumns(meta.value?.columns ?? []);
-    if (!props.showCustomConfig) return sorted;
 
     const cfg = customConfigs.value.columns;
     const merged = sorted.map((col, idx) => ({ col, cfg: cfg[col.propertyPath], idx }));

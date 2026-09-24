@@ -214,18 +214,15 @@ const exportorFunc = createExcelJsExportApiFunc();
          内置选中提示条（table 有选中行时自动显示）+ 右侧表格操作下拉按钮 -->
     <YsCommandBar :actions="tableCommands" :table="tableRef" />
 
-    <!-- 全功能表格：内置命令按钮全部关闭（showSelectionBar/showCustomConfig/showExportExcel
-         均为 false，viewSwitchModes 保持默认空数组），命令全部由上方下拉按钮驱动；
-         checkbox 列初始开启、视图初始表格——两者均非受控，由表格内部状态 + TableApi 切换 -->
+    <!-- 全功能表格：Table 不内置任何命令 UI，列设置/导出/视图切换/选择行/列宽拖动
+         全部由上方 YsCommandBar 的操作下拉经 TableApi 驱动；
+         checkbox 列初始开启、视图初始表格——两者均非受控，由 TableApi 切换 -->
     <ys-table
       ref="tableRef"
       :meta-fun="metaFun"
       :data-fun="dataFun"
       :page-size="10"
       show-checkbox
-      :show-selection-bar="false"
-      :show-custom-config="false"
-      :show-export-excel="false"
       :load-custom-config-fun="loadCustomConfigFun"
       :save-custom-config-fun="saveCustomConfigFun"
       :exportor-func="exportorFunc"
