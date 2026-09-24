@@ -11,6 +11,9 @@ import { useDefault, useRowActions, useSelection, visibleActions, isEnabled } fr
 import ExportExcelDialog from "./exportExcelDialog.vue";
 import ColumnConfigDialog from "./columnConfigDialog.vue";
 import RowActionsColumn from "./rowActionsColumn.vue";
+import CardView from "./cardView.vue";
+import ListView from "./listView.vue";
+import ContextMenu from "./contextMenu.vue";
 
 // 组件名统一带 ys 前缀：模板中以 <ys-table>（或 <YsTable>）使用，
 // 同时保证全局注册（app.component）、递归组件与 devtools 中名称稳定。
@@ -495,68 +498,65 @@ const tableApi: TableApi = {
          列设置 / 导出对话框经 TableApi.openConfigDialog()/openExportDialog() 打开，
          视图切换经 v-model:view-mode 或 TableApi.setViewMode() 驱动。 -->
 
-    <!-- 表格视图：v-if 与卡片视图二选一；切回本视图后由 useSelection.restoreSelection
-         把跨页累计选中恢复到勾选列（选中状态以 rowKey Map 为准，不再用 reserve-selection）。
-         外层 wrap 为自制 loading 遮罩提供定位上下文（不再用 el-table 的 v-loading 指令，
-         以便三种视图共用 #loading 插槽） -->
-    <div v-if="currentViewMode === 'table'" class="yk-table__table-wrap">
-      <el-table ref="tableEl" :data="rows"
-        :row-key="rowKey" border @selection-change="onSelectionChange" @header-dragend="onColumnResize">
-        <!-- 空数据提示：使用者经 #empty 插槽自定义（表格/卡片/列表三种视图共享，见下方两个视图分支）；
-             仅在使用者提供了插槽时才声明，否则保留 el-table 默认的「暂无数据」空态 -->
-        <template v-if="$slots.empty" #empty>
-          <slot name="empty" />
-        </template>
-        <!-- 勾选列：跨页保留由 useSelection 的 rowKey Map 受控维护，表头 checkbox 全选/取消全选当前页。
-             不绑 resizable——EP 对 type=selection 固定宽列默认不可拖，显式绑 true 反而会放开 -->
-        <el-table-column v-if="currentShowCheckbox" type="selection" width="48" />
-        <!-- 数据列：col.render 存在时优先用自定义渲染（返回字符串/VNode 均可，
-             经函数式组件呈现），否则走默认的 propertyPath 取值显示。
-             resizable 跟随列宽拖动开关（el-table-column 默认 true，需显式透传才能关） -->
-        <el-table-column v-for="col in columns" :key="col.propertyPath" :prop="col.propertyPath" :label="col.displayName"
-          :width="col.width" :resizable="currentColumnResizable" show-overflow-tooltip>
-          <template v-if="col.render" #default="{ row }">
-            <component :is="() => col.render!(row, (row as Record<string, unknown>)[col.propertyPath])" />
+    <!-- 视图区域：三视图二选一 + 统一加载遮罩。view-area 为遮罩提供定位上下文（position:relative） -->
+    <div class="yk-table__view-area">
+      <!-- 表格视图：v-if 与卡片视图二选一；切回本视图后由 useSelection.restoreSelection
+           把跨页累计选中恢复到勾选列（选中状态以 rowKey Map 为准，不再用 reserve-selection） -->
+      <div v-if="currentViewMode === 'table'" class="yk-table__table-wrap">
+        <el-table ref="tableEl" :data="rows"
+          :row-key="rowKey" border @selection-change="onSelectionChange" @header-dragend="onColumnResize">
+          <!-- 空数据提示：使用者经 #empty 插槽自定义（表格/卡片/列表三种视图共享，见下方两个视图分支）；
+               仅在使用者提供了插槽时才声明，否则保留 el-table 默认的「暂无数据」空态 -->
+          <template v-if="$slots.empty" #empty>
+            <slot name="empty" />
           </template>
-        </el-table-column>
-        <!-- 行操作列：actions 状态归 Table 所有（视图切换往返不丢失；卡片右键菜单共用） -->
-        <RowActionsColumn v-if="props.rowActionsFunc" :actions="actions" :table="tableApi"
-          :resizable="currentColumnResizable" />
-      </el-table>
-      <!-- 加载遮罩：三种视图共用 #loading 插槽；未提供插槽时渲染内置 spinner -->
-      <transition name="yk-loading-fade">
-        <div v-if="viewLoading" class="yk-table__loading-mask">
-          <slot name="loading">
-            <span class="yk-table__loading-spinner" aria-label="加载中" />
-          </slot>
-        </div>
-      </transition>
-    </div>
-
-    <!-- 卡片视图：当前页每行一张卡片；卡片内容经 #card 插槽自定义（作用域为 { row, index }），
-         未提供插槽时默认把整行 JSON 序列化展示。checkbox 与表格视图共用同一套跨页选中状态。
-         存在行操作（rowActionsFunc）时，卡片上右键弹出操作菜单（与操作列同一套 actions） -->
-    <div v-else-if="currentViewMode === 'card'" class="yk-table__cards">
-      <div v-for="(row, index) in rows" :key="String(row[rowKey])" class="yk-table__card"
-        :class="{
-          'is-selected': currentShowCheckbox && isRowSelected(row),
-          'has-actions': actions.length > 0,
-        }"
-        :title="actions.length > 0 ? '右键查看行操作' : undefined"
-        @contextmenu="onCardContextMenu($event, row)">
-        <el-checkbox v-if="currentShowCheckbox" class="yk-table__card-checkbox"
-          :model-value="isRowSelected(row)"
-          @change="onCardCheck(row, $event)" />
-        <slot name="card" :row="row" :index="index">
-          <pre class="yk-table__card-json">{{ JSON.stringify(row, null, 2) }}</pre>
-        </slot>
+          <!-- 勾选列：跨页保留由 useSelection 的 rowKey Map 受控维护，表头 checkbox 全选/取消全选当前页。
+               不绑 resizable——EP 对 type=selection 固定宽列默认不可拖，显式绑 true 反而会放开 -->
+          <el-table-column v-if="currentShowCheckbox" type="selection" width="48" />
+          <!-- 数据列：col.render 存在时优先用自定义渲染（返回字符串/VNode 均可，
+               经函数式组件呈现），否则走默认的 propertyPath 取值显示。
+               resizable 跟随列宽拖动开关（el-table-column 默认 true，需显式透传才能关） -->
+          <el-table-column v-for="col in columns" :key="col.propertyPath" :prop="col.propertyPath" :label="col.displayName"
+            :width="col.width" :resizable="currentColumnResizable" show-overflow-tooltip>
+            <template v-if="col.render" #default="{ row }">
+              <component :is="() => col.render!(row, (row as Record<string, unknown>)[col.propertyPath])" />
+            </template>
+          </el-table-column>
+          <!-- 行操作列：actions 状态归 Table 所有（视图切换往返不丢失；卡片右键菜单共用） -->
+          <RowActionsColumn v-if="props.rowActionsFunc" :actions="actions" :table="tableApi"
+            :resizable="currentColumnResizable" />
+        </el-table>
       </div>
-      <!-- 空数据提示：与表格视图共享 #empty 插槽；未提供插槽时回落 el-empty「暂无数据」 -->
-      <template v-if="!viewLoading && rows.length === 0">
-        <slot v-if="$slots.empty" name="empty" />
-        <el-empty v-else description="暂无数据" />
-      </template>
-      <!-- 加载遮罩：三种视图共用 #loading 插槽；未提供插槽时渲染内置 spinner -->
+
+      <!-- 卡片视图：渲染委托 CardView；#card / #empty 插槽透传，未提供时由子组件兜底。
+           checkbox 跨页选中状态经 isRowSelected/emit check 驱动；右键菜单由本组件 Table 承载。
+           加载遮罩不在此处——由外层 view-area 统一渲染，三视图共用 -->
+      <CardView v-else-if="currentViewMode === 'card'"
+        :rows="rows" :row-key="rowKey" :show-checkbox="currentShowCheckbox"
+        :loading="viewLoading" :has-actions="actions.length > 0"
+        :is-selected="isRowSelected"
+        @check="onCardCheck" @contextmenu="onCardContextMenu">
+        <template v-if="$slots.card" #default="{ row, index }">
+          <slot name="card" :row="row" :index="index" />
+        </template>
+        <template v-if="$slots.empty" #empty><slot name="empty" /></template>
+      </CardView>
+
+      <!-- 列表视图：渲染委托 ListView；#list / #empty 插槽透传，未提供时由子组件兜底。
+           checkbox 跨页选中状态经 isRowSelected/emit check 驱动；右键菜单与卡片视图共用同一套 -->
+      <ListView v-else
+        :rows="rows" :row-key="rowKey" :show-checkbox="currentShowCheckbox"
+        :loading="viewLoading" :has-actions="actions.length > 0"
+        :is-selected="isRowSelected"
+        @check="onCardCheck" @contextmenu="onCardContextMenu">
+        <template v-if="$slots.list" #default="{ row, index }">
+          <slot name="list" :row="row" :index="index" />
+        </template>
+        <template v-if="$slots.empty" #empty><slot name="empty" /></template>
+      </ListView>
+
+      <!-- 加载遮罩：三视图共用 #loading 插槽；未提供插槽时渲染内置 spinner。
+           遮罩挂在 view-area 内，覆盖当前视图（表格/卡片/列表）整个区域 -->
       <transition name="yk-loading-fade">
         <div v-if="viewLoading" class="yk-table__loading-mask">
           <slot name="loading">
@@ -566,57 +566,12 @@ const tableApi: TableApi = {
       </transition>
     </div>
 
-    <!-- 列表视图：一行一条数据、占满整行宽度；行内容经 #list 插槽自定义（作用域同为 { row, index }），
-         未提供插槽时默认把整行 JSON 序列化展示。checkbox 在行首，与表格/卡片视图共用同一套跨页选中状态；
-         存在行操作时右键弹出操作菜单（与卡片视图共用 onCardContextMenu 及同一个 teleport 菜单） -->
-    <div v-else class="yk-table__list">
-      <div v-for="(row, index) in rows" :key="String(row[rowKey])" class="yk-table__list-item"
-        :class="{
-          'is-selected': currentShowCheckbox && isRowSelected(row),
-          'has-actions': actions.length > 0,
-        }"
-        :title="actions.length > 0 ? '右键查看行操作' : undefined"
-        @contextmenu="onCardContextMenu($event, row)">
-        <el-checkbox v-if="currentShowCheckbox" class="yk-table__list-item-checkbox"
-          :model-value="isRowSelected(row)"
-          @change="onCardCheck(row, $event)" />
-        <div class="yk-table__list-item-body">
-          <slot name="list" :row="row" :index="index">
-            <pre class="yk-table__list-item-json">{{ JSON.stringify(row, null, 2) }}</pre>
-          </slot>
-        </div>
-      </div>
-      <!-- 空数据提示：与表格视图共享 #empty 插槽；未提供插槽时回落 el-empty「暂无数据」 -->
-      <template v-if="!viewLoading && rows.length === 0">
-        <slot v-if="$slots.empty" name="empty" />
-        <el-empty v-else description="暂无数据" />
-      </template>
-      <!-- 加载遮罩：三种视图共用 #loading 插槽；未提供插槽时渲染内置 spinner -->
-      <transition name="yk-loading-fade">
-        <div v-if="viewLoading" class="yk-table__loading-mask">
-          <slot name="loading">
-            <span class="yk-table__loading-spinner" aria-label="加载中" />
-          </slot>
-        </div>
-      </transition>
-    </div>
-
-    <!-- 卡片/列表视图行操作右键菜单：teleport 到 body 避免被容器裁切；
-         透明遮罩捕获菜单外点击/右键以关闭，Esc 同样关闭 -->
-    <teleport to="body">
-      <template v-if="cardMenu">
-        <div class="yk-table__menu-mask" @click="cardMenu = null"
-          @contextmenu.prevent="cardMenu = null" />
-        <ul class="yk-table__context-menu" :style="{ left: `${cardMenu.x}px`, top: `${cardMenu.y}px` }">
-          <li v-for="action in cardMenuActions" :key="action.name" class="yk-table__context-menu-item"
-            :class="{ 'is-disabled': !isEnabled(action, cardMenu.row) }"
-            @click="isEnabled(action, cardMenu.row) && onCardMenuAction(action)">
-            <component v-if="action.icon" :is="action.icon" class="yk-table__context-menu-icon" />
-            {{ action.desc }}
-          </li>
-        </ul>
-      </template>
-    </teleport>
+    <!-- 卡片/列表视图行操作右键菜单：渲染委托 ContextMenu 组件（teleport 到 body）。
+         菜单项可见性经 cardMenuActions（visibleActions 过滤）传入，可用性经 isEnabled 判断；
+         点选 emit select → onCardMenuAction 执行；点遮罩/外部 emit close → cardMenu 置空。
+         Esc 关闭仍由本组件 onCardMenuKeydown 处理 -->
+    <ContextMenu :menu="cardMenu" :actions="cardMenuActions" :is-enabled="isEnabled"
+      @close="cardMenu = null" @select="onCardMenuAction" />
 
     <!-- 底部栏：左侧 footer 插槽（占剩余空间，可放统计/自定义内容）+ 右侧分页组件。
          align-items:center 使分页垂直居中对齐左侧插槽；插槽内容过高时撑大底部栏高度。
@@ -655,94 +610,25 @@ const tableApi: TableApi = {
 </template>
 
 <style scoped>
-/* ---------------- 卡片视图 ---------------- */
-.yk-table__cards {
-  display: grid;
-  /* 自适应列宽：容器够宽时一行多张，窄屏自动降为单列 */
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 12px;
-  /* 加载遮罩始终有可挂载的高度，避免空容器遮罩塌陷 */
-  min-height: 120px;
-  /* 自制 loading 遮罩的定位上下文（替代原 v-loading 自动追加的 relative） */
-  position: relative;
-}
-
-.yk-table__card {
-  position: relative;
-  padding: 12px 14px;
-  border: 1px solid var(--el-border-color, #dcdfe6);
-  border-radius: 6px;
-  background: var(--el-bg-color, #fff);
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.yk-table__card.is-selected {
-  border-color: var(--el-color-primary, #409eff);
-  /* inset 光晕勾边，比改 border-width 更不引发布局位移 */
-  box-shadow: 0 0 0 1px var(--el-color-primary, #409eff) inset;
-}
-
-/* 配置了行操作的卡片：右键可弹操作菜单 */
-.yk-table__card.has-actions {
-  cursor: context-menu;
-}
-
-/* ---------------- 列表视图 ---------------- */
-.yk-table__list {
+/* ---------------- 根容器：flex 纵向，支持「占满父容器 → 内容滚动 + 分页固定」 ---------------- */
+/* 默认无高度时行为不变（内容多高就多高）。当外部给 .yk-table 设高度（如 height:100%）时，
+   view-area 经 flex:1 撑满剩余空间并滚动，footer 固定底部不被压缩。 */
+.yk-table {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  /* 加载遮罩始终有可挂载的高度，避免空容器遮罩塌陷 */
-  min-height: 120px;
-  /* 自制 loading 遮罩的定位上下文（替代原 v-loading 自动追加的 relative） */
+}
+
+/* ---------------- 视图区域 + 加载遮罩（三视图统一由 Table 渲染） ---------------- */
+/* view-area 为加载遮罩提供定位上下文；三种视图（表格/卡片/列表）二选一在此区域内渲染。
+   flex:1 + min-height:0 让它占满 .yk-table 剩余高度并可收缩滚动；overflow:auto 在内容超出时出滚动条 */
+.yk-table__view-area {
   position: relative;
-}
-
-.yk-table__list-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 14px;
-  border: 1px solid var(--el-border-color, #dcdfe6);
-  border-radius: 6px;
-  background: var(--el-bg-color, #fff);
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-.yk-table__list-item.is-selected {
-  border-color: var(--el-color-primary, #409eff);
-  /* inset 光晕勾边，与卡片选中态一致，且不引发布局位移 */
-  box-shadow: 0 0 0 1px var(--el-color-primary, #409eff) inset;
-}
-
-/* 配置了行操作的列表行：右键可弹操作菜单（与卡片共用） */
-.yk-table__list-item.has-actions {
-  cursor: context-menu;
-}
-
-.yk-table__list-item-checkbox {
-  flex-shrink: 0;
-}
-
-/* 行内容占满剩余宽度；min-width:0 允许插槽内容内部收缩/截断而不撑破行 */
-.yk-table__list-item-body {
   flex: 1;
-  min-width: 0;
-}
-
-/* JSON 兜底样式：与卡片视图的 yk-table__card-json 一致 */
-.yk-table__list-item-json {
-  margin: 0;
-  max-height: 160px;
+  min-height: 0;
   overflow: auto;
-  font-size: 12px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-all;
 }
 
-/* ---------------- 加载遮罩（三种视图共用，#loading 插槽可自定义内容） ---------------- */
-/* 表格视图的外层包裹：为遮罩提供定位上下文 */
+/* 表格视图的外层包裹（仅表格视图用；卡片/列表视图的容器在其各自组件内） */
 .yk-table__table-wrap {
   position: relative;
 }
@@ -785,85 +671,12 @@ const tableApi: TableApi = {
   opacity: 0;
 }
 
-/* 透明遮罩：铺满视口，捕获菜单外的点击/右键以关闭菜单 */
-.yk-table__menu-mask {
-  position: fixed;
-  inset: 0;
-  z-index: 2000;
-}
-
-.yk-table__context-menu {
-  position: fixed;
-  z-index: 2001;
-  box-sizing: border-box;
-  min-width: 120px;
-  margin: 4px 0;
-  padding: 4px 0;
-  list-style: none;
-  background: var(--el-bg-color-overlay, #fff);
-  border: 1px solid var(--el-border-color-light, #e4e7ed);
-  border-radius: 4px;
-  box-shadow: var(--el-box-shadow-light, 0 0 12px rgba(0, 0, 0, 0.12));
-}
-
-.yk-table__context-menu-item {
-  padding: 0 16px;
-  font-size: 14px;
-  line-height: 34px;
-  color: var(--el-text-color-regular, #606266);
-  white-space: nowrap;
-  cursor: pointer;
-}
-
-.yk-table__context-menu-item:hover {
-  background: var(--el-fill-color-light, #f5f7fa);
-  color: var(--el-color-primary, #409eff);
-}
-
-.yk-table__context-menu-item.is-disabled {
-  color: var(--el-disabled-text-color, #a8abb2);
-  cursor: not-allowed;
-}
-
-.yk-table__context-menu-item.is-disabled:hover {
-  background: transparent;
-  color: var(--el-disabled-text-color, #a8abb2);
-}
-
-/* 右键菜单项图标：stroke 跟随 li 的 color（currentColor），hover 变蓝 / disabled 变灰自动联动 */
-.yk-table__context-menu-icon {
-  margin-right: 6px;
-  vertical-align: middle;
-}
-
-.yk-table__card-checkbox {
-  position: absolute;
-  top: 10px;
-  right: 12px;
-  z-index: 1;
-}
-
-.yk-table__card-json {
-  /* 右侧给悬浮 checkbox 留位 */
-  margin: 0;
-  padding-right: 24px;
-  max-height: 260px;
-  overflow: auto;
-  font-size: 12px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-break: break-all;
-}
-
-/* 空态占满整行，而非挤进单列格子 */
-.yk-table__cards :deep(.el-empty) {
-  grid-column: 1 / -1;
-}
-
-/* 底部栏：左侧 footer 插槽 + 右侧分页，flex 布局；分页垂直居中对齐左侧插槽内容 */
+/* 底部栏：左侧 footer 插槽 + 右侧分页，flex 布局；分页垂直居中对齐左侧插槽内容。
+   flex-shrink:0 保证占满父容器时 footer 不被压缩，始终固定在底部可见 */
 .yk-table__footer {
   display: flex;
   align-items: center;
+  flex-shrink: 0;
   margin-top: 12px;
   gap: 12px;
 }
