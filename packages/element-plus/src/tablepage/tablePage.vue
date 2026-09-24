@@ -128,47 +128,47 @@ defineExpose({
 </script>
 
 <template>
+  <!-- 三段直接作为 .yk-table-page 的 flex 子项，class 经 Vue attrs 继承落到各组件根元素：
+       filterPanel/commandBar flex-shrink:0 固定不被压缩，table flex:1 + min-height:0 撑满剩余。
+       table 高度被父容器约束后，其内部 view-area 出滚动条、footer 分页固定底部。 -->
   <div class="yk-table-page">
-    <div class="yk-table-page__filter">
-      <YsFilterPanel
-        ref="filterPanelRef"
-        v-bind="filterPanelProps"
-        @search="onSearch"
-        @reset="onReset"
-        @update:quick-queries="emit('update:quickQueries', $event)"
-      >
-        <slot />
-      </YsFilterPanel>
-    </div>
+    <YsFilterPanel
+      ref="filterPanelRef"
+      class="yk-table-page__filter"
+      v-bind="filterPanelProps"
+      @search="onSearch"
+      @reset="onReset"
+      @update:quick-queries="emit('update:quickQueries', $event)"
+    >
+      <slot />
+    </YsFilterPanel>
 
-    <div class="yk-table-page__command">
-      <YsCommandBar
-        :actions="props.actions"
-        :table="tableRef"
-        :show-action-menu-button="props.showActionMenuButton"
-      >
-        <template v-if="$slots['command-bar']" #default>
-          <slot name="command-bar" />
-        </template>
-      </YsCommandBar>
-    </div>
+    <YsCommandBar
+      class="yk-table-page__command"
+      :actions="props.actions"
+      :table="tableRef"
+      :show-action-menu-button="props.showActionMenuButton"
+    >
+      <template v-if="$slots['command-bar']" #default>
+        <slot name="command-bar" />
+      </template>
+    </YsCommandBar>
 
-    <div class="yk-table-page__table">
-      <YsTable
-        ref="tableRef"
-        v-bind="tableProps"
-        @data-loaded="emit('data-loaded', $event)"
-        @update:view-mode="emit('update:viewMode', $event)"
-        @update:show-checkbox="emit('update:showCheckbox', $event)"
-        @update:column-resizable="emit('update:columnResizable', $event)"
-      >
-        <template v-if="$slots.card" #card="scope"><slot name="card" v-bind="scope" /></template>
-        <template v-if="$slots.list" #list="scope"><slot name="list" v-bind="scope" /></template>
-        <template v-if="$slots.empty" #empty="scope"><slot name="empty" v-bind="scope" /></template>
-        <template v-if="$slots.loading" #loading="scope"><slot name="loading" v-bind="scope" /></template>
-        <template v-if="$slots.footer" #footer="scope"><slot name="footer" v-bind="scope" /></template>
-      </YsTable>
-    </div>
+    <YsTable
+      ref="tableRef"
+      class="yk-table-page__table"
+      v-bind="tableProps"
+      @data-loaded="emit('data-loaded', $event)"
+      @update:view-mode="emit('update:viewMode', $event)"
+      @update:show-checkbox="emit('update:showCheckbox', $event)"
+      @update:column-resizable="emit('update:columnResizable', $event)"
+    >
+      <template v-if="$slots.card" #card="scope"><slot name="card" v-bind="scope" /></template>
+      <template v-if="$slots.list" #list="scope"><slot name="list" v-bind="scope" /></template>
+      <template v-if="$slots.empty" #empty="scope"><slot name="empty" v-bind="scope" /></template>
+      <template v-if="$slots.loading" #loading="scope"><slot name="loading" v-bind="scope" /></template>
+      <template v-if="$slots.footer" #footer="scope"><slot name="footer" v-bind="scope" /></template>
+    </YsTable>
   </div>
 </template>
 
@@ -187,9 +187,5 @@ defineExpose({
 .yk-table-page__table {
   flex: 1;
   min-height: 0;
-}
-
-.yk-table-page__table :deep(.yk-table) {
-  height: 100%;
 }
 </style>

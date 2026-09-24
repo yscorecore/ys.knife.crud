@@ -32,6 +32,7 @@ import AdvancedFilterPanelPage from "./pages/filter/AdvancedFilterPanelPage.vue"
 import SwitchableFilterPage from "./pages/filter/SwitchableFilterPage.vue";
 import SingleLineFilterPage from "./pages/filter/SingleLineFilterPage.vue";
 import TablePageDemo from "./pages/tablePage/TablePageDemo.vue";
+import TablePageFillHeightDemo from "./pages/tablePage/TablePageFillHeightDemo.vue";
 
 /**
  * Demo 页面注册表：导航按钮与 App 动态渲染共用的唯一数据源。
@@ -183,6 +184,11 @@ export const demoPages = [
     id: "table-page",
     label: "查询+命令+表格三合一（YsTablePage 自动联动）",
     component: TablePageDemo,
+  },
+  {
+    id: "table-page-fill-height",
+    label: "YsTablePage 占满高度（内容滚动 + 分页固定）",
+    component: TablePageFillHeightDemo,
   },
 ] as const satisfies readonly DemoPageDef[];
 

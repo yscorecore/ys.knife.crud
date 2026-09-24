@@ -33,13 +33,21 @@ const { loadCustomConfigFun, saveCustomConfigFun } = useLocalCustomConfig(
 const exportorFunc = createExcelJsExportApiFunc();
 
 /**
- * 解析单条件 FilterInfo.toString()（"name contains VALUE"）中的 contains 值。
+ * 解析单条件 FilterInfo.toString()（`name contains "VALUE"`）中的 contains 值。
  * core 未公开 FilterInfo 求值器，demo 仅演示简单模式姓名过滤——真实项目里 dataFun
  * 通常把 filter 透传给后端，不在前端求值。
+ * 注意：FilterInfo 的右值是 Constant，其 toString 用 JSON.stringify 包裹
+ * （字符串值会带双引号），这里用 JSON.parse 反解一次还原原始值。
  */
 function extractContains(s: string): string {
   const m = /contains\s+(.+)$/i.exec(s);
-  return m?.[1]?.trim() ?? "";
+  const raw = m?.[1]?.trim() ?? "";
+  try {
+    const parsed = JSON.parse(raw);
+    return typeof parsed === "string" ? parsed : raw;
+  } catch {
+    return raw;
+  }
 }
 
 /**
