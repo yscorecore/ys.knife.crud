@@ -24,12 +24,14 @@ import CustomSelectionBarTablePage from "./pages/table/CustomSelectionBarTablePa
 import CustomEntryButtonsTablePage from "./pages/table/CustomEntryButtonsTablePage.vue";
 import CardViewTablePage from "./pages/table/CardViewTablePage.vue";
 import LoadingTablePage from "./pages/table/LoadingTablePage.vue";
+import FillHeightTablePage from "./pages/table/FillHeightTablePage.vue";
 import AdminLayoutPage from "./pages/table/AdminLayoutPage.vue";
 import AdminExternalSearchPage from "./pages/table/AdminExternalSearchPage.vue";
 import FilterPanelPage from "./pages/filter/FilterPanelPage.vue";
 import AdvancedFilterPanelPage from "./pages/filter/AdvancedFilterPanelPage.vue";
 import SwitchableFilterPage from "./pages/filter/SwitchableFilterPage.vue";
 import SingleLineFilterPage from "./pages/filter/SingleLineFilterPage.vue";
+import TablePageDemo from "./pages/tablePage/TablePageDemo.vue";
 
 /**
  * Demo 页面注册表：导航按钮与 App 动态渲染共用的唯一数据源。
@@ -143,6 +145,11 @@ export const demoPages = [
     component: LoadingTablePage,
   },
   {
+    id: "table-fill-height",
+    label: "占满容器高度（内容滚动 + 分页固定）",
+    component: FillHeightTablePage,
+  },
+  {
     id: "table-admin-layout",
     label: "管理系统布局（功能树 + 主面板选项卡）",
     component: AdminLayoutPage,
@@ -171,6 +178,11 @@ export const demoPages = [
     id: "filter-single-line",
     label: "搜索面板单行模式（展开/折叠 + 全功能表格）",
     component: SingleLineFilterPage,
+  },
+  {
+    id: "table-page",
+    label: "查询+命令+表格三合一（YsTablePage 自动联动）",
+    component: TablePageDemo,
   },
 ] as const satisfies readonly DemoPageDef[];
 
