@@ -49,6 +49,15 @@ const props = defineProps({
    * TableApi.setColumnResizable 切换（组件内部维护状态，同时照常派发 update 事件）。
    */
   columnResizable: { type: Boolean, default: true },
+  /**
+   * 是否锁定表头（sticky header），默认 false。仅表格视图生效：当内容区出现纵向
+   * 滚动条时，表头粘在视图区顶部始终可见，不随内容滚走。实现上是给 el-table 的
+   * .el-table__header-wrapper 加 position:sticky（table-layout 默认 fixed 下该节点独立
+   * 渲染）。卡片 / 列表视图无表头，不受影响。
+   * 受控与非受控皆可：用 v-model:sticky-header 时由父级驱动；不绑定时可经
+   * TableApi.setStickyHeader 切换（组件内部维护状态，同时照常派发 update 事件）。
+   */
+  stickyHeader: { type: Boolean, default: false },
   /** 加载自定义配置（含列设置与用户默认分页大小；返回 null 按空配置处理） */
   loadCustomConfigFun: { type: Function as PropType<NonNullable<CoreTableProps["loadCustomConfigFun"]>>, required: false },
   /** 保存自定义配置（含列设置与用户默认分页大小） */
@@ -83,6 +92,8 @@ const emit = defineEmits<{
   (e: "update:showCheckbox", show: boolean): void;
   /** 列宽拖动开关切换时触发，配合 columnResizable prop 做 v-model:column-resizable */
   (e: "update:columnResizable", resizable: boolean): void;
+  /** 表头锁定开关切换时触发，配合 stickyHeader prop 做 v-model:sticky-header */
+  (e: "update:stickyHeader", sticky: boolean): void;
 }>();
 
 /* ---------------- 默认状态（useDefault） ----------------
@@ -343,6 +354,28 @@ function setColumnResizable(resizable: boolean): void {
 }
 
 /**
+ * 内部实际生效的表头锁定开关，模式与 currentColumnResizable 一致：
+ * - 父级用 v-model:sticky-header（受控）：set 时 emit，父级回写 prop，watch 再同步回来；
+ * - 非受控：经 TableApi.setStickyHeader 直接改本地态即可生效，同时照常 emit。
+ */
+const innerStickyHeader = ref(props.stickyHeader);
+watch(() => props.stickyHeader, (sticky) => {
+  innerStickyHeader.value = sticky;
+});
+const currentStickyHeader = computed<boolean>({
+  get: () => innerStickyHeader.value,
+  set: (sticky) => {
+    innerStickyHeader.value = sticky;
+    emit("update:stickyHeader", sticky);
+  },
+});
+
+/** TableApi 入口：切换表头锁定开关 */
+function setStickyHeader(sticky: boolean): void {
+  currentStickyHeader.value = sticky;
+}
+
+/**
  * 父组件已提供的插槽名列表。slots 是响应式 proxy，Object.keys 在 computed 内
  * 调用会被追踪；外部菜单据此决定「卡片 / 列表视图」入口是否显示
  *（没提供 #card/#list 插槽时切过去只有 JSON 兜底，不应暴露入口）。
@@ -445,6 +478,7 @@ const exposed = {
   viewMode: currentViewMode,
   selectable: currentShowCheckbox,
   columnResizable: currentColumnResizable,
+  stickyHeader: currentStickyHeader,
   slotNames,
   selectedRows,
   rows,
@@ -453,6 +487,7 @@ const exposed = {
   setViewMode,
   setSelectable,
   setColumnResizable,
+  setStickyHeader,
   clearSelection,
   selectAllOnPage,
   invertSelectionOnPage,
@@ -475,6 +510,7 @@ const tableApi: TableApi = {
   get viewMode() { return currentViewMode.value },
   get selectable() { return currentShowCheckbox.value },
   get columnResizable() { return currentColumnResizable.value },
+  get stickyHeader() { return currentStickyHeader.value },
   get slotNames() { return slotNames.value },
   get selectedRows() { return selectedRows.value },
   get rows() { return rows.value },
@@ -483,6 +519,7 @@ const tableApi: TableApi = {
   setViewMode,
   setSelectable,
   setColumnResizable,
+  setStickyHeader,
   clearSelection,
   selectAllOnPage,
   invertSelectionOnPage,
@@ -502,7 +539,8 @@ const tableApi: TableApi = {
     <div class="yk-table__view-area">
       <!-- 表格视图：v-if 与卡片视图二选一；切回本视图后由 useSelection.restoreSelection
            把跨页累计选中恢复到勾选列（选中状态以 rowKey Map 为准，不再用 reserve-selection） -->
-      <div v-if="currentViewMode === 'table'" class="yk-table__table-wrap">
+      <div v-if="currentViewMode === 'table'" class="yk-table__table-wrap"
+        :class="{ 'yk-table__table-wrap--sticky-header': currentStickyHeader }">
         <el-table ref="tableEl" :data="rows"
           :row-key="rowKey" border @selection-change="onSelectionChange" @header-dragend="onColumnResize">
           <!-- 空数据提示：使用者经 #empty 插槽自定义（表格/卡片/列表三种视图共享，见下方两个视图分支）；
@@ -631,6 +669,26 @@ const tableApi: TableApi = {
 /* 表格视图的外层包裹（仅表格视图用；卡片/列表视图的容器在其各自组件内） */
 .yk-table__table-wrap {
   position: relative;
+}
+
+/* 表头锁定：view-area 纵向滚动时表头粘在顶部始终可见。el-table 在 table-layout:fixed
+   下把 .el-table__header-wrapper 独立渲染，sticky 到最近的滚动祖先。
+   关键坑：Element Plus 自带 .el-table { overflow:hidden }，使 .el-table 成为 header-wrapper
+   的最近滚动祖先——但 .el-table 自身不滚动（height:fit-content），导致 sticky 被困在内部失效。
+   必须把 .el-table 的 overflow 改回 visible，sticky 才能向上逃到 .yk-table__view-area
+   （fill-height 场景下真正的滚动容器）。.el-table__body-wrapper 自身仍 overflow:hidden，
+   内部行内容不会因此溢出。补不透明背景避免滚动内容从表头后方透出；
+   z-index 低于加载遮罩（10），加载时遮罩盖住表头。
+   注意：本实现仅支持「表格占满固定高度容器、view-area 内部滚动」场景；
+   若表格随页面滚动（view-area 不滚动），需另行处理。 */
+.yk-table__table-wrap--sticky-header :deep(.el-table) {
+  overflow: visible;
+}
+.yk-table__table-wrap--sticky-header :deep(.el-table__header-wrapper) {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--el-table-header-bg-color, var(--el-fill-color-light, #f5f7fa));
 }
 
 .yk-table__loading-mask {

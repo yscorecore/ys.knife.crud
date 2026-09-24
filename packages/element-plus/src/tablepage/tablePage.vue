@@ -29,6 +29,7 @@ const props = defineProps({
   pageSizes: { type: Array as PropType<number[]>, default: () => [10, 20, 50, 100] },
   showCheckbox: { type: Boolean, default: false },
   columnResizable: { type: Boolean, default: true },
+  stickyHeader: { type: Boolean, default: false },
   loadCustomConfigFun: { type: Function as PropType<NonNullable<CoreTableProps["loadCustomConfigFun"]>>, required: false },
   saveCustomConfigFun: { type: Function as PropType<NonNullable<CoreTableProps["saveCustomConfigFun"]>>, required: false },
   exportPageSize: { type: Number, default: 1000 },
@@ -61,6 +62,7 @@ const emit = defineEmits<{
   (e: "update:viewMode", mode: ViewMode): void;
   (e: "update:showCheckbox", show: boolean): void;
   (e: "update:columnResizable", resizable: boolean): void;
+  (e: "update:stickyHeader", sticky: boolean): void;
 }>();
 
 // 用 shallowRef 而非 ref：ref 的 UnwrapRef 经 keyof 会丢掉 FilterInfo 的 protected 成员，
@@ -86,6 +88,7 @@ const tableProps = computed(() => ({
   pageSizes: props.pageSizes,
   showCheckbox: props.showCheckbox,
   columnResizable: props.columnResizable,
+  stickyHeader: props.stickyHeader,
   loadCustomConfigFun: props.loadCustomConfigFun,
   saveCustomConfigFun: props.saveCustomConfigFun,
   exportPageSize: props.exportPageSize,
@@ -161,7 +164,8 @@ defineExpose({
       @data-loaded="emit('data-loaded', $event)"
       @update:view-mode="emit('update:viewMode', $event)"
       @update:show-checkbox="emit('update:showCheckbox', $event)"
-      @update:column-resizable="emit('update:columnResizable', $event)"
+        @update:column-resizable="emit('update:columnResizable', $event)"
+        @update:sticky-header="emit('update:stickyHeader', $event)"
     >
       <template v-if="$slots.card" #card="scope"><slot name="card" v-bind="scope" /></template>
       <template v-if="$slots.list" #list="scope"><slot name="list" v-bind="scope" /></template>

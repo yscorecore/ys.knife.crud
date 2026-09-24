@@ -29,13 +29,14 @@ const viewMode = ref<ViewMode>("table");
       </div>
       <p class="fill-page__hint">
         ys-table 设 <code>height: 100%</code> 占满父容器：表格/卡片/列表内容区超出时出现滚动条，
-        底部分页导航始终固定可见不被滚走。切换三种视图对比滚动行为。200 行数据 / 每页 20 条 = 10 页。
+        底部分页导航始终固定可见不被滚走。开启 <code>sticky-header</code> 后，表格视图滚动时列头锁定在顶部。
+        切换三种视图对比滚动行为。200 行数据 / 每页 20 条 = 10 页。
       </p>
     </header>
 
     <div class="fill-page__body">
       <ys-table :meta-fun="metaFun" :data-fun="dataFun" v-model:view-mode="viewMode"
-        :page-size="20" show-checkbox style="height: 100%" />
+        :page-size="20" show-checkbox sticky-header style="height: 100%" />
     </div>
   </div>
 </template>

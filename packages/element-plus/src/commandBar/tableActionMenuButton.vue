@@ -3,7 +3,7 @@ import type { TableApi } from "@ys.knife.crud/core";
 
 /**
  * 表格操作菜单按钮（图标按钮 + 下拉菜单）：
- * 把「刷新 / 列设置 / 导出 Excel / 视图切换 / 选择行开关 / 列宽拖动开关」
+ * 把「刷新 / 列设置 / 导出 Excel / 视图切换 / 选择行开关 / 列宽拖动开关 / 锁定表头开关」
  * 收敛到一个纯图标按钮，全部命令经 TableApi 驱动。菜单本身无状态——✓ 标记在菜单
  * 弹出渲染时直接读 table 的当前状态（TableApi getter，始终反映表格实际值），
  * 切换调对应 setter（受控 / 非受控模式均生效）。
@@ -44,6 +44,9 @@ function onCommand(command: string): void {
       break;
     case "toggle-column-resize":
       props.table.setColumnResizable(!props.table.columnResizable);
+      break;
+    case "toggle-sticky-header":
+      props.table.setStickyHeader(!props.table.stickyHeader);
       break;
   }
 }
@@ -115,6 +118,10 @@ function onCommand(command: string): void {
         <!-- 列宽拖动开关：关闭后表头列边界不可拖（仅表格视图有意义，开关状态对表格视图常驻生效） -->
         <el-dropdown-item command="toggle-column-resize">
           <span class="yk-table-action-menu-button__check">{{ table.columnResizable ? "✓" : "" }}</span>列宽拖动
+        </el-dropdown-item>
+        <!-- 表头锁定开关：开启后内容区滚动时表头粘在顶部始终可见（仅表格视图有意义） -->
+        <el-dropdown-item command="toggle-sticky-header">
+          <span class="yk-table-action-menu-button__check">{{ table.stickyHeader ? "✓" : "" }}</span>锁定表头
         </el-dropdown-item>
       </el-dropdown-menu>
     </template>

@@ -25,6 +25,15 @@ export interface ColumnResizeProps {
 }
 
 /**
+ * 表头锁定相关 props
+ */
+export interface StickyHeaderProps {
+    /** 是否锁定表头（内容区滚动时表头粘在顶部始终可见），默认 false。
+     *  仅表格视图生效；受控（v-model:sticky-header）与非受控模式均可切换 */
+    readonly stickyHeader?: boolean;
+}
+
+/**
  * 表格的展示形态：
  * - table：传统表格视图（默认）
  * - card：卡片网格视图（卡片内容可经 #card 插槽自定义，默认 JSON 序列化展示整行）
@@ -64,7 +73,7 @@ export interface DefaultProps {
 
 
 /** TableProps 是组件的「输入契约」：父组件通过 props 传入 */
-export interface TableProps extends RowActionsProps, SelectionProps, ColumnResizeProps, ViewProps, CustomConfigProps, ExportExcelProps, DefaultProps {
+export interface TableProps extends RowActionsProps, SelectionProps, ColumnResizeProps, StickyHeaderProps, ViewProps, CustomConfigProps, ExportExcelProps, DefaultProps {
 
 }
 
@@ -92,6 +101,8 @@ export interface TableApi {
     readonly selectable: boolean
     /** 当前是否允许拖动表头列边界调整列宽（受控 / 非受控模式下均反映实际值） */
     readonly columnResizable: boolean
+    /** 当前是否锁定表头（内容区滚动时表头粘在顶部；受控 / 非受控模式下均反映实际值） */
+    readonly stickyHeader: boolean
     /**
      * 父组件当前已提供的插槽名列表（如 "card" / "list"）。
      * 外部操作菜单据此决定是否显示「卡片视图 / 列表视图」入口——
@@ -125,6 +136,11 @@ export interface TableApi {
      * 与非受控模式均可：内部更新实际状态并照常派发 update:columnResizable。
      */
     setColumnResizable(resizable: boolean): void
+    /**
+     * 切换表头锁定开关（内容区滚动时表头是否粘在顶部）。受控（v-model:sticky-header）
+     * 与非受控模式均可：内部更新实际状态并照常派发 update:stickyHeader。
+     */
+    setStickyHeader(sticky: boolean): void
     /** 清空全部选中（含其他页的选中） */
     clearSelection(): void
     /** 选中当前页所有行（其他页已选中不受影响），供外部自定义选中提示条调用 */
