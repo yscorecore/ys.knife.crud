@@ -12,7 +12,8 @@ import YsFilterItemLayout from "./filter/filterItemLayout.vue";
 import YsAdvancedFilterPanel from "./advancedFilter/advancedFilterPanel.vue";
 import YsAdvancedValueEditor from "./advancedFilter/advancedValueEditor.vue";
 import YsAdvancedConditionGroup from "./advancedFilter/advancedConditionGroup.vue";
-import YsTablePage from "./tablePage/tablePage.vue";
+import YsTablePage from "./tablepage/tablePage.vue";
+import YsImportExcel from "./importExcel/importExcel.vue";
 
 export {
   YsTable,
@@ -21,6 +22,7 @@ export {
   YsMainPanel,
   YsFilterPanel,
   YsTablePage,
+  YsImportExcel,
   YsTextFilterItem,
   YsDateFilterItem,
   YsDateRangeFilterItem,
@@ -60,12 +62,13 @@ export type YsAdvancedFilterPanelProps = InstanceType<typeof YsAdvancedFilterPan
 export type YsAdvancedValueEditorProps = InstanceType<typeof YsAdvancedValueEditor>["$props"];
 export type YsAdvancedConditionGroupProps = InstanceType<typeof YsAdvancedConditionGroup>["$props"];
 export type YsTablePageProps = InstanceType<typeof YsTablePage>["$props"];
+export type YsImportExcelProps = InstanceType<typeof YsImportExcel>["$props"];
 
 // 高级查询面板的已存查询预设类型（v-model:quick-queries / v-model:saved-queries 用）
 export type { SavedQuery } from "./advancedFilter/advancedFilterContext";
 
 // YsTablePage 的增强 dataFun 签名：(req, filter, signal) => Promise<PagedList>
-export type { TablePageDataFun } from "./tablePage/tablePageTypes";
+export type { TablePageDataFun } from "./tablepage/tablePageTypes";
 
 /**
  * Vue 插件：app.use(YsCrudElementPlus) 全局注册后，模板里可直接写
@@ -90,6 +93,7 @@ const YsCrudElementPlus: Plugin = {
     app.component("YsAdvancedValueEditor", YsAdvancedValueEditor);
     app.component("YsAdvancedConditionGroup", YsAdvancedConditionGroup);
     app.component("YsTablePage", YsTablePage);
+    app.component("YsImportExcel", YsImportExcel);
   },
 };
 

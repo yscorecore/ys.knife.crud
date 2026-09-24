@@ -12,6 +12,9 @@ export * from "./table/selection";
 export * from "./table/customConfig";
 export * from "./table/exportExcel";
 
+// ---------------- Excel 导入（importExcel） ----------------
+export * from "./importExcel/importExcel";
+
 // ---------------- 主面板（mainPanel） ----------------
 export * from "./mainPanel/nodes";
 export * from "./mainPanel/tabs";

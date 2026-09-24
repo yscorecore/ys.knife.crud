@@ -33,6 +33,7 @@ import SwitchableFilterPage from "./pages/filter/SwitchableFilterPage.vue";
 import SingleLineFilterPage from "./pages/filter/SingleLineFilterPage.vue";
 import TablePageDemo from "./pages/tablePage/TablePageDemo.vue";
 import TablePageFillHeightDemo from "./pages/tablePage/TablePageFillHeightDemo.vue";
+import ImportExcelPage from "./pages/importExcel/ImportExcelPage.vue";
 
 /**
  * Demo 页面注册表：导航按钮与 App 动态渲染共用的唯一数据源。
@@ -189,6 +190,11 @@ export const demoPages = [
     id: "table-page-fill-height",
     label: "YsTablePage 占满高度（内容滚动 + 分页固定）",
     component: TablePageFillHeightDemo,
+  },
+  {
+    id: "import-excel",
+    label: "Excel 数据导入（选文件 + 校验状态 + 逐行处理）",
+    component: ImportExcelPage,
   },
 ] as const satisfies readonly DemoPageDef[];
 

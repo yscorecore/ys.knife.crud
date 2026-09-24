@@ -52,3 +52,5 @@ export * from "./enumOptionsSource";
 // advancedFilter.ts 混合导出（OPERATOR_LABELS/FIELD_TYPE_OPERATORS/推断函数是值，
 // AdvancedCondition/AdvancedCombinator/AdvancedFieldType 是类型）→ 用 export *
 export * from "./advancedFilter";
+// importData.ts 目前只有纯类型（interface/type）→ verbatimModuleSyntax 下必须用 export type *
+export type * from "./importData";

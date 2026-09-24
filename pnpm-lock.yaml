@@ -106,6 +106,9 @@ importers:
       '@ys.knife.crud/export-exceljs':
         specifier: workspace:*
         version: link:../export-exceljs
+      '@ys.knife.crud/import-exceljs':
+        specifier: workspace:*
+        version: link:../import-exceljs
       element-plus:
         specifier: ^2.7.0
         version: 2.14.5(vue@3.5.42(typescript@5.9.3))
@@ -127,6 +130,28 @@ importers:
         version: 2.2.12(typescript@5.9.3)
 
   packages/export-exceljs:
+    dependencies:
+      '@ys.knife.crud/core':
+        specifier: workspace:*
+        version: link:../core
+      exceljs:
+        specifier: ^4.4.0
+        version: 4.4.0
+    devDependencies:
+      '@types/node':
+        specifier: ^22.10.5
+        version: 22.20.2
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.1.3
+      tsup:
+        specifier: ^8.3.6
+        version: 8.5.1(postcss@8.5.28)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.3
+
+  packages/import-exceljs:
     dependencies:
       '@ys.knife.crud/core':
         specifier: workspace:*
