@@ -44,13 +44,12 @@ const columns: DataColumn[] = [
 /** ExcelJS 解析器（组件本身不绑定解析库，由外部注入） */
 const parser = createExcelJsImportParser();
 
-/** 模拟逐行调接口：随机耗时；编码以 E 开头的行返回失败，其余成功并带提示 */
+/** 模拟逐行调接口：随机耗时；编码以 E 开头的行抛错模拟处理失败 */
 const processor: ImportRowProcessor = async (data) => {
   await new Promise((resolve) => setTimeout(resolve, 250 + Math.random() * 400));
   if (String(data.code).startsWith("E")) {
     throw new Error(`编码 ${data.code} 已存在，请更换后重试`);
   }
-  return `已创建商品「${data.name}」× ${data.qty}`;
 };
 
 const lastSummary = ref<ImportProcessSummary | null>(null);

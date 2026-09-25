@@ -62,19 +62,19 @@ export interface ImportRow<T = Record<string, unknown>> {
     status: ImportRowStatus,
     /** 校验错误信息（status=invalid 时非空） */
     errors: string[],
-    /** 处理成功的返回提示，或处理失败的错误原因 */
+    /** 处理失败的错误原因（processor 抛出的 error.message） */
     message?: string,
 }
 
 /**
  * 逐行处理函数：对一行结构化数据执行业务操作（通常是调接口）。
- * - 正常结束：resolve；返回字符串时作为该行的成功提示
- * - 抛错 / reject：该行记为 failed，error.message 作为失败原因
+ * - resolve：该行记为 success
+ * - reject / 抛错：该行记为 failed，error.message 作为失败原因
  */
 export type ImportRowProcessor<T = Record<string, unknown>> = (
     data: T,
     row: ImportRow<T>,
-) => Promise<string | void> | string | void;
+) => Promise<void>;
 
 /** 解析后的一行原始数据（保留真实 Excel 行号，中间空行不会导致行号错位） */
 export interface ImportSheetRow {

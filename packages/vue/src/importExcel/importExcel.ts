@@ -257,11 +257,8 @@ export function useImportExcel({ columns, processor, parser }: UseImportExcelOpt
                 // 先让「处理中」状态渲染出来，再执行业务（多为异步接口）
                 await nextTick();
                 try {
-                    const message = await processRow(row.data, row);
+                    await processRow(row.data, row);
                     row.status = "success";
-                    if (typeof message === "string") {
-                        row.message = message;
-                    }
                     summary.success += 1;
                     progressSuccess.value += 1;
                 } catch (e) {

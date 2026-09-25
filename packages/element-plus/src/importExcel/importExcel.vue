@@ -10,11 +10,14 @@ import type {
   ImportRowProcessor,
   ImportRowStatus,
 } from "@ys.knife.crud/core";
+import ImportRowEditDialog from "./importRowEditDialog.vue";
+import { formatCell } from "./formatCell";
 
 /**
  * YsImportExcel —— Excel 数据导入组件。
  *
- * 流程：点击「选择 Excel 文件」（或外部经 ref 调 openFilePicker()）手动选文件
+ * 流程：点击「选择 Excel 文件」（或外部经 ref 调 openFilePicker()）手动选文件，
+ * 也可直接把 Excel 文件拖拽到组件上（拖入时显示遮罩提示）
  * → parser 解析第一个工作表 → 按 columns（position → name → alias）映射并逐行校验
  * → 表格展示全部行（不分页）：checkbox 列与行号列（数据序号，从 1 开始）固定在左侧，
  * 状态列固定在右侧，valid 行默认勾选、invalid 行禁止勾选
@@ -188,13 +191,35 @@ function openFilePicker(): void {
   fileInputRef.value?.click();
 }
 
-async function onFileChange(event: Event): Promise<void> {
-  const input = event.target as HTMLInputElement;
-  const file = input.files?.[0];
-  // 立即清空 value：否则选同一个文件不会再次触发 change
-  input.value = "";
-  if (!file) return;
+// ---------------- 文件加载：点击选择 + 拖拽放入，共用同一入口 ----------------
 
+/** 拖拽进入/离开在子元素间会冒泡成一对对事件，用计数器判定真实的拖入拖出 */
+const dragDepth = ref(0);
+const isDragging = computed(() => dragDepth.value > 0);
+
+/** 仅当拖拽的是文件时才响应（拖选文本等不出现遮罩） */
+function hasDraggedFiles(event: DragEvent): boolean {
+  return Array.from(event.dataTransfer?.types ?? []).includes("Files");
+}
+
+/** 校验扩展名是否在 accept（如 ".xlsx"，支持逗号分隔多个）范围内 */
+function isAcceptedFile(file: File): boolean {
+  const exts = props.accept
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+  if (exts.length === 0) return true;
+  const name = file.name.toLowerCase();
+  return exts.some((ext) => name.endsWith(ext));
+}
+
+/** 加载单个 Excel 文件（文件框 change 与拖拽 drop 共用） */
+async function handleFile(file: File): Promise<void> {
+  if (loading.value) return;
+  if (!isAcceptedFile(file)) {
+    ElMessage.error(`仅支持 ${props.accept} 格式的文件`);
+    return;
+  }
   try {
     const loaded = await loadFile(file);
     emit("loaded", loaded);
@@ -209,6 +234,39 @@ async function onFileChange(event: Event): Promise<void> {
   } catch (e) {
     ElMessage.error(e instanceof Error ? e.message : String(e));
   }
+}
+
+async function onFileChange(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const file = input.files?.[0];
+  // 立即清空 value：否则选同一个文件不会再次触发 change
+  input.value = "";
+  if (file) await handleFile(file);
+}
+
+function onDragEnter(event: DragEvent): void {
+  if (!hasDraggedFiles(event)) return;
+  dragDepth.value += 1;
+}
+
+function onDragOver(event: DragEvent): void {
+  if (!hasDraggedFiles(event)) return;
+  // 必须 preventDefault 才能触发 drop
+  event.preventDefault();
+  if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+}
+
+function onDragLeave(event: DragEvent): void {
+  if (!hasDraggedFiles(event)) return;
+  dragDepth.value = Math.max(0, dragDepth.value - 1);
+}
+
+function onDrop(event: DragEvent): void {
+  if (!hasDraggedFiles(event)) return;
+  event.preventDefault();
+  dragDepth.value = 0;
+  const file = event.dataTransfer?.files?.[0];
+  if (file) void handleFile(file);
 }
 
 function onSelectionChange(selected: ImportRow[]): void {
@@ -236,19 +294,6 @@ async function onStartProcessing(): Promise<void> {
   }
 }
 
-/** 单元格值展示：对象序列化，其余直接转字符串 */
-function formatCell(value: unknown): string {
-  if (value === null || value === undefined) return "";
-  if (typeof value === "object") {
-    try {
-      return JSON.stringify(value);
-    } catch {
-      return String(value);
-    }
-  }
-  return String(value);
-}
-
 // ---------------- 失败行的编辑 / 删除 ----------------
 
 /** 仅校验失败、处理失败的行允许编辑/删除；处理进行中统一禁用避免与串行处理互相干扰 */
@@ -258,48 +303,19 @@ function canEditRow(row: ImportRow): boolean {
 
 const editVisible = ref(false);
 const editingRow = ref<ImportRow | null>(null);
-/** 编辑表单（输入框统一为字符串，保存时再走各列 valueMapper 转换） */
-const editForm = ref<Record<string, string>>({});
-/** 本次保存的校验错误（仍有错误时弹窗不关闭，就地提示） */
-const editErrors = ref<string[]>([]);
 
 function startEdit(row: ImportRow): void {
   if (!canEditRow(row)) return;
   editingRow.value = row;
-  editErrors.value = [];
-  const form: Record<string, string> = {};
-  for (const col of props.columns) {
-    form[col.name] = formatCell(row.data[col.name]);
-  }
-  editForm.value = form;
   editVisible.value = true;
 }
 
-/** 保存编辑：重新走 valueMapper + validator；通过则翻为待处理并自动勾选 */
-async function onSaveEdit(): Promise<void> {
-  const row = editingRow.value;
-  if (!row) return;
-  const inputs: Record<string, unknown> = {};
-  for (const col of props.columns) {
-    inputs[col.name] = editForm.value[col.name] ?? "";
-  }
-  const { row: updated, errors } = saveRowEdit(row, inputs);
-  editErrors.value = errors;
-  if (errors.length > 0) return;
-
-  // 校验通过：关闭弹窗并同步 el-table 勾选（invalid 行此前是禁选未勾选状态）
-  editVisible.value = false;
-  editingRow.value = null;
+/** 弹窗内保存并校验通过：同步 el-table 勾选（invalid 行此前是禁选未勾选状态） */
+async function onRowSaved(updated: ImportRow): Promise<void> {
   emit("row-update", updated);
   await nextTick();
   tableRef.value?.toggleRowSelection(updated, true);
   ElMessage.success(`第 ${updated.rowNumber} 行已修正，可重新处理`);
-}
-
-function cancelEdit(): void {
-  editVisible.value = false;
-  editingRow.value = null;
-  editErrors.value = [];
 }
 
 async function onRemoveRow(row: ImportRow): Promise<void> {
@@ -322,7 +338,13 @@ defineExpose({ openFilePicker, startProcessing: onStartProcessing, clear });
 </script>
 
 <template>
-  <div class="yk-import-excel">
+  <div
+    class="yk-import-excel"
+    @dragenter="onDragEnter"
+    @dragover="onDragOver"
+    @dragleave="onDragLeave"
+    @drop="onDrop"
+  >
     <input
       ref="fileInputRef"
       class="yk-import-excel__file"
@@ -349,9 +371,9 @@ defineExpose({ openFilePicker, startProcessing: onStartProcessing, clear });
       </span>
 
       <div v-if="hasData" class="yk-import-excel__stats">
-        <span>共 {{ rows.length }} 行</span>
-        <span>已选 {{ selectedCount }}</span>
-        <span class="yk-import-excel__stat--danger">校验失败 {{ invalidCount }}</span>
+        <span class="yk-import-excel__stat">共 {{ rows.length }} 行</span>
+        <span class="yk-import-excel__stat">已选 {{ selectedCount }}</span>
+        <span class="yk-import-excel__stat yk-import-excel__stat--danger">校验失败 {{ invalidCount }}</span>
       </div>
     </div>
 
@@ -365,7 +387,7 @@ defineExpose({ openFilePicker, startProcessing: onStartProcessing, clear });
         class="yk-import-excel__progress-bar"
       />
       <span class="yk-import-excel__progress-meta">
-        成功 {{ progressSuccess }}<span class="yk-import-excel__stat--danger"> / 失败 {{ progressFailed }}</span>
+        成功 {{ progressSuccess }}<span class="yk-import-excel__danger-text"> / 失败 {{ progressFailed }}</span>
       </span>
       <span class="yk-import-excel__progress-eta">{{ etaText }}</span>
     </div>
@@ -416,8 +438,7 @@ defineExpose({ openFilePicker, startProcessing: onStartProcessing, clear });
             </div>
             <div
               v-else-if="(row as ImportRow).message"
-              class="yk-import-excel__msg"
-              :class="{ 'yk-import-excel__msg--danger': (row as ImportRow).status === 'failed' }"
+              class="yk-import-excel__msg yk-import-excel__msg--danger"
             >
               {{ (row as ImportRow).message }}
             </div>
@@ -428,9 +449,23 @@ defineExpose({ openFilePicker, startProcessing: onStartProcessing, clear });
           <template #default="{ row }">
             <template v-if="canEditRow(row as ImportRow)">
               <el-button link type="primary" size="small" @click="startEdit(row as ImportRow)">
+                <svg class="yk-import-excel__action-icon" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  aria-hidden="true">
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                </svg>
                 编辑
               </el-button>
               <el-button link type="danger" size="small" @click="onRemoveRow(row as ImportRow)">
+                <svg class="yk-import-excel__action-icon" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                  aria-hidden="true">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  <line x1="10" y1="11" x2="10" y2="17" />
+                  <line x1="14" y1="11" x2="14" y2="17" />
+                </svg>
                 删除
               </el-button>
             </template>
@@ -438,46 +473,47 @@ defineExpose({ openFilePicker, startProcessing: onStartProcessing, clear });
           </template>
         </el-table-column>
       </el-table>
-      <el-empty v-else description="请选择 Excel 文件加载数据" />
+      <!-- 初始空态：整块即投放区，点击等同「选择 Excel 文件」 -->
+      <div v-else class="yk-import-excel__empty" @click="openFilePicker">
+        <svg class="yk-import-excel__empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+          stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+          <path d="M12 18v-6" />
+          <polyline points="9.5 14.5 12 12l2.5 2.5" />
+        </svg>
+        <p class="yk-import-excel__empty-title">点击选择 Excel 文件，或将文件拖拽到此处</p>
+        <p class="yk-import-excel__empty-hint">支持 {{ props.accept }} 格式，首行需为表头</p>
+      </div>
     </div>
 
-    <!-- 失败行编辑弹窗：保存时按列定义重新转换/校验，通过后翻为待处理并勾选 -->
-    <el-dialog
-      v-model="editVisible"
-      :title="editingRow ? `编辑第 ${editingRow.rowNumber} 行` : '编辑数据行'"
-      width="480px"
-      append-to-body
-      :close-on-click-modal="false"
-    >
-      <el-alert
-        v-if="editErrors.length > 0"
-        class="yk-import-excel__edit-alert"
-        type="error"
-        :closable="false"
-        show-icon
-      >
-        <div v-for="(err, i) in editErrors" :key="i">{{ err }}</div>
-      </el-alert>
-      <el-form label-width="92px" @submit.prevent>
-        <el-form-item
-          v-for="col in props.columns"
-          :key="col.name"
-          :label="col.name"
-          :required="!col.optional"
-        >
-          <el-input v-model="editForm[col.name]" :placeholder="col.optional ? '可留空' : `请输入${col.name}`" />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="cancelEdit">取消</el-button>
-        <el-button type="primary" @click="onSaveEdit">保存并重新校验</el-button>
-      </template>
-    </el-dialog>
+    <!-- 文件拖入时的全屏遮罩提示（pointer-events:none，drop 仍落到根节点） -->
+    <div v-if="isDragging" class="yk-import-excel__drop-mask">
+      <div class="yk-import-excel__drop-tip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"
+          stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 15V3" />
+          <polyline points="7 8 12 3 17 8" />
+          <path d="M3 15v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4" />
+        </svg>
+        <span>松开鼠标，加载 Excel 文件</span>
+      </div>
+    </div>
+
+    <!-- 失败行编辑（独立子组件）：保存时按列定义重新转换/校验，通过后翻为待处理并勾选 -->
+    <ImportRowEditDialog
+      v-model:visible="editVisible"
+      :row="editingRow"
+      :columns="props.columns"
+      :saver="saveRowEdit"
+      @saved="onRowSaved"
+    />
   </div>
 </template>
 
 <style scoped>
 .yk-import-excel {
+  position: relative;
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -511,12 +547,25 @@ defineExpose({ openFilePicker, startProcessing: onStartProcessing, clear });
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px 12px;
-  color: #606266;
-  font-size: 0.9em;
+  gap: 4px 8px;
+  font-size: 0.88em;
 }
 
-.yk-import-excel__stat--danger,
+/* 统计项：圆角胶囊；失败项红底红字 */
+.yk-import-excel__stat {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #f4f4f5;
+  color: #606266;
+  white-space: nowrap;
+}
+
+.yk-import-excel__stat--danger {
+  background: #fef0f0;
+  color: #f56c6c;
+}
+
+.yk-import-excel__danger-text,
 .yk-import-excel__msg--danger {
   color: #f56c6c;
 }
@@ -552,8 +601,84 @@ defineExpose({ openFilePicker, startProcessing: onStartProcessing, clear });
   width: 100%;
 }
 
-.yk-import-excel__body .el-empty {
-  margin: auto;
+/* 初始空态：虚线投放区，点击/拖拽均可加载文件 */
+.yk-import-excel__empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1.5px dashed #c0ccda;
+  border-radius: 8px;
+  color: #909399;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background-color 0.2s;
+}
+
+.yk-import-excel__empty:hover {
+  border-color: #409eff;
+  color: #409eff;
+  background-color: rgba(64, 158, 255, 0.04);
+}
+
+.yk-import-excel__empty-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.yk-import-excel__empty-title {
+  margin: 4px 0 0;
+  font-size: 15px;
+  color: #606266;
+}
+
+.yk-import-excel__empty:hover .yk-import-excel__empty-title {
+  color: #409eff;
+}
+
+.yk-import-excel__empty-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #a8abb2;
+}
+
+/* 文件拖入遮罩：铺满组件，蓝色虚线框 + 提示，不拦截事件 */
+.yk-import-excel__drop-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(64, 158, 255, 0.08);
+  pointer-events: none;
+}
+
+.yk-import-excel__drop-tip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+  border: 2px dashed #409eff;
+  border-radius: 10px;
+  background: #fff;
+  color: #409eff;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.yk-import-excel__drop-tip svg {
+  width: 44px;
+  height: 44px;
 }
 
 /* 状态列允许错误信息换行完整展示（el-table 默认单行省略） */
@@ -592,7 +717,11 @@ defineExpose({ openFilePicker, startProcessing: onStartProcessing, clear });
   color: #c0c4cc;
 }
 
-.yk-import-excel__edit-alert {
-  margin-bottom: 12px;
+/* 行内操作按钮图标：14px 线性，currentColor 跟随按钮颜色 */
+.yk-import-excel__action-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  vertical-align: -2px;
 }
 </style>
