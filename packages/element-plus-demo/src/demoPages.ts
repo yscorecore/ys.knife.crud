@@ -34,6 +34,7 @@ import SingleLineFilterPage from "./pages/filter/SingleLineFilterPage.vue";
 import TablePageDemo from "./pages/tablePage/TablePageDemo.vue";
 import TablePageFillHeightDemo from "./pages/tablePage/TablePageFillHeightDemo.vue";
 import ImportExcelPage from "./pages/importExcel/ImportExcelPage.vue";
+import ImportExcelBatchPage from "./pages/importExcel/ImportExcelBatchPage.vue";
 
 /**
  * Demo 页面注册表：导航按钮与 App 动态渲染共用的唯一数据源。
@@ -195,6 +196,11 @@ export const demoPages = [
     id: "import-excel",
     label: "Excel 数据导入（选文件 + 校验状态 + 逐行处理）",
     component: ImportExcelPage,
+  },
+  {
+    id: "import-excel-batch",
+    label: "Excel 批量导入（batchSize 分批，可切换批次大小）",
+    component: ImportExcelBatchPage,
   },
 ] as const satisfies readonly DemoPageDef[];
 

@@ -67,13 +67,16 @@ export interface ImportRow<T = Record<string, unknown>> {
 }
 
 /**
- * 逐行处理函数：对一行结构化数据执行业务操作（通常是调接口）。
- * - resolve：该行记为 success
- * - reject / 抛错：该行记为 failed，error.message 作为失败原因
+ * 逐批处理函数：一次接收若干行结构化数据，通常是调批量接口。
+ * 批量大小由 batchSize 决定；单条处理只是 batchSize=1 的特例。
+ * - 成功：对每一行 row.status = "success"
+ * - 失败：对每一行 row.status = "failed"，row.message = 失败原因
+ * signal 在「停止处理」时被 abort，可在内部传给 fetch 等以中断在途请求
+ * （不监听也不影响：当前批照常完成，后续批次不再发起）。
  */
 export type ImportRowProcessor<T = Record<string, unknown>> = (
-    data: T,
-    row: ImportRow<T>,
+    rows: ImportRow<T>[],
+    signal?: AbortSignal,
 ) => Promise<void>;
 
 /** 解析后的一行原始数据（保留真实 Excel 行号，中间空行不会导致行号错位） */
@@ -101,8 +104,10 @@ export type ImportParser = (file: File) => Promise<ImportSheet[]>
 
 /** 一次「开始处理」结束后的汇总结果 */
 export interface ImportProcessSummary {
-    /** 本轮处理的总行数 */
+    /** 本轮计划处理的总行数 */
     total: number,
     success: number,
     failed: number,
+    /** 是否因「停止」提前结束（true 时 success+failed < total，剩余行保持待处理可续跑） */
+    stopped: boolean,
 }

@@ -21,7 +21,8 @@ import { formatCell } from "./formatCell";
  * → parser 解析第一个工作表 → 按 columns（position → name → alias）映射并逐行校验
  * → 表格展示全部行（不分页）：checkbox 列与行号列（数据序号，从 1 开始）固定在左侧，
  * 状态列固定在右侧，valid 行默认勾选、invalid 行禁止勾选
- * → 点击「开始处理」串行调用 processor 逐行处理，
+ * → 点击「开始处理」按 batchSize（默认 1）分批串行调用 processor，
+ * processor 自行给每行设置 success/failed（未设置的兜底为 success）；
  * 状态列实时翻转为 处理中 / 成功 / 失败（失败原因回显）。
  * 校验失败/处理失败的行提供操作列：弹窗编辑（保存时重新 valueMapper + validator，
  * 通过后翻为待处理并自动勾选，可再次提交）或删除该行；处理进行中操作禁用。
@@ -33,16 +34,21 @@ import { formatCell } from "./formatCell";
  * 表格可视区中部；不需要该行为时传 false。
  * 处理中在工具栏下方显示进度条（本轮 done/total + 成功/失败）与按平均行耗时
  * 推算的预计剩余时间；处理结束进度条自动隐藏。
+ * 处理中工具栏出现「停止」按钮：当前批照常落定，后续批次不再发起；
+ * 未开始的行保持待处理与勾选状态，可再次「开始处理」续跑。
  */
 const props = withDefaults(
   defineProps<{
     columns: DataColumn[];
+    /** 批量处理函数（一次接收一批行；单行处理只是 batchSize=1 的特例） */
     processor: ImportRowProcessor;
     parser: ImportParser;
     accept?: string;
     autoScroll?: boolean;
+    /** 每次调用 processor 的最大行数，默认 1（逐行） */
+    batchSize?: number;
   }>(),
-  { accept: ".xlsx", autoScroll: true },
+  { accept: ".xlsx", autoScroll: true, batchSize: 1 },
 );
 
 const emit = defineEmits<{
@@ -59,6 +65,7 @@ const {
   sheetName,
   loading,
   processing,
+  stopping,
   processingTotal,
   progressDone,
   progressSuccess,
@@ -74,11 +81,13 @@ const {
   saveRowEdit,
   removeRow,
   startProcessing,
+  stopProcessing,
   clear,
 } = useImportExcel({
   columns: toRef(props, "columns"),
   processor: toRef(props, "processor"),
   parser: toRef(props, "parser"),
+  batchSize: toRef(props, "batchSize"),
 });
 
 const tableRef = ref<TableInstance>();
@@ -92,6 +101,19 @@ const statusMeta: Record<ImportRowStatus, { label: string; type: "info" | "dange
   success: { label: "成功", type: "success" },
   failed: { label: "失败", type: "danger" },
 };
+
+/** 状态列筛选项（el-table 列筛选）：文案带该状态的实时行数，随数据变化自动更新 */
+const statusFilters = computed(() =>
+  (Object.keys(statusMeta) as ImportRowStatus[]).map((status) => ({
+    text: `${statusMeta[status].label}（${rows.value.filter((r) => r.status === status).length}）`,
+    value: status,
+  })),
+);
+
+/** 状态列筛选方法：按 row.status 精确匹配 */
+function filterByStatus(value: string, row: ImportRow): boolean {
+  return row.status === value;
+}
 
 /**
  * 把指定行垂直滚动到表格可视区中部（处理时自动跟随当前 processing 行）。
@@ -284,7 +306,12 @@ async function onStartProcessing(): Promise<void> {
     const summary = await startProcessing();
     if (!summary) return;
     emit("processed", summary);
-    if (summary.failed === 0) {
+    if (summary.stopped) {
+      const remaining = summary.total - summary.success - summary.failed;
+      ElMessage.warning(
+        `已停止：成功 ${summary.success} 行，失败 ${summary.failed} 行，剩余 ${remaining} 行未处理（可再次「开始处理」续跑）`,
+      );
+    } else if (summary.failed === 0) {
       ElMessage.success(`全部处理完成，共 ${summary.success} 行`);
     } else {
       ElMessage.warning(`处理完成：成功 ${summary.success} 行，失败 ${summary.failed} 行`);
@@ -334,7 +361,7 @@ async function onRemoveRow(row: ImportRow): Promise<void> {
   ElMessage.success(`已删除第 ${row.rowNumber} 行`);
 }
 
-defineExpose({ openFilePicker, startProcessing: onStartProcessing, clear });
+defineExpose({ openFilePicker, startProcessing: onStartProcessing, stopProcessing, clear });
 </script>
 
 <template>
@@ -364,6 +391,14 @@ defineExpose({ openFilePicker, startProcessing: onStartProcessing, clear });
         @click="onStartProcessing"
       >
         开始处理{{ pendingCount > 0 ? `（${pendingCount} 行）` : "" }}
+      </el-button>
+      <el-button
+        v-if="processing"
+        type="danger"
+        :disabled="stopping"
+        @click="stopProcessing"
+      >
+        {{ stopping ? "正在停止…" : "停止" }}
       </el-button>
       <el-button :disabled="!hasData || processing" @click="clear">清空</el-button>
       <span v-if="fileName" class="yk-import-excel__file-name" :title="fileName">
@@ -424,6 +459,10 @@ defineExpose({ openFilePicker, startProcessing: onStartProcessing, clear });
           width="200"
           fixed="right"
           class-name="yk-import-excel__status-cell"
+          :filters="statusFilters"
+          :filter-method="filterByStatus"
+          :filter-multiple="false"
+          filter-placement="bottom-end"
         >
           <template #default="{ row }">
             <el-tag :type="statusMeta[(row as ImportRow).status].type" size="small" disable-transitions>
@@ -723,5 +762,54 @@ defineExpose({ openFilePicker, startProcessing: onStartProcessing, clear });
   height: 14px;
   margin-right: 4px;
   vertical-align: -2px;
+}
+</style>
+
+<!--
+  非 scoped：状态列筛选面板（.el-table-filter）由 el-table teleport 到 body 渲染，
+  scoped 样式无法命中，这里做全局定制。当前仅本组件使用列筛选，样式副作用可控。
+-->
+<style>
+/* 面板整体：圆角 + 柔和阴影，去掉默认紧贴边缘的生硬感 */
+.el-table-filter {
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+}
+
+/* 单选列表：去掉默认 padding，选项改为整行 hover 的圆角块 */
+.el-table-filter__list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+}
+
+.el-table-filter__list-item {
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #606266;
+  cursor: pointer;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.el-table-filter__list-item:hover {
+  background: #f5f7fa;
+  color: #303133;
+}
+
+/* 当前选中项：浅蓝底 + 主题色文字，比默认仅文字变色更醒目 */
+.el-table-filter__list-item.is-active {
+  background: #ecf5ff;
+  color: #409eff;
+  font-weight: 500;
 }
 </style>

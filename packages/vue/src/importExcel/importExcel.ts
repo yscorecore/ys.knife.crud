@@ -11,10 +11,12 @@ import type {
 export interface UseImportExcelOptions {
     /** 列定义（position → name → alias 定位） */
     columns: Ref<DataColumn[]>;
-    /** 逐行处理函数 */
+    /** 逐批处理函数（一次处理一批行；单行处理只是 batchSize=1 的特例） */
     processor: Ref<ImportRowProcessor | undefined>;
     /** Excel 文件解析器（如 @ys.knife.crud/import-exceljs 的 createExcelJsImportParser()） */
     parser: Ref<ImportParser | undefined>;
+    /** 每次调用 processor 的最大行数，默认 1（逐行） */
+    batchSize?: Ref<number>;
 }
 
 /** 表头归一化：去空白 + 小写，保证 name/alias 匹配对空格与大小写不敏感 */
@@ -90,7 +92,7 @@ function resolveColumns(
  * UI 层（如 YsImportExcel）只负责文件选择框、表格与状态标签渲染，
  * 解析库经 parser 注入、业务操作经 processor 注入，本函数不绑定任何第三方库。
  */
-export function useImportExcel({ columns, processor, parser }: UseImportExcelOptions) {
+export function useImportExcel({ columns, processor, parser, batchSize }: UseImportExcelOptions) {
     /** 已加载并映射的全部数据行 */
     const rows = ref<ImportRow[]>([]);
     /** 本次加载解析出的列下标（loadFile 时确定；编辑回写 raw 时复用） */
@@ -101,6 +103,10 @@ export function useImportExcel({ columns, processor, parser }: UseImportExcelOpt
     const loading = ref(false);
     /** 逐行处理中 */
     const processing = ref(false);
+    /** 已请求停止（当前批完成后生效） */
+    const stopping = ref(false);
+    /** 本轮处理的 AbortController（停止时 abort，传给 processor） */
+    let processController: AbortController | null = null;
     /** 本轮处理的总行数（驱动进度文案/进度条） */
     const processingTotal = ref(0);
     /** 本轮已落定（成功+失败）的行数，仅统计当前这一轮，开始时清零 */
@@ -226,17 +232,20 @@ export function useImportExcel({ columns, processor, parser }: UseImportExcelOpt
     }
 
     /**
-     * 逐行处理所有「勾选且状态为 valid/failed」的行：
-     * - 串行执行 processor（一行处理完再处理下一行），状态实时翻转为 processing
-     * - processor 正常结束 → success（返回字符串作为成功提示）；抛错 → failed（错误信息回显）
+     * 分批处理所有「勾选且状态为 valid/failed」的行：
+     * - 按 batchSize（默认 1）分块，串行逐块调用 processor，块内行同时翻为 processing
+     * - processor 内部自行给每行设置 success/failed（失败需回写 row.message）
+     * - 块内行未显式设置状态的兜底为 success（视为处理通过）
      * - 已 success 的行跳过，failed 的行允许重新勾选后重试
+     * - 处理中可 stopProcessing()：当前批照常落定，后续批次不再发起；
+     *   未开始的行保持 valid/failed 与勾选状态，可再次「开始处理」续跑
      * 返回本轮汇总；没有可处理行或正在处理时返回 null。
      */
     async function startProcessing(): Promise<ImportProcessSummary | null> {
         if (processing.value) return null;
-        const processRow = processor.value;
-        if (!processRow) {
-            throw new Error("未提供 processor（逐行处理函数）");
+        const processBatch = processor.value;
+        if (!processBatch) {
+            throw new Error("未提供 processor（批量处理函数）");
         }
 
         const targets = rows.value.filter(
@@ -244,35 +253,75 @@ export function useImportExcel({ columns, processor, parser }: UseImportExcelOpt
         );
         if (targets.length === 0) return null;
 
+        const batch = Math.max(1, Math.floor(batchSize?.value ?? 1));
+        processController = new AbortController();
+        const signal = processController.signal;
+
         processing.value = true;
+        stopping.value = false;
         processingTotal.value = targets.length;
         progressDone.value = 0;
         progressSuccess.value = 0;
         progressFailed.value = 0;
-        const summary: ImportProcessSummary = { total: targets.length, success: 0, failed: 0 };
+        const summary: ImportProcessSummary = {
+            total: targets.length,
+            success: 0,
+            failed: 0,
+            stopped: false,
+        };
         try {
-            for (const row of targets) {
-                row.status = "processing";
-                row.message = undefined;
+            for (let i = 0; i < targets.length; i += batch) {
+                // 批次边界检查停止标记：当前批不中断，剩余批次不再发起
+                if (stopping.value) {
+                    summary.stopped = true;
+                    break;
+                }
+                const chunk = targets.slice(i, i + batch);
+                for (const row of chunk) {
+                    row.status = "processing";
+                    row.message = undefined;
+                }
                 // 先让「处理中」状态渲染出来，再执行业务（多为异步接口）
                 await nextTick();
                 try {
-                    await processRow(row.data, row);
-                    row.status = "success";
-                    summary.success += 1;
-                    progressSuccess.value += 1;
+                    await processBatch(chunk, signal);
                 } catch (e) {
-                    row.status = "failed";
-                    row.message = e instanceof Error ? e.message : String(e);
-                    summary.failed += 1;
-                    progressFailed.value += 1;
+                    // 整批抛错（含 signal abort）：全部标记 failed，错误信息统一回显
+                    const msg = e instanceof Error ? e.message : String(e);
+                    for (const row of chunk) {
+                        row.status = "failed";
+                        row.message = msg;
+                    }
                 }
-                progressDone.value += 1;
+                // 汇总本批结果：processor 未显式设置状态的行视为 success
+                for (const row of chunk) {
+                    if (row.status === "processing") row.status = "success";
+                    if (row.status === "failed") {
+                        summary.failed += 1;
+                        progressFailed.value += 1;
+                    } else {
+                        summary.success += 1;
+                        progressSuccess.value += 1;
+                    }
+                    progressDone.value += 1;
+                }
             }
             return summary;
         } finally {
             processing.value = false;
+            stopping.value = false;
+            processController = null;
         }
+    }
+
+    /**
+     * 停止当前处理：当前批照常完成（processor 收到 abort 可自行中断在途请求），
+     * 后续批次不再发起；未开始的行保持 valid/failed 与勾选状态，可续跑。
+     */
+    function stopProcessing(): void {
+        if (!processing.value || stopping.value) return;
+        stopping.value = true;
+        processController?.abort();
     }
 
     /**
@@ -334,6 +383,7 @@ export function useImportExcel({ columns, processor, parser }: UseImportExcelOpt
         sheetName,
         loading,
         processing,
+        stopping,
         processingTotal,
         progressDone,
         progressSuccess,
@@ -350,6 +400,7 @@ export function useImportExcel({ columns, processor, parser }: UseImportExcelOpt
         saveRowEdit,
         removeRow,
         startProcessing,
+        stopProcessing,
         clear,
     };
 }
