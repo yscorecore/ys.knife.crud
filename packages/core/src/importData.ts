@@ -5,7 +5,7 @@
  *   ImportParser（文件 → 原始工作表矩阵）
  *   → 按 DataColumn 把每行映射为结构化数据并校验（ImportRow.status = valid/invalid）
  *   → 用户勾选待处理行
- *   → ImportRowProcessor 逐行处理（processing → success/failed，状态实时回显）
+ *   → ImportRowProcessor 逐批处理（processing → success/failed，状态实时回显）
  */
 
 /**
@@ -66,18 +66,87 @@ export interface ImportRow<T = Record<string, unknown>> {
     message?: string,
 }
 
+/** 一行的处理结果（processor 返回数组的元素，与输入行按下标一一对应） */
+export interface ImportRowResult {
+    /** 该行的处理结果：成功 / 失败 */
+    status: "success" | "failed",
+    /** 失败原因（status 为 failed 时给出，回显到状态列） */
+    message?: string,
+}
+
 /**
  * 逐批处理函数：一次接收若干行结构化数据，通常是调批量接口。
- * 批量大小由 batchSize 决定；单条处理只是 batchSize=1 的特例。
- * - 成功：对每一行 row.status = "success"
- * - 失败：对每一行 row.status = "failed"，row.message = 失败原因
+ * 返回与输入**等长且顺序一致**的结果数组：results[i] 对应 rows[i]
+ * （框架会校验长度，不一致时整批按失败处理）。
  * signal 在「停止处理」时被 abort，可在内部传给 fetch 等以中断在途请求
  * （不监听也不影响：当前批照常完成，后续批次不再发起）。
+ * 整批抛错（如网络异常）：该批全部标记 failed，错误信息统一回显。
  */
 export type ImportRowProcessor<T = Record<string, unknown>> = (
     rows: ImportRow<T>[],
     signal?: AbortSignal,
-) => Promise<void>;
+) => Promise<ImportRowResult[]>;
+
+/**
+ * 导入处理器配置：处理函数 + 批次大小的整体配置。
+ * 单条处理是 batchSize=1 的特例（singleRowProcessor）；
+ * 整批同成败的批量接口可用 batchProcessor 便捷构造。
+ */
+export interface ImportProcessor<T = Record<string, unknown>> {
+    /** 批量处理函数（一次接收一批行，返回等长同序的结果数组） */
+    process: ImportRowProcessor<T>,
+    /** 每次调用 process 的最大行数，默认 1（逐行） */
+    batchSize?: number,
+}
+
+/**
+ * 单行处理器适配器：把「处理一行 data」的简单函数包装成 ImportProcessor（batchSize 恒为 1）。
+ * - process 正常完成（同步返回或异步 resolve）→ 该行记为 success
+ * - process 抛错 / reject → 该行记为 failed，error.message 作为失败原因
+ * 适合后台只提供单条接口的场景：调用方无需手动组装结果数组，
+ * 成功/失败完全用「正常返回 / 抛异常」表达（与逐行 try-catch 的直觉一致）。
+ */
+export function singleRowProcessor<T = Record<string, unknown>>(
+    process: (row: T, signal?: AbortSignal) => void | Promise<void>,
+): ImportProcessor<T> {
+    return {
+        batchSize: 1,
+        process: async (rows, signal) => {
+            try {
+                await process(rows[0]!.data, signal)
+                return [{ status: "success" }]
+            } catch (e) {
+                return [{ status: "failed", message: e instanceof Error ? e.message : String(e) }]
+            }
+        },
+    }
+}
+
+/**
+ * 批量处理器适配器（整批成败一致）：把「一次处理一批 data」的函数包装成 ImportProcessor。
+ * 语义为「要么全部成功，要么全部失败」：
+ * - process 正常完成（同步返回或异步 resolve）→ 本批每一行都记为 success
+ * - process 抛错 / reject → 本批每一行都记为 failed，共用同一 error.message
+ * 适合后台批量接口「整批事务、部分失败直接整体报错」的场景；
+ * 需要逐行成败结果的场景请直接实现 ImportProcessor.process 返回每行结果。
+ */
+export function batchProcessor<T = Record<string, unknown>>(
+    process: (rows: T[], signal?: AbortSignal) => void | Promise<void>,
+    batchSize: number,
+): ImportProcessor<T> {
+    return {
+        batchSize,
+        process: async (rows, signal) => {
+            try {
+                await process(rows.map((row) => row.data), signal)
+                return rows.map(() => ({ status: "success" as const }))
+            } catch (e) {
+                const message = e instanceof Error ? e.message : String(e)
+                return rows.map(() => ({ status: "failed" as const, message }))
+            }
+        },
+    }
+}
 
 /** 解析后的一行原始数据（保留真实 Excel 行号，中间空行不会导致行号错位） */
 export interface ImportSheetRow {

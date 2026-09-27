@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import type { Column, DataColumn, ImportProcessSummary, ImportRowProcessor } from "@ys.knife.crud/core";
+import type { Column, DataColumn, ImportProcessSummary, ImportProcessor, ImportRowResult } from "@ys.knife.crud/core";
 import { YsImportExcel } from "@ys.knife.crud/element-plus";
 import { createExcelJsImportParser } from "@ys.knife.crud/import-exceljs";
 import { createExcelJsExportApiFunc } from "@ys.knife.crud/export-exceljs";
@@ -44,17 +44,17 @@ const columns: DataColumn[] = [
 /** ExcelJS 解析器（组件本身不绑定解析库，由外部注入） */
 const parser = createExcelJsImportParser();
 
-/** 模拟批量调接口：随机耗时；编码以 E 开头的行标记失败，其余成功 */
-const processor: ImportRowProcessor = async (batch) => {
-  await new Promise((resolve) => setTimeout(resolve, 250 + Math.random() * 400));
-  for (const row of batch) {
-    if (String(row.data.code).startsWith("E")) {
-      row.status = "failed";
-      row.message = `编码 ${row.data.code} 已存在，请更换后重试`;
-    } else {
-      row.status = "success";
-    }
-  }
+/** 模拟批量调接口：随机耗时；编码以 E 开头的行标记失败，其余成功（返回与输入等长同序的结果数组） */
+const processor: ImportProcessor = {
+  batchSize: 10,
+  process: async (batch) => {
+    await new Promise((resolve) => setTimeout(resolve, 250 + Math.random() * 400));
+    return batch.map((row): ImportRowResult =>
+      String(row.data.code).startsWith("E")
+        ? { status: "failed", message: `编码 ${row.data.code} 已存在，请更换后重试` }
+        : { status: "success" },
+    );
+  },
 };
 
 const lastSummary = ref<ImportProcessSummary | null>(null);
@@ -224,7 +224,7 @@ async function downloadDataset(key: string): Promise<void> {
       <p class="import-page__hint">
         点击「选择 Excel 文件」手动选 xlsx → 按 <code>position → name → alias</code> 优先级映射列并逐行校验
         → 表格一次性展示全部行（行号 + checkbox + 末尾状态列，校验失败行不可勾选）
-        → 「开始处理」按 batchSize（本页设为 10）分批调用外部 processor，状态实时翻转为 处理中/成功/失败。
+        → 「开始处理」按 processor.batchSize（本页设为 10）分批调用外部 processor，状态实时翻转为 处理中/成功/失败。
         右上角可下载多组测试数据：标准数据、异常数据（含校验/处理失败）、别名表头、列顺序打乱、200 行大批量。
         校验失败或处理失败的行可在右侧「操作」列<strong>编辑</strong>（保存后自动重新校验，通过即翻为待处理并勾选，可再次提交）或<strong>删除</strong>。
       </p>
@@ -240,7 +240,7 @@ async function downloadDataset(key: string): Promise<void> {
     />
 
     <div class="import-page__body">
-      <ys-import-excel :columns="columns" :parser="parser" :processor="processor" :batch-size="10"
+      <ys-import-excel :columns="columns" :parser="parser" :processor="processor"
         @processed="lastSummary = $event" />
     </div>
   </div>

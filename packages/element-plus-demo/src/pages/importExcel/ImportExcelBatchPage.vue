@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import type { Column, DataColumn, ImportProcessSummary, ImportRowProcessor } from "@ys.knife.crud/core";
+import type { Column, DataColumn, ImportProcessSummary, ImportProcessor, ImportRowProcessor, ImportRowResult } from "@ys.knife.crud/core";
 import { YsImportExcel } from "@ys.knife.crud/element-plus";
 import { createExcelJsImportParser } from "@ys.knife.crud/import-exceljs";
 import { createExcelJsExportApiFunc } from "@ys.knife.crud/export-exceljs";
@@ -9,7 +9,7 @@ defineEmits<{
   (e: "back"): void;
 }>();
 
-/** 批量导入 demo：重点演示 batchSize —— 每次 processor 调用携带的行数 */
+/** 批量导入 demo：重点演示 processor.batchSize —— 每次 process 调用携带的行数 */
 const columns: DataColumn[] = [
   { name: "code", alias: ["商品编码", "编码"] },
   { name: "name", alias: ["商品名称", "名称"] },
@@ -23,7 +23,7 @@ const parser = createExcelJsImportParser();
 /**
  * 批次大小选项：
  * - 1：逐行（等价于单条处理，批量模式的特例）
- * - 20 / 50：每次调用 processor 处理一批
+ * - 20 / 50：每次调用 process 处理一批
  * - 0：不限制（一次调用处理全部勾选行）
  */
 const batchSizeOptions = [
@@ -34,29 +34,32 @@ const batchSizeOptions = [
 ] as const;
 const batchSizeChoice = ref<number>(50);
 
-/** 记录每次 processor 调用的批量（演示分批节奏） */
+/** 记录每次 process 调用的批量（演示分批节奏） */
 const batchCalls = ref<number[]>([]);
 
-/** 模拟批量接口：一次接收一批行，随机耗时；编码含「E」的行标记失败 */
-const processor: ImportRowProcessor = async (batch) => {
+/** 模拟批量接口：一次接收一批行，随机耗时；编码含「E」的行标记失败（返回与输入等长同序的结果数组） */
+const processBatch: ImportRowProcessor = async (batch) => {
   batchCalls.value.push(batch.length);
   await new Promise((resolve) => setTimeout(resolve, 400 + Math.random() * 500));
-  for (const row of batch) {
-    if (String(row.data.code).includes("E")) {
-      row.status = "failed";
-      row.message = `编码 ${row.data.code} 已存在，请更换后重试`;
-    } else {
-      row.status = "success";
-    }
-  }
+  return batch.map((row): ImportRowResult =>
+    String(row.data.code).includes("E")
+      ? { status: "failed", message: `编码 ${row.data.code} 已存在，请更换后重试` }
+      : { status: "success" },
+  );
 };
 
 const lastSummary = ref<ImportProcessSummary | null>(null);
 
-/** 传给组件的 batchSize：0 表示不限制 → 传一个足够大的数 */
+/** 批次大小：0 表示不限制 → 传一个足够大的数 */
 const effectiveBatchSize = computed(() =>
   batchSizeChoice.value > 0 ? batchSizeChoice.value : Number.MAX_SAFE_INTEGER,
 );
+
+/** 传给组件的处理器：处理函数 + 批次大小（切换批次大小后实时生效） */
+const processor = computed<ImportProcessor>(() => ({
+  process: processBatch,
+  batchSize: effectiveBatchSize.value,
+}));
 
 const batchCallsText = computed(() =>
   batchCalls.value.length > 0 ? batchCalls.value.join(" + ") : "",
@@ -103,8 +106,9 @@ function onLoaded(): void {
         </el-button>
       </div>
       <p class="import-page__hint">
-        后台提供批量接口时，一次调用即可处理多行。<code>batchSize</code> 控制每次调用
-        <code>processor</code> 携带的最大行数：批内所有行同时翻为「处理中」，processor 对每行分别设置成功/失败。
+        后台提供批量接口时，一次调用即可处理多行。<code>processor.batchSize</code> 控制每次调用
+        <code>processor.process</code> 携带的最大行数：批内所有行同时翻为「处理中」，
+        process 返回与输入等长同序的结果数组（results[i] 对应 rows[i]）决定每行成功/失败。
         切换下方批次大小（支持「一次全部」）后点「开始处理」，观察处理中行的批量翻转与分批调用次数。
       </p>
       <div class="import-page__options">
@@ -134,7 +138,6 @@ function onLoaded(): void {
         :columns="columns"
         :parser="parser"
         :processor="processor"
-        :batch-size="effectiveBatchSize"
         @loaded="onLoaded"
         @processed="onProcessed"
       />

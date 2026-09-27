@@ -6,8 +6,8 @@ import type {
   DataColumn,
   ImportParser,
   ImportProcessSummary,
+  ImportProcessor,
   ImportRow,
-  ImportRowProcessor,
   ImportRowStatus,
 } from "@ys.knife.crud/core";
 import ImportRowEditDialog from "./importRowEditDialog.vue";
@@ -21,8 +21,8 @@ import { formatCell } from "./formatCell";
  * → parser 解析第一个工作表 → 按 columns（position → name → alias）映射并逐行校验
  * → 表格展示全部行（不分页）：checkbox 列与行号列（数据序号，从 1 开始）固定在左侧，
  * 状态列固定在右侧，valid 行默认勾选、invalid 行禁止勾选
- * → 点击「开始处理」按 batchSize（默认 1）分批串行调用 processor，
- * processor 自行给每行设置 success/failed（未设置的兜底为 success）；
+ * → 点击「开始处理」按 processor.batchSize（默认 1）分批串行调用 processor.process，
+ * process 返回与输入等长同序的结果数组，按 results[i] 回写 rows[i] 的成功/失败；
  * 状态列实时翻转为 处理中 / 成功 / 失败（失败原因回显）。
  * 校验失败/处理失败的行提供操作列：弹窗编辑（保存时重新 valueMapper + validator，
  * 通过后翻为待处理并自动勾选，可再次提交）或删除该行；处理进行中操作禁用。
@@ -40,15 +40,13 @@ import { formatCell } from "./formatCell";
 const props = withDefaults(
   defineProps<{
     columns: DataColumn[];
-    /** 批量处理函数（一次接收一批行；单行处理只是 batchSize=1 的特例） */
-    processor: ImportRowProcessor;
+    /** 导入处理器（处理函数 + 批次大小；单行处理只是 batchSize=1 的特例） */
+    processor: ImportProcessor;
     parser: ImportParser;
     accept?: string;
     autoScroll?: boolean;
-    /** 每次调用 processor 的最大行数，默认 1（逐行） */
-    batchSize?: number;
   }>(),
-  { accept: ".xlsx", autoScroll: true, batchSize: 1 },
+  { accept: ".xlsx", autoScroll: true },
 );
 
 const emit = defineEmits<{
@@ -87,7 +85,6 @@ const {
   columns: toRef(props, "columns"),
   processor: toRef(props, "processor"),
   parser: toRef(props, "parser"),
-  batchSize: toRef(props, "batchSize"),
 });
 
 const tableRef = ref<TableInstance>();

@@ -3,20 +3,18 @@ import type {
     DataColumn,
     ImportParser,
     ImportProcessSummary,
+    ImportProcessor,
     ImportRow,
-    ImportRowProcessor,
 } from "@ys.knife.crud/core";
 
 /** useImportExcel 入参（组件把 props 的相关字段以 Ref 形式传入，保持响应式追踪） */
 export interface UseImportExcelOptions {
     /** 列定义（position → name → alias 定位） */
     columns: Ref<DataColumn[]>;
-    /** 逐批处理函数（一次处理一批行；单行处理只是 batchSize=1 的特例） */
-    processor: Ref<ImportRowProcessor | undefined>;
+    /** 导入处理器（处理函数 + 批次大小；单行处理只是 batchSize=1 的特例） */
+    processor: Ref<ImportProcessor | undefined>;
     /** Excel 文件解析器（如 @ys.knife.crud/import-exceljs 的 createExcelJsImportParser()） */
     parser: Ref<ImportParser | undefined>;
-    /** 每次调用 processor 的最大行数，默认 1（逐行） */
-    batchSize?: Ref<number>;
 }
 
 /** 表头归一化：去空白 + 小写，保证 name/alias 匹配对空格与大小写不敏感 */
@@ -92,7 +90,7 @@ function resolveColumns(
  * UI 层（如 YsImportExcel）只负责文件选择框、表格与状态标签渲染，
  * 解析库经 parser 注入、业务操作经 processor 注入，本函数不绑定任何第三方库。
  */
-export function useImportExcel({ columns, processor, parser, batchSize }: UseImportExcelOptions) {
+export function useImportExcel({ columns, processor, parser }: UseImportExcelOptions) {
     /** 已加载并映射的全部数据行 */
     const rows = ref<ImportRow[]>([]);
     /** 本次加载解析出的列下标（loadFile 时确定；编辑回写 raw 时复用） */
@@ -233,9 +231,9 @@ export function useImportExcel({ columns, processor, parser, batchSize }: UseImp
 
     /**
      * 分批处理所有「勾选且状态为 valid/failed」的行：
-     * - 按 batchSize（默认 1）分块，串行逐块调用 processor，块内行同时翻为 processing
-     * - processor 内部自行给每行设置 success/failed（失败需回写 row.message）
-     * - 块内行未显式设置状态的兜底为 success（视为处理通过）
+     * - 按 processor.batchSize（默认 1）分块，串行逐块调用 processor.process，块内行同时翻为 processing
+     * - process 返回与输入等长同序的结果数组，按 results[i] 回写 rows[i] 的 success/failed 与失败原因
+     * - 结果数组长度与输入不一致、或整批抛错：该批全部标记 failed，错误信息统一回显
      * - 已 success 的行跳过，failed 的行允许重新勾选后重试
      * - 处理中可 stopProcessing()：当前批照常落定，后续批次不再发起；
      *   未开始的行保持 valid/failed 与勾选状态，可再次「开始处理」续跑
@@ -243,9 +241,9 @@ export function useImportExcel({ columns, processor, parser, batchSize }: UseImp
      */
     async function startProcessing(): Promise<ImportProcessSummary | null> {
         if (processing.value) return null;
-        const processBatch = processor.value;
-        if (!processBatch) {
-            throw new Error("未提供 processor（批量处理函数）");
+        const importer = processor.value;
+        if (!importer) {
+            throw new Error("未提供 processor（导入处理器）");
         }
 
         const targets = rows.value.filter(
@@ -253,7 +251,7 @@ export function useImportExcel({ columns, processor, parser, batchSize }: UseImp
         );
         if (targets.length === 0) return null;
 
-        const batch = Math.max(1, Math.floor(batchSize?.value ?? 1));
+        const batch = Math.max(1, Math.floor(importer.batchSize ?? 1));
         processController = new AbortController();
         const signal = processController.signal;
 
@@ -284,18 +282,29 @@ export function useImportExcel({ columns, processor, parser, batchSize }: UseImp
                 // 先让「处理中」状态渲染出来，再执行业务（多为异步接口）
                 await nextTick();
                 try {
-                    await processBatch(chunk, signal);
+                    const results = await importer.process(chunk, signal);
+                    if (!Array.isArray(results) || results.length !== chunk.length) {
+                        throw new Error(
+                            `processor 返回结果数量（${Array.isArray(results) ? results.length : "非数组"}）`
+                            + `与输入行数（${chunk.length}）不一致`,
+                        );
+                    }
+                    // 结果与输入按下标一一对应，回写每行状态
+                    chunk.forEach((row, j) => {
+                        const result = results[j]!;
+                        row.status = result.status === "failed" ? "failed" : "success";
+                        row.message = result.status === "failed" ? result.message : undefined;
+                    });
                 } catch (e) {
-                    // 整批抛错（含 signal abort）：全部标记 failed，错误信息统一回显
+                    // 整批抛错（含 signal abort、结果长度不符）：全部标记 failed，错误信息统一回显
                     const msg = e instanceof Error ? e.message : String(e);
                     for (const row of chunk) {
                         row.status = "failed";
                         row.message = msg;
                     }
                 }
-                // 汇总本批结果：processor 未显式设置状态的行视为 success
+                // 汇总本批结果
                 for (const row of chunk) {
-                    if (row.status === "processing") row.status = "success";
                     if (row.status === "failed") {
                         summary.failed += 1;
                         progressFailed.value += 1;
