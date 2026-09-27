@@ -7,9 +7,9 @@ import type {
   Column,
   EnumOptionsSource,
   FilterInfo,
-} from "@ys.knife.crud/core";
-import { emptyFilter } from "@ys.knife.crud/core";
-import { FilterPanelKey, useAdvancedFilter, useFilterPanel } from "@ys.knife.crud/vue";
+} from "@ys-knife-crud/core";
+import { emptyFilter } from "@ys-knife-crud/core";
+import { FilterPanelKey, useAdvancedFilter, useFilterPanel } from "@ys-knife-crud/vue";
 import YsAdvancedFilterPanel from "../advancedFilter/advancedFilterPanel.vue";
 import type { SavedQuery } from "../advancedFilter/advancedFilterContext";
 
@@ -32,7 +32,7 @@ defineOptions({ name: "YsFilterPanel" });
  *   （参考 table.vue 的 metaFun / dataFun 模式）；后端只需存 group + name + description，
  *   filterInfo 由组件按 advancedColumns 重算
  *
- * 通用逻辑下沉到 @ys.knife.crud/vue 的 useFilterPanel；本组件只负责视图编排与事件分发。
+ * 通用逻辑下沉到 @ys-knife-crud/vue 的 useFilterPanel；本组件只负责视图编排与事件分发。
  */
 const props = defineProps({
   /** 是否渲染内置「查询」按钮，默认 true */

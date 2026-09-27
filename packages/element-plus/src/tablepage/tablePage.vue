@@ -11,8 +11,8 @@ import type {
   TableApi,
   TableProps as CoreTableProps,
   ViewMode,
-} from "@ys.knife.crud/core";
-import { emptyFilter } from "@ys.knife.crud/core";
+} from "@ys-knife-crud/core";
+import { emptyFilter } from "@ys-knife-crud/core";
 import type { SavedQuery } from "../advancedFilter/advancedFilterContext";
 import type { TablePageDataFun } from "./tablePageTypes";
 import YsFilterPanel from "../filter/filterPanel.vue";

@@ -6,8 +6,8 @@ import {
   type Meta,
   type PagedList,
   type TableApi,
-} from "@ys.knife.crud/core";
-import { YsTable } from "@ys.knife.crud/element-plus";
+} from "@ys-knife-crud/core";
+import { YsTable } from "@ys-knife-crud/element-plus";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 import { manyRows, metaFun } from "../shared/demoData";
 

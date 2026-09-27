@@ -1,7 +1,7 @@
 /**
  * 枚举选项数据源契约:framework-agnostic,不依赖 Vue。
  *
- * 由 @ys.knife.crud/element-plus 的 YsEnumFilterItem 消费:
+ * 由 @ys-knife-crud/element-plus 的 YsEnumFilterItem 消费:
  * 组件 onMounted 调用一次,结果缓存到 options ref,用于渲染 el-select 选项。
  *
  * 设计为函数类型而非对象:使用方在 dataFunc 里把字段提取成 {label, value} 结构,

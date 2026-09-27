@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { constData, Operator, type ViewMode } from "@ys.knife.crud/core";
+import { constData, Operator, type ViewMode } from "@ys-knife-crud/core";
 import {
   type TablePageDataFun,
   YsTablePage,
   YsTextFilterItem,
-} from "@ys.knife.crud/element-plus";
+} from "@ys-knife-crud/element-plus";
 import { exportRows, metaFun, type UserRow } from "../shared/demoData";
 
 defineEmits<{

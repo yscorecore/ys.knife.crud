@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import type { Column, DataColumn, ImportProcessSummary, ImportProcessor, ImportRowResult } from "@ys.knife.crud/core";
-import { YsImportExcel } from "@ys.knife.crud/element-plus";
-import { createExcelJsImportParser } from "@ys.knife.crud/import-exceljs";
-import { createExcelJsExportApiFunc } from "@ys.knife.crud/export-exceljs";
+import type { Column, DataColumn, ImportProcessSummary, ImportProcessor, ImportRowResult } from "@ys-knife-crud/core";
+import { YsImportExcel } from "@ys-knife-crud/element-plus";
+import { createExcelJsImportParser } from "@ys-knife-crud/import-exceljs";
+import { createExcelJsExportApiFunc } from "@ys-knife-crud/export-exceljs";
 
 defineEmits<{
   (e: "back"): void;
@@ -177,7 +177,7 @@ const sampleDatasets: SampleDataset[] = [
   },
 ];
 
-/** 用导出 API 生成指定测试数据的 xlsx（消费已有的 @ys.knife.crud/export-exceljs） */
+/** 用导出 API 生成指定测试数据的 xlsx（消费已有的 @ys-knife-crud/export-exceljs） */
 async function downloadDataset(key: string): Promise<void> {
   const dataset = sampleDatasets.find((d) => d.key === key);
   if (!dataset) return;

@@ -1,6 +1,6 @@
 import type { Ref } from "vue";
 import { ElMessage } from "element-plus";
-import type { TableApi } from "@ys.knife.crud/core";
+import type { TableApi } from "@ys-knife-crud/core";
 import type { UserRow } from "./demoData";
 
 /**

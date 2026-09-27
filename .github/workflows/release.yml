@@ -2,14 +2,14 @@ name: Release
 
 # 发布触发：
 #   1) v*                        —— 全仓统一版本 tag（首次 v0.0.1，5 个包同版本发布）
-#   2) @ys.knife.crud/<pkg>@x.y.z —— 单包发布：在包目录执行 pnpm version patch
+#   2) @ys-knife-crud/<pkg>@x.y.z —— 单包发布：在包目录执行 pnpm version patch
 #                                   （tag 前缀见各包 .npmrc 的 tag-version-prefix），
 #                                   postversion 钩子自动 push commit 与 tag
 on:
   push:
     tags:
       - "v*"
-      - "@ys.knife.crud/*"
+      - "@ys-knife-crud/*"
 
 permissions:
   contents: read
@@ -40,7 +40,7 @@ jobs:
 
       - name: Build libraries
         # demo 是私有应用不发布，只构建 5 个库包
-        run: pnpm -r --filter "!@ys.knife.crud/element-plus-demo" run build
+        run: pnpm -r --filter "!@ys-knife-crud/element-plus-demo" run build
 
       - name: Publish to npm
         # -r 递归发布：private 包自动跳过；已发布过的版本 pnpm 会自动跳过（单包 tag 也安全）

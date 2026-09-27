@@ -1,6 +1,6 @@
 import { h, type FunctionalComponent, type VNode } from "vue";
 import { ElMessage } from "element-plus";
-import { type TableAction } from "@ys.knife.crud/core";
+import { type TableAction } from "@ys-knife-crud/core";
 
 /**
  * 表格级命令图标工厂：14px 线性风格（Feather 风格），stroke 跟随按钮文字颜色（currentColor）。

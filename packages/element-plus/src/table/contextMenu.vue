@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Action } from "@ys.knife.crud/core";
+import type { Action } from "@ys-knife-crud/core";
 
 /**
  * 右键上下文菜单：卡片/列表视图行操作入口。

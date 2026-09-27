@@ -6,7 +6,7 @@
  * 组件内部折叠侧栏等行为不受影响。功能树数据与面板映射复用 adminDemoMenu。
  */
 import { ref } from "vue";
-import { YsMainPanel } from "@ys.knife.crud/element-plus";
+import { YsMainPanel } from "@ys-knife-crud/element-plus";
 import { loadDemoMenuNodes } from "./adminDemoMenu";
 
 defineEmits<{

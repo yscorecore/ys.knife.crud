@@ -8,7 +8,7 @@ import {
   constData,
   emptyFilter,
   type TableApi,
-} from "@ys.knife.crud/core";
+} from "@ys-knife-crud/core";
 import {
   type SavedQuery,
   YsFilterPanel,
@@ -18,8 +18,8 @@ import {
   YsEnumFilterItem,
   YsTable,
   YsCommandBar,
-} from "@ys.knife.crud/element-plus";
-import { createExcelJsExportApiFunc } from "@ys.knife.crud/export-exceljs";
+} from "@ys-knife-crud/element-plus";
+import { createExcelJsExportApiFunc } from "@ys-knife-crud/export-exceljs";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 import { manyRows, metaFun } from "../shared/demoData";
 import { useLocalCustomConfig } from "../shared/useLocalCustomConfig";

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { toRef, type PropType } from "vue";
-import type { Meta, CustomConfigProps } from "@ys.knife.crud/core";
-import { useCustomConfig } from "@ys.knife.crud/vue";
+import type { Meta, CustomConfigProps } from "@ys-knife-crud/core";
+import { useCustomConfig } from "@ys-knife-crud/vue";
 
 /**
  * 列设置对话框：勾选显隐、上移/下移调顺序、输入框调列宽。
@@ -27,9 +27,9 @@ import { useCustomConfig } from "@ys.knife.crud/vue";
  */
 const props = defineProps({
   /** 加载自定义配置（含列设置与用户默认分页大小；返回 null 按空配置处理） */
-  loadCustomConfigFun: { type: Function as PropType<NonNullable<import("@ys.knife.crud/core").TableProps["loadCustomConfigFun"]>>, required: false },
+  loadCustomConfigFun: { type: Function as PropType<NonNullable<import("@ys-knife-crud/core").TableProps["loadCustomConfigFun"]>>, required: false },
   /** 保存自定义配置（含列设置与用户默认分页大小） */
-  saveCustomConfigFun: { type: Function as PropType<NonNullable<import("@ys.knife.crud/core").TableProps["saveCustomConfigFun"]>>, required: false },
+  saveCustomConfigFun: { type: Function as PropType<NonNullable<import("@ys-knife-crud/core").TableProps["saveCustomConfigFun"]>>, required: false },
   /** 列元数据（候选列取 meta 中 showForDisplay=true 的列） */
   meta: { type: Object as PropType<Meta | null>, default: null },
 });

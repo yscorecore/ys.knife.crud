@@ -1,5 +1,5 @@
 {
-  "name": "@ys.knife.crud/element-plus",
+  "name": "@ys-knife-crud/element-plus",
   "version": "0.0.1",
   "description": "Vue 3 + element-plus UI components for ys.knife.crud",
   "type": "module",
@@ -55,8 +55,8 @@
     "vue": "^3.5.0"
   },
   "dependencies": {
-    "@ys.knife.crud/core": "workspace:*",
-    "@ys.knife.crud/vue": "workspace:*",
+    "@ys-knife-crud/core": "workspace:*",
+    "@ys-knife-crud/vue": "workspace:*",
     "dayjs": "^1.11.23"
   },
   "devDependencies": {

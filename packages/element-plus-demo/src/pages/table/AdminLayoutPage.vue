@@ -7,7 +7,7 @@
  * 生成 componentMap 传给 YsMainPanel，由组件内部动态加载并显示在主面板选项卡中
  * （可关闭、去重激活）。
  */
-import { YsMainPanel } from "@ys.knife.crud/element-plus";
+import { YsMainPanel } from "@ys-knife-crud/element-plus";
 import { loadDemoMenuNodes } from "./adminDemoMenu";
 
 defineEmits<{

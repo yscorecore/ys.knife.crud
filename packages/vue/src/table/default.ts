@@ -3,7 +3,7 @@ import type {
   DefaultProps,
   Meta,
   PagedList,
-} from "@ys.knife.crud/core";
+} from "@ys-knife-crud/core";
 
 /**
  * 表格的默认状态与数据加载逻辑：列元数据、分页数据、当前页行数据、

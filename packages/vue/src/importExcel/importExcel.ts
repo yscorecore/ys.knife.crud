@@ -5,7 +5,7 @@ import type {
     ImportProcessSummary,
     ImportProcessor,
     ImportRow,
-} from "@ys.knife.crud/core";
+} from "@ys-knife-crud/core";
 
 /** useImportExcel 入参（组件把 props 的相关字段以 Ref 形式传入，保持响应式追踪） */
 export interface UseImportExcelOptions {
@@ -13,7 +13,7 @@ export interface UseImportExcelOptions {
     columns: Ref<DataColumn[]>;
     /** 导入处理器（处理函数 + 批次大小；单行处理只是 batchSize=1 的特例） */
     processor: Ref<ImportProcessor | undefined>;
-    /** Excel 文件解析器（如 @ys.knife.crud/import-exceljs 的 createExcelJsImportParser()） */
+    /** Excel 文件解析器（如 @ys-knife-crud/import-exceljs 的 createExcelJsImportParser()） */
     parser: Ref<ImportParser | undefined>;
 }
 

@@ -3,7 +3,7 @@ import {
   constMetaFunc,
   type Meta,
   type PageFunc,
-} from "@ys.knife.crud/core";
+} from "@ys-knife-crud/core";
 
 /** 演示表格使用的行结构 */
 export interface UserRow {

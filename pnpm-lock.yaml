@@ -48,10 +48,10 @@ importers:
 
   packages/element-plus:
     dependencies:
-      '@ys.knife.crud/core':
+      '@ys-knife-crud/core':
         specifier: workspace:*
         version: link:../core
-      '@ys.knife.crud/vue':
+      '@ys-knife-crud/vue':
         specifier: workspace:*
         version: link:../vue
       dayjs:
@@ -100,16 +100,16 @@ importers:
 
   packages/element-plus-demo:
     dependencies:
-      '@ys.knife.crud/core':
+      '@ys-knife-crud/core':
         specifier: workspace:*
         version: link:../core
-      '@ys.knife.crud/element-plus':
+      '@ys-knife-crud/element-plus':
         specifier: workspace:*
         version: link:../element-plus
-      '@ys.knife.crud/export-exceljs':
+      '@ys-knife-crud/export-exceljs':
         specifier: workspace:*
         version: link:../export-exceljs
-      '@ys.knife.crud/import-exceljs':
+      '@ys-knife-crud/import-exceljs':
         specifier: workspace:*
         version: link:../import-exceljs
       element-plus:
@@ -134,7 +134,7 @@ importers:
 
   packages/export-exceljs:
     dependencies:
-      '@ys.knife.crud/core':
+      '@ys-knife-crud/core':
         specifier: workspace:*
         version: link:../core
       exceljs:
@@ -156,7 +156,7 @@ importers:
 
   packages/import-exceljs:
     dependencies:
-      '@ys.knife.crud/core':
+      '@ys-knife-crud/core':
         specifier: workspace:*
         version: link:../core
       exceljs:
@@ -178,7 +178,7 @@ importers:
 
   packages/vue:
     dependencies:
-      '@ys.knife.crud/core':
+      '@ys-knife-crud/core':
         specifier: workspace:*
         version: link:../core
       ys.knife.query.js:

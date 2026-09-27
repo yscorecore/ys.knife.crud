@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from "vue";
-import type { TableAction, TableApi } from "@ys.knife.crud/core";
+import type { TableAction, TableApi } from "@ys-knife-crud/core";
 import YsTableActionMenuButton from "./tableActionMenuButton.vue";
 import YsSelectionBar from "../table/selectionBar.vue";
 

@@ -1,5 +1,5 @@
 import { ref, watch } from "vue";
-import type { FunctionNode, MainPanelProps } from "@ys.knife.crud/core";
+import type { FunctionNode, MainPanelProps } from "@ys-knife-crud/core";
 
 /**
  * 分组节点判断：children 非空。

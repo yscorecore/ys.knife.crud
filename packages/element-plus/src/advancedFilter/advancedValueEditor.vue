@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, type PropType } from "vue";
-import type { AdvancedFieldType, AdvancedOperator, EnumOption } from "@ys.knife.crud/core";
+import type { AdvancedFieldType, AdvancedOperator, EnumOption } from "@ys-knife-crud/core";
 import dayjs from "dayjs";
 
 /**

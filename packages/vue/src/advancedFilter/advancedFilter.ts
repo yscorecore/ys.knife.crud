@@ -10,15 +10,15 @@ import type {
   AdvancedOperator,
   Column,
   EnumOptionsSource,
-} from "@ys.knife.crud/core";
-import { isConditionGroup, isNullOperator } from "@ys.knife.crud/core";
+} from "@ys-knife-crud/core";
+import { isConditionGroup, isNullOperator } from "@ys-knife-crud/core";
 import {
   FIELD_TYPE_OPERATORS,
   defaultOperatorForType,
   inferColumnFieldType,
   isMultiValueOperator,
   isRangeOperator,
-} from "@ys.knife.crud/core";
+} from "@ys-knife-crud/core";
 
 /**
  * 高级查询面板逻辑：UI 库无关。条件树形结构管理 + 递归聚合 FilterInfo。

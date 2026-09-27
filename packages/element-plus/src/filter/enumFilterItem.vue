@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, type PropType } from "vue";
-import type { EnumOption, EnumOptionsSource, FilterItemApi, Operator } from "@ys.knife.crud/core";
-import { useEnumFilterItem, type EnumFilterItemProps } from "@ys.knife.crud/vue";
+import type { EnumOption, EnumOptionsSource, FilterItemApi, Operator } from "@ys-knife-crud/core";
+import { useEnumFilterItem, type EnumFilterItemProps } from "@ys-knife-crud/vue";
 import YsFilterItemLayout from "./filterItemLayout.vue";
 
 // 组件名统一带 ys 前缀：模板中以 <ys-enum-filter-item>（或 <YsEnumFilterItem>）使用。

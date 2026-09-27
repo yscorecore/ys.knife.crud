@@ -1,5 +1,5 @@
 import { defineAsyncComponent, ref, type Component } from "vue";
-import type { FunctionNode, MainPanelProps } from "@ys.knife.crud/core";
+import type { FunctionNode, MainPanelProps } from "@ys-knife-crud/core";
 
 /**
  * 主面板选项卡（运行时结构）：由功能树叶子节点打开时生成。

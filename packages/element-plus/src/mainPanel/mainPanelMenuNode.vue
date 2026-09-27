@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { FunctionNode } from "@ys.knife.crud/core";
+import type { FunctionNode } from "@ys-knife-crud/core";
 
 /**
  * YsMainPanel 功能树的递归节点：

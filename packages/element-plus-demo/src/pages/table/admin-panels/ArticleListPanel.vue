@@ -1,7 +1,7 @@
 <!-- 文章列表面板：YsTable（页面内自定义 Meta，列宽可拖动并持久化） -->
 <script setup lang="ts">
-import { constData, constMetaFunc, loadLocalStorageConfig, saveLocalStorageConfig, type Meta } from "@ys.knife.crud/core";
-import { YsTable } from "@ys.knife.crud/element-plus";
+import { constData, constMetaFunc, loadLocalStorageConfig, saveLocalStorageConfig, type Meta } from "@ys-knife-crud/core";
+import { YsTable } from "@ys-knife-crud/element-plus";
 
 interface PostRow {
   id: number;

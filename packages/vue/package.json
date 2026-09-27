@@ -1,5 +1,5 @@
 {
-  "name": "@ys.knife.crud/vue",
+  "name": "@ys-knife-crud/vue",
   "version": "0.0.1",
   "description": "Vue 3 composables for ys.knife.crud (column config, excel export, row actions, row selection) — UI-library agnostic",
   "type": "module",
@@ -48,7 +48,7 @@
     "postversion": "git push && git push --tags"
   },
   "dependencies": {
-    "@ys.knife.crud/core": "workspace:*",
+    "@ys-knife-crud/core": "workspace:*",
     "ys.knife.query.js": "^0.0.24"
   },
   "peerDependencies": {

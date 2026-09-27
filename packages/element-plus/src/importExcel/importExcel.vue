@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, toRef, watch } from "vue";
 import { ElMessage, ElMessageBox, type TableInstance } from "element-plus";
-import { useImportExcel } from "@ys.knife.crud/vue";
+import { useImportExcel } from "@ys-knife-crud/vue";
 import type {
   DataColumn,
   ImportParser,
@@ -9,7 +9,7 @@ import type {
   ImportProcessor,
   ImportRow,
   ImportRowStatus,
-} from "@ys.knife.crud/core";
+} from "@ys-knife-crud/core";
 import ImportRowEditDialog from "./importRowEditDialog.vue";
 import { formatCell } from "./formatCell";
 

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import type { Column, ExportApi, ExportApiFunc, TableApi } from "@ys.knife.crud/core";
-import { constData } from "@ys.knife.crud/core";
-import { YsTable } from "@ys.knife.crud/element-plus";
+import type { Column, ExportApi, ExportApiFunc, TableApi } from "@ys-knife-crud/core";
+import { constData } from "@ys-knife-crud/core";
+import { YsTable } from "@ys-knife-crud/element-plus";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 import { manyRows, metaFun } from "../shared/demoData";
 

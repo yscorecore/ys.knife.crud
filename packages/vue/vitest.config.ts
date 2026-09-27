@@ -5,7 +5,7 @@ export default defineConfig({
   resolve: {
     alias: {
       // 单测时直接指向源码，避免先构建依赖
-      "@ys.knife.crud/core": fileURLToPath(
+      "@ys-knife-crud/core": fileURLToPath(
         new URL("../core/src/index.ts", import.meta.url)
       ),
     },

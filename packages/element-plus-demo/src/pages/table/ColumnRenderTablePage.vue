@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { h } from "vue";
-import { constData, constMetaFunc, type Meta } from "@ys.knife.crud/core";
-import { YsTable } from "@ys.knife.crud/element-plus";
+import { constData, constMetaFunc, type Meta } from "@ys-knife-crud/core";
+import { YsTable } from "@ys-knife-crud/element-plus";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 import { createRows, type UserRow } from "../shared/demoData";
 

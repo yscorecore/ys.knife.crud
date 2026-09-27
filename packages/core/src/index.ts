@@ -1,4 +1,4 @@
-// @ys.knife.crud/core public entry
+// @ys-knife-crud/core public entry
 //
 // This package is a thin aggregator at the moment. It re-exports `ys.knife.query.js`
 // so that consumers only have to install one library to drive their data sources.
@@ -8,7 +8,7 @@
 export * from "ys.knife.query.js";
 
 // Convenience named re-export of the most commonly used surface, in case callers
-// prefer `import { query, QueryBuilder, PageReq } from "@ys.knife.crud/core"` over
+// prefer `import { query, QueryBuilder, PageReq } from "@ys-knife-crud/core"` over
 // reaching for the underlying `ys.knife.query.js` dependency directly.
 //
 // Note: `verbatimModuleSyntax` is on, so pure types (interfaces) must be re-exported

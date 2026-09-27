@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { constData, Operator } from "@ys.knife.crud/core";
+import { constData, Operator } from "@ys-knife-crud/core";
 import {
   type TablePageDataFun,
   YsTablePage,
   YsTextFilterItem,
-} from "@ys.knife.crud/element-plus";
-import { createExcelJsExportApiFunc } from "@ys.knife.crud/export-exceljs";
+} from "@ys-knife-crud/element-plus";
+import { createExcelJsExportApiFunc } from "@ys-knife-crud/export-exceljs";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 import { manyRows, metaFun } from "../shared/demoData";
 import { useLocalCustomConfig } from "../shared/useLocalCustomConfig";

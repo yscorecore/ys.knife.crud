@@ -5,8 +5,8 @@ import {
   type EnumOption,
   type EnumOptionsSource,
   type FilterInfo,
-} from "@ys.knife.crud/core";
-import { YsAdvancedFilterPanel } from "@ys.knife.crud/element-plus";
+} from "@ys-knife-crud/core";
+import { YsAdvancedFilterPanel } from "@ys-knife-crud/element-plus";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 
 defineEmits<{

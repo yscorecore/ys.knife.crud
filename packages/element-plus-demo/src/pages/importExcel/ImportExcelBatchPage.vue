@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import type { Column, DataColumn, ImportProcessSummary, ImportProcessor, ImportRowProcessor, ImportRowResult } from "@ys.knife.crud/core";
-import { YsImportExcel } from "@ys.knife.crud/element-plus";
-import { createExcelJsImportParser } from "@ys.knife.crud/import-exceljs";
-import { createExcelJsExportApiFunc } from "@ys.knife.crud/export-exceljs";
+import type { Column, DataColumn, ImportProcessSummary, ImportProcessor, ImportRowProcessor, ImportRowResult } from "@ys-knife-crud/core";
+import { YsImportExcel } from "@ys-knife-crud/element-plus";
+import { createExcelJsImportParser } from "@ys-knife-crud/import-exceljs";
+import { createExcelJsExportApiFunc } from "@ys-knife-crud/export-exceljs";
 
 defineEmits<{
   (e: "back"): void;

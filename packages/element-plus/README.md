@@ -1,15 +1,15 @@
-# @ys.knife.crud/element-plus
+# @ys-knife-crud/element-plus
 
-The **element-plus view layer** for `ys.knife.crud` — a set of Vue 3 + Element Plus components that render a full CRUD table (filter panel, command bar, table, column-settings dialog, Excel export dialog, …). All business logic lives in [`@ys.knife.crud/vue`](../vue); framework-agnostic contracts (`Meta`, `Column`, `Action`, `TableApi`, `ExportApi`, …) live in [`@ys.knife.crud/core`](../core).
+The **element-plus view layer** for `ys.knife.crud` — a set of Vue 3 + Element Plus components that render a full CRUD table (filter panel, command bar, table, column-settings dialog, Excel export dialog, …). All business logic lives in [`@ys-knife-crud/vue`](../vue); framework-agnostic contracts (`Meta`, `Column`, `Action`, `TableApi`, `ExportApi`, …) live in [`@ys-knife-crud/core`](../core).
 
 ## Installation
 
 ```bash
 # pnpm
-pnpm add @ys.knife.crud/element-plus @ys.knife.crud/core element-plus
+pnpm add @ys-knife-crud/element-plus @ys-knife-crud/core element-plus
 
 # npm
-npm install @ys.knife.crud/element-plus @ys.knife.crud/core element-plus
+npm install @ys-knife-crud/element-plus @ys-knife-crud/core element-plus
 ```
 
 ## Registering components
@@ -22,7 +22,7 @@ Two ways to use the components:
 import { createApp } from "vue";
 import ElementPlus from "element-plus";
 import "element-plus/dist/index.css";
-import YsCrudElementPlus from "@ys.knife.crud/element-plus";
+import YsCrudElementPlus from "@ys-knife-crud/element-plus";
 
 const app = createApp(App);
 app.use(ElementPlus);
@@ -33,7 +33,7 @@ app.mount("#app");
 **Local import** (tree-shakeable, per-page):
 
 ```ts
-import { YsTablePage, YsTextFilterItem } from "@ys.knife.crud/element-plus";
+import { YsTablePage, YsTextFilterItem } from "@ys-knife-crud/element-plus";
 // now <ys-table-page> / <YsTablePage> resolves in this SFC's template
 ```
 
@@ -60,7 +60,7 @@ A **three-in-one composition component**: `YsFilterPanel` + `YsCommandBar` + `Ys
 This means `YsTablePage`'s `dataFun` uses an **augmented signature** (one extra `filter` arg) compared to core's `PageFunc`:
 
 ```ts
-import type { TablePageDataFun } from "@ys.knife.crud/element-plus";
+import type { TablePageDataFun } from "@ys-knife-crud/element-plus";
 // TablePageDataFun = (req, filter, signal?) => Promise<PagedList<unknown>>
 
 const dataFun: TablePageDataFun = async (req, filter, signal) => {
@@ -76,9 +76,9 @@ const dataFun: TablePageDataFun = async (req, filter, signal) => {
 
 ```vue
 <script setup lang="ts">
-import { constData, Operator } from "@ys.knife.crud/core";
-import { YsTablePage, YsTextFilterItem, type TablePageDataFun } from "@ys.knife.crud/element-plus";
-import { createExcelJsExportApiFunc } from "@ys.knife.crud/export-exceljs";
+import { constData, Operator } from "@ys-knife-crud/core";
+import { YsTablePage, YsTextFilterItem, type TablePageDataFun } from "@ys-knife-crud/element-plus";
+import { createExcelJsExportApiFunc } from "@ys-knife-crud/export-exceljs";
 import { metaFun, type UserRow } from "./meta";        // your MetaFunc
 import { allRows } from "./data";                       // your source rows
 
@@ -230,20 +230,20 @@ The package also exports the individual building blocks for when you need finer 
                     │ uses
                     ▼
 ┌─────────────────────────────────────────────┐
-│  @ys.knife.crud/element-plus  (.vue)        │  ← this package
+│  @ys-knife-crud/element-plus  (.vue)        │  ← this package
 └───────────────────┬─────────────────────────┘
                     │ consumes
                     ▼
 ┌─────────────────────────────────────────────┐
-│  @ys.knife.crud/vue  (composables)          │
+│  @ys-knife-crud/vue  (composables)          │
 └───────────────────┬─────────────────────────┘
                     │ depends on
                     ▼
 ┌─────────────────────────────────────────────┐
-│  @ys.knife.crud/core  (contracts & types)   │
+│  @ys-knife-crud/core  (contracts & types)   │
 └─────────────────────────────────────────────┘
 
-         @ys.knife.crud/export-exceljs
+         @ys-knife-crud/export-exceljs
          (ExportApi implementation, injected as exportorFunc)
 ```
 

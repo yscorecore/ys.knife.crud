@@ -18,7 +18,7 @@
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish",
-    "release:dry": "pnpm -r --filter \"!@ys.knife.crud/element-plus-demo\" publish --dry-run --no-git-checks"
+    "release:dry": "pnpm -r --filter \"!@ys-knife-crud/element-plus-demo\" publish --dry-run --no-git-checks"
   },
   "devDependencies": {
     "@changesets/cli": "^2.27.9",

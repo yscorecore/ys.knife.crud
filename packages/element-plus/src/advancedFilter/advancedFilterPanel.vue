@@ -9,9 +9,9 @@ import type {
   EnumOption,
   EnumOptionsSource,
   FilterInfo,
-} from "@ys.knife.crud/core";
-import { isConditionGroup } from "@ys.knife.crud/core";
-import { useAdvancedFilter } from "@ys.knife.crud/vue";
+} from "@ys-knife-crud/core";
+import { isConditionGroup } from "@ys-knife-crud/core";
+import { useAdvancedFilter } from "@ys-knife-crud/vue";
 import YsAdvancedConditionGroup from "./advancedConditionGroup.vue";
 import {
   ADVANCED_FILTER_KEY,
@@ -44,7 +44,7 @@ defineOptions({ name: "YsAdvancedFilterPanel" });
  *   已存查询标签的渲染由外部（如 YsFilterPanel）经 expose 的 savedQueries /
  *   applySavedQuery / removeSavedQuery 自行编排。
  *
- * 通用逻辑在 @ys.knife.crud/vue 的 useAdvancedFilter；递归渲染由
+ * 通用逻辑在 @ys-knife-crud/vue 的 useAdvancedFilter；递归渲染由
  * YsAdvancedConditionGroup 完成；本组件只做顶层 provide 与查询/重置/保存按钮编排。
  */
 const props = defineProps({

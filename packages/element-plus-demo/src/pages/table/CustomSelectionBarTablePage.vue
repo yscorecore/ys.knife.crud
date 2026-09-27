@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue";
-import { constData, type TableApi } from "@ys.knife.crud/core";
-import { YsTable } from "@ys.knife.crud/element-plus";
+import { constData, type TableApi } from "@ys-knife-crud/core";
+import { YsTable } from "@ys-knife-crud/element-plus";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 import { manyRows, metaFun, type UserRow } from "../shared/demoData";
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { inject, onBeforeUnmount, onMounted, type PropType } from "vue";
-import type { FilterItemApi } from "@ys.knife.crud/core";
-import { FilterPanelKey } from "@ys.knife.crud/vue";
+import type { FilterItemApi } from "@ys-knife-crud/core";
+import { FilterPanelKey } from "@ys-knife-crud/vue";
 
 /**
  * YsFilterItemLayout：FilterItem 的统一外壳组件。

@@ -1,6 +1,6 @@
 import type { InjectionKey, Ref } from "vue";
-import type { AdvancedConditionGroup, Column, EnumOption } from "@ys.knife.crud/core";
-import type { useAdvancedFilter } from "@ys.knife.crud/vue";
+import type { AdvancedConditionGroup, Column, EnumOption } from "@ys-knife-crud/core";
+import type { useAdvancedFilter } from "@ys-knife-crud/vue";
 
 /**
  * FilterInfo 公共接口的子集类型。跨包 dts 时 FilterInfo 的 protected 字段会被剥离，

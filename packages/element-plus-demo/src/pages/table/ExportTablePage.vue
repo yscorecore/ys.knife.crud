@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { constData, type TableApi } from "@ys.knife.crud/core";
-import { YsTable } from "@ys.knife.crud/element-plus";
-import { createExcelJsExportApiFunc } from "@ys.knife.crud/export-exceljs";
+import { constData, type TableApi } from "@ys-knife-crud/core";
+import { YsTable } from "@ys-knife-crud/element-plus";
+import { createExcelJsExportApiFunc } from "@ys-knife-crud/export-exceljs";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 import { manyRows, metaFun } from "../shared/demoData";
 import { useSelectionViewer } from "../shared/useSelectionViewer";

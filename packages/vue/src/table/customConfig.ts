@@ -6,7 +6,7 @@ import type {
   DraftColumn,
   Meta,
   CustomConfigProps,
-} from "@ys.knife.crud/core";
+} from "@ys-knife-crud/core";
 
 /**
  * 取「参与显示」的列并按 displayOrder 排序。

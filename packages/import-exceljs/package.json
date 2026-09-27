@@ -1,5 +1,5 @@
 {
-  "name": "@ys.knife.crud/import-exceljs",
+  "name": "@ys-knife-crud/import-exceljs",
   "version": "0.0.1",
   "description": "ExcelJS implementation of the ys.knife.crud ImportParser contract (browser-friendly)",
   "type": "module",
@@ -47,7 +47,7 @@
     "postversion": "git push && git push --tags"
   },
   "dependencies": {
-    "@ys.knife.crud/core": "workspace:*",
+    "@ys-knife-crud/core": "workspace:*",
     "exceljs": "^4.4.0"
   },
   "devDependencies": {

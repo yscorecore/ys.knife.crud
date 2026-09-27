@@ -4,7 +4,7 @@ import {
   saveLocalStorageConfig,
   type loadCustomConfigFunc,
   type saveCustomConfigFunc,
-} from "@ys.knife.crud/core";
+} from "@ys-knife-crud/core";
 
 /**
  * 列设置演示共用：把某个 localStorage key 包装成

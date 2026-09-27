@@ -6,8 +6,8 @@ import type {
   TableApi,
   TableProps as CoreTableProps,
   ViewMode,
-} from "@ys.knife.crud/core";
-import { useDefault, useRowActions, useSelection, visibleActions, isEnabled } from "@ys.knife.crud/vue";
+} from "@ys-knife-crud/core";
+import { useDefault, useRowActions, useSelection, visibleActions, isEnabled } from "@ys-knife-crud/vue";
 import ExportExcelDialog from "./exportExcelDialog.vue";
 import ColumnConfigDialog from "./columnConfigDialog.vue";
 import RowActionsColumn from "./rowActionsColumn.vue";

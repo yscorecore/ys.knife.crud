@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { Operator } from "@ys.knife.crud/core";
-import { YsFilterPanel, YsTextFilterItem, YsDateFilterItem, YsDateRangeFilterItem, YsEnumFilterItem, type EnumOption } from "@ys.knife.crud/element-plus";
+import { Operator } from "@ys-knife-crud/core";
+import { YsFilterPanel, YsTextFilterItem, YsDateFilterItem, YsDateRangeFilterItem, YsEnumFilterItem, type EnumOption } from "@ys-knife-crud/element-plus";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 
 defineEmits<{

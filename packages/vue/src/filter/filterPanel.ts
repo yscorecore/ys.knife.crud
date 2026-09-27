@@ -1,6 +1,6 @@
 import { computed, ref, type InjectionKey } from "vue";
 import { FilterInfo, emptyFilter } from "ys.knife.query.js";
-import type { FilterItemApi } from "@ys.knife.crud/core";
+import type { FilterItemApi } from "@ys-knife-crud/core";
 
 /**
  * 搜索面板（FilterPanel）聚合子 FilterItem 的 FilterInfo 的逻辑：UI 库无关。

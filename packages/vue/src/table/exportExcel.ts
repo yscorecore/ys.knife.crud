@@ -7,7 +7,7 @@ import {
   type ExportOption,
   type ExportScope,
   type PageFunc,
-} from "@ys.knife.crud/core";
+} from "@ys-knife-crud/core";
 
 /** useExportExcel 需要从组件 props 中访问的成员 */
 interface ExportProps {
@@ -42,7 +42,7 @@ interface UseExportExcelOptions {
  * 组件只经 ExportApi 接口操作（renderHeader → renderRows → download/cancel），
  * 不关心底层实现；未显式传 exportorFunc 时缺省使用 core 的控制台假实现
  * （createConsoleExportApiFunc，只在控制台打日志、不产出文件），
- * 真实导出由消费方注入（如 @ys.knife.crud/export-exceljs）。
+ * 真实导出由消费方注入（如 @ys-knife-crud/export-exceljs）。
  */
 export function useExportExcel({
   props,

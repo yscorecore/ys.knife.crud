@@ -6,8 +6,8 @@ import type {
   AdvancedConditionNode,
   Column,
   EnumOption,
-} from "@ys.knife.crud/core";
-import { OPERATOR_LABELS, isConditionGroup, isNullOperator } from "@ys.knife.crud/core";
+} from "@ys-knife-crud/core";
+import { OPERATOR_LABELS, isConditionGroup, isNullOperator } from "@ys-knife-crud/core";
 import YsAdvancedValueEditor from "./advancedValueEditor.vue";
 import {
   ADVANCED_FILTER_KEY,

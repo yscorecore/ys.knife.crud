@@ -9,7 +9,7 @@ import {
 import type {
   FunctionNodesFunc,
   MainPanelComponentMap,
-} from "@ys.knife.crud/core";
+} from "@ys-knife-crud/core";
 import {
   collectGroupKeys,
   filterNodesByKeyword,
@@ -17,7 +17,7 @@ import {
   isGroupNode,
   useMainPanelNodes,
   useMainPanelTabs,
-} from "@ys.knife.crud/vue";
+} from "@ys-knife-crud/vue";
 import MainPanelMenuNode from "./mainPanelMenuNode.vue";
 
 // 组件名统一带 ys 前缀：模板中以 <ys-main-panel>（或 <YsMainPanel>）使用，
@@ -27,7 +27,7 @@ defineOptions({ name: "YsMainPanel" });
 /**
  * YsMainPanel：左侧功能树 + 右侧主面板选项卡的管理后台布局骨架。
  * 通用逻辑（功能树加载、选项卡状态、组件解析缓存）全部下沉到
- * @ys.knife.crud/vue 的 useMainPanelNodes / useMainPanelTabs，本组件只负责
+ * @ys-knife-crud/vue 的 useMainPanelNodes / useMainPanelTabs，本组件只负责
  * el-menu / el-tabs 视图编排与折叠态。
  *
  * - nodesFunc：功能树数据加载函数（异步返回 FunctionNode[]，数据可来自后端接口）；

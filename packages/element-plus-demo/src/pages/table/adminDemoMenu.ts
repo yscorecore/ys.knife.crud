@@ -1,4 +1,4 @@
-import type { FunctionNode } from "@ys.knife.crud/core";
+import type { FunctionNode } from "@ys-knife-crud/core";
 
 /**
  * 主面板 demo 共用的功能树数据与加载函数。

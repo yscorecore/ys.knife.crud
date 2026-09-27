@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { listData } from "@ys.knife.crud/core";
-import { YsTable } from "@ys.knife.crud/element-plus";
+import { listData } from "@ys-knife-crud/core";
+import { YsTable } from "@ys-knife-crud/element-plus";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 import { createRows, metaFun, type UserRow } from "../shared/demoData";
 

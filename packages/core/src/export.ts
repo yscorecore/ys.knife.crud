@@ -35,7 +35,7 @@ export type ExportApiFunc = () => ExportApi
  * 控制台版 ExportApi（假导出）：不产出任何文件，
  * 把 renderHeader / renderRows / download / cancel 的调用打到 console。
  * 用作组件的缺省导出实现——未注入 exportorFunc 时导出流程可完整走通，
- * 方便联调与演示；生产环境请注入真实实现（如 @ys.knife.crud/export-exceljs）。
+ * 方便联调与演示；生产环境请注入真实实现（如 @ys-knife-crud/export-exceljs）。
  */
 class ConsoleExportApi implements ExportApi {
     private readonly sheets = new Map<string, unknown[][]>()

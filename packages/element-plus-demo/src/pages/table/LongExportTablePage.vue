@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { type TableApi } from "@ys.knife.crud/core";
-import { YsTable } from "@ys.knife.crud/element-plus";
-import { createExcelJsExportApiFunc } from "@ys.knife.crud/export-exceljs";
+import { type TableApi } from "@ys-knife-crud/core";
+import { YsTable } from "@ys-knife-crud/element-plus";
+import { createExcelJsExportApiFunc } from "@ys-knife-crud/export-exceljs";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 import { createBigRows, delayedPagedData, metaFun } from "../shared/demoData";
 

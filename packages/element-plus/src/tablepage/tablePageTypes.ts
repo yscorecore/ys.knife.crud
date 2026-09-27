@@ -1,4 +1,4 @@
-import type { FilterInfo, PagedList, PageReq } from "@ys.knife.crud/core";
+import type { FilterInfo, PagedList, PageReq } from "@ys-knife-crud/core";
 
 /**
  * YsTablePage 的 dataFun 增强签名：相比 core 的 PageFunc 多一个 filter 参数。

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from "vue";
-import type { DataColumn, ImportRow } from "@ys.knife.crud/core";
+import type { DataColumn, ImportRow } from "@ys-knife-crud/core";
 import { formatCell } from "./formatCell";
 
 /**

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, toRef } from "vue";
-import { useExportExcel } from "@ys.knife.crud/vue";
+import { useExportExcel } from "@ys-knife-crud/vue";
 import type {
   Column,
   ExportApiFunc as ExportorFunc,
   PageFunc,
-} from "@ys.knife.crud/core";
+} from "@ys-knife-crud/core";
 
 /**
  * 导出 Excel 对话框组：包含三个相关弹窗

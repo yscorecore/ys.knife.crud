@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { type PropType } from "vue";
-import type { FilterItemApi, Operator } from "@ys.knife.crud/core";
-import { useDateFilterItem, type DateFilterItemProps } from "@ys.knife.crud/vue";
+import type { FilterItemApi, Operator } from "@ys-knife-crud/core";
+import { useDateFilterItem, type DateFilterItemProps } from "@ys-knife-crud/vue";
 import YsFilterItemLayout from "./filterItemLayout.vue";
 
 // 组件名统一带 ys 前缀：模板中以 <ys-date-filter-item>（或 <YsDateFilterItem>）使用。

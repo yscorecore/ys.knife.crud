@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { h, ref, type FunctionalComponent } from "vue";
-import { constActions, constData, type RowActionsFunc, type ViewMode } from "@ys.knife.crud/core";
-import { YsTable } from "@ys.knife.crud/element-plus";
+import { constActions, constData, type RowActionsFunc, type ViewMode } from "@ys-knife-crud/core";
+import { YsTable } from "@ys-knife-crud/element-plus";
 import { ElMessage } from "element-plus";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 import { createRows, metaFun, type UserRow } from "../shared/demoData";

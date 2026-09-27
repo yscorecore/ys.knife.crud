@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, type PropType } from "vue";
-import type { Action, TableApi } from "@ys.knife.crud/core";
-import { visibleActions, isEnabled } from "@ys.knife.crud/vue";
+import type { Action, TableApi } from "@ys-knife-crud/core";
+import { visibleActions, isEnabled } from "@ys-knife-crud/vue";
 
 /**
  * 行操作列（纯展示）：渲染 el-table-column 与操作按钮组。

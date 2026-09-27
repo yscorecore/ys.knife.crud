@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import type { Column, ExportApi, ExportApiFunc } from "@ys.knife.crud/core";
+import type { Column, ExportApi, ExportApiFunc } from "@ys-knife-crud/core";
 
 /**
  * ExcelJS 版导出实现的可选参数（创建时确定，之后按 ExportApi 生命周期使用）。

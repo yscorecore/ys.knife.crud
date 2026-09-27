@@ -7,7 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       // 开发期直接指向组件库源码，免去先 build 组件库（tsup 对 .vue 支持有限）
-      "@ys.knife.crud/element-plus": fileURLToPath(
+      "@ys-knife-crud/element-plus": fileURLToPath(
         new URL("../element-plus/src/index.ts", import.meta.url)
       ),
     },

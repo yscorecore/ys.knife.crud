@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TableApi } from "@ys.knife.crud/core";
+import type { TableApi } from "@ys-knife-crud/core";
 
 /**
  * 表格操作菜单按钮（图标按钮 + 下拉菜单）：

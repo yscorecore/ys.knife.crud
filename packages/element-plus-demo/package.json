@@ -1,8 +1,8 @@
 {
-  "name": "@ys.knife.crud/element-plus-demo",
+  "name": "@ys-knife-crud/element-plus-demo",
   "version": "0.0.0",
   "private": true,
-  "description": "Demo app exercising @ys.knife.crud/element-plus. Not published to npm.",
+  "description": "Demo app exercising @ys-knife-crud/element-plus. Not published to npm.",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,10 +11,10 @@
     "typecheck": "vue-tsc --noEmit"
   },
   "dependencies": {
-    "@ys.knife.crud/core": "workspace:*",
-    "@ys.knife.crud/element-plus": "workspace:*",
-    "@ys.knife.crud/export-exceljs": "workspace:*",
-    "@ys.knife.crud/import-exceljs": "workspace:*",
+    "@ys-knife-crud/core": "workspace:*",
+    "@ys-knife-crud/element-plus": "workspace:*",
+    "@ys-knife-crud/export-exceljs": "workspace:*",
+    "@ys-knife-crud/import-exceljs": "workspace:*",
     "element-plus": "^2.7.0",
     "vue": "^3.5.13"
   },

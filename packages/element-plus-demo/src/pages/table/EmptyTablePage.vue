@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
-import { emptyData, type ViewMode } from "@ys.knife.crud/core";
-import { YsTable } from "@ys.knife.crud/element-plus";
+import { emptyData, type ViewMode } from "@ys-knife-crud/core";
+import { YsTable } from "@ys-knife-crud/element-plus";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 import { metaFun, type UserRow } from "../shared/demoData";
 

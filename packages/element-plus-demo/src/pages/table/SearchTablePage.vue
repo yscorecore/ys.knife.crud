@@ -18,7 +18,7 @@ import {
   type RowActionsFunc,
   type TableApi,
   type ViewMode,
-} from "@ys.knife.crud/core";
+} from "@ys-knife-crud/core";
 import {
   YsTable,
   YsFilterPanel,
@@ -26,8 +26,8 @@ import {
   YsDateRangeFilterItem,
   YsEnumFilterItem,
   type SavedQuery,
-} from "@ys.knife.crud/element-plus";
-import { createExcelJsExportApiFunc } from "@ys.knife.crud/export-exceljs";
+} from "@ys-knife-crud/element-plus";
+import { createExcelJsExportApiFunc } from "@ys-knife-crud/export-exceljs";
 import DemoPageLayout from "../shared/DemoPageLayout.vue";
 import { metaFun, manyRows, type UserRow } from "../shared/demoData";
 import { useLocalCustomConfig } from "../shared/useLocalCustomConfig";

@@ -1,10 +1,10 @@
-# @ys.knife.crud/vue
+# @ys-knife-crud/vue
 
 Reusable **Vue 3 composables** for `ys.knife.crud` — the UI-library-agnostic logic layer that drives a CRUD table.
 
-These composables encapsulate the table business logic (column configuration, Excel export, row actions) without depending on any specific UI component library, so any Vue 3 project can consume them. They build on top of [`@ys.knife.crud/core`](../core) for the framework-agnostic contracts (`Meta`, `Column`, `Action`, `ExportApi`, `CustomConfig`, …).
+These composables encapsulate the table business logic (column configuration, Excel export, row actions) without depending on any specific UI component library, so any Vue 3 project can consume them. They build on top of [`@ys-knife-crud/core`](../core) for the framework-agnostic contracts (`Meta`, `Column`, `Action`, `ExportApi`, `CustomConfig`, …).
 
-The element-plus view layer ([`@ys.knife.crud/element-plus`](../element-plus)) is one consumer: it keeps only the `.vue` components and delegates all logic to this package.
+The element-plus view layer ([`@ys-knife-crud/element-plus`](../element-plus)) is one consumer: it keeps only the `.vue` components and delegates all logic to this package.
 
 ## Features
 
@@ -20,13 +20,13 @@ The element-plus view layer ([`@ys.knife.crud/element-plus`](../element-plus)) i
 
 ```bash
 # npm
-npm install @ys.knife.crud/vue @ys.knife.crud/core
+npm install @ys-knife-crud/vue @ys-knife-crud/core
 
 # pnpm
-pnpm add @ys.knife.crud/vue @ys.knife.crud/core
+pnpm add @ys-knife-crud/vue @ys-knife-crud/core
 
 # yarn
-yarn add @ys.knife.crud/vue @ys.knife.crud/core
+yarn add @ys-knife-crud/vue @ys-knife-crud/core
 ```
 
 ## Peer dependencies
@@ -35,7 +35,7 @@ yarn add @ys.knife.crud/vue @ys.knife.crud/core
 | --- | --- | --- |
 | `vue` | `^3.5.0` | Must be installed by the consuming project. |
 
-`@ys.knife.crud/core` is a regular dependency and is pulled in automatically.
+`@ys-knife-crud/core` is a regular dependency and is pulled in automatically.
 
 ## Usage
 
@@ -49,7 +49,7 @@ import {
   useSelection,
   visibleActions,
   isEnabled,
-} from "@ys.knife.crud/vue";
+} from "@ys-knife-crud/vue";
 ```
 
 ### `useCustomConfig`
@@ -89,7 +89,7 @@ The composable owns all dialog visibility, progress state, and actions. **Recomm
 
 ```ts
 import { toRef } from "vue";
-import { useExportExcel } from "@ys.knife.crud/vue";
+import { useExportExcel } from "@ys-knife-crud/vue";
 
 // Inside a self-managing dialog component (e.g. exportExcelDialog.vue)
 const props = defineProps<{
@@ -161,7 +161,7 @@ The parent component then only wires data inputs and calls `openExportDialog()`:
 <el-button v-if="showExportExcel" @click="exportDialogRef?.openExportDialog()">⬇ 导出 Excel</el-button>
 ```
 
-If `exportorFunc` is not provided, the core console stub (`createConsoleExportApiFunc`) is used — it logs calls and produces no file. Inject a real implementation such as [`@ys.knife.crud/export-exceljs`](../export-exceljs) for actual file output.
+If `exportorFunc` is not provided, the core console stub (`createConsoleExportApiFunc`) is used — it logs calls and produces no file. Inject a real implementation such as [`@ys-knife-crud/export-exceljs`](../export-exceljs) for actual file output.
 
 ### `useRowActions`
 
@@ -200,20 +200,20 @@ const {
 
 ```
 ┌─────────────────────────────────────────────────┐
-│  @ys.knife.crud/element-plus  (.vue)            │  ← element-plus view layer
+│  @ys-knife-crud/element-plus  (.vue)            │  ← element-plus view layer
 └───────────────────────┬─────────────────────────┘
                         │ consumes
                         ▼
 ┌─────────────────────────────────────────────────┐
-│  @ys.knife.crud/vue  (composables)              │  ← this package
+│  @ys-knife-crud/vue  (composables)              │  ← this package
 └───────────────────────┬─────────────────────────┘
                         │ depends on
                         ▼
 ┌─────────────────────────────────────────────────┐
-│  @ys.knife.crud/core  (contracts & types)       │  ← framework-agnostic
+│  @ys-knife-crud/core  (contracts & types)       │  ← framework-agnostic
 └─────────────────────────────────────────────────┘
 
-         @ys.knife.crud/export-exceljs
+         @ys-knife-crud/export-exceljs
          (ExportApi implementation, injected as exportorFunc)
 ```
 

@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import type { ImportParser, ImportSheet, ImportSheetRow } from "@ys.knife.crud/core";
+import type { ImportParser, ImportSheet, ImportSheetRow } from "@ys-knife-crud/core";
 
 /**
  * 基于 ExcelJS 的 ImportParser 实现（浏览器友好）：
