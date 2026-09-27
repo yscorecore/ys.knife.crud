@@ -1,7 +1,7 @@
 import type { Meta, MetaFunc } from "./meta"
 import type { PageFunc } from "./page"
-import { type PagedList,type FilterInfo, Operator } from "ys.knife.query.js"
-import type { Action, RowActionsFunc } from "./action"
+import { type PagedList, type FilterInfo } from "ys.knife.query.js"
+import type { RowActionsFunc } from "./action"
 import type { loadCustomConfigFunc as loadCustomConfigFunc, saveCustomConfigFunc } from "./customConfig"
 import type { ExportApiFunc } from "./export"
 

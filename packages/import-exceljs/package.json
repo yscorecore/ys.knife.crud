@@ -1,6 +1,6 @@
 {
   "name": "@ys.knife.crud/import-exceljs",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "ExcelJS implementation of the ys.knife.crud ImportParser contract (browser-friendly)",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -25,15 +25,26 @@
     "xlsx"
   ],
   "license": "MIT",
+  "author": "Pengbo",
+  "homepage": "https://github.com/yscorecore/ys.knife.crud#readme",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/yscorecore/ys.knife.crud.git",
+    "url": "git+https://github.com/yscorecore/ys.knife.crud.git",
     "directory": "packages/import-exceljs"
+  },
+  "bugs": {
+    "url": "https://github.com/yscorecore/ys.knife.crud/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "provenance": true
   },
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "postversion": "git push && git push --tags"
   },
   "dependencies": {
     "@ys.knife.crud/core": "workspace:*",

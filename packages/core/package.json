@@ -1,6 +1,6 @@
 {
   "name": "@ys.knife.crud/core",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Framework-agnostic CRUD core: data source contract, in-memory implementation and queryable CRUD manager",
   "type": "module",
   "main": "./dist/index.js",
@@ -23,17 +23,28 @@
     "typescript"
   ],
   "license": "MIT",
+  "author": "Pengbo",
+  "homepage": "https://github.com/yscorecore/ys.knife.crud#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/your-org/ys.knife.crud.git",
+    "url": "git+https://github.com/yscorecore/ys.knife.crud.git",
     "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/yscorecore/ys.knife.crud/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "provenance": true
   },
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "postversion": "git push && git push --tags"
   },
   "dependencies": {
     "ys.knife.query.js": "^0.0.24"

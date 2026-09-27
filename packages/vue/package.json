@@ -1,6 +1,6 @@
 {
   "name": "@ys.knife.crud/vue",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "description": "Vue 3 composables for ys.knife.crud (column config, excel export, row actions, row selection) — UI-library agnostic",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -24,17 +24,28 @@
     "table"
   ],
   "license": "MIT",
+  "author": "Pengbo",
+  "homepage": "https://github.com/yscorecore/ys.knife.crud#readme",
   "repository": {
     "type": "git",
-    "url": "git+ssh://git@github.com/yscorecore/ys.knife.crud.git",
+    "url": "git+https://github.com/yscorecore/ys.knife.crud.git",
     "directory": "packages/vue"
+  },
+  "bugs": {
+    "url": "https://github.com/yscorecore/ys.knife.crud/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "provenance": true
   },
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "postversion": "git push && git push --tags"
   },
   "dependencies": {
     "@ys.knife.crud/core": "workspace:*",

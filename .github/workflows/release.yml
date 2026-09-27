@@ -1,0 +1,51 @@
+name: Release
+
+# 发布触发：
+#   1) v*                        —— 全仓统一版本 tag（首次 v0.0.1，5 个包同版本发布）
+#   2) @ys.knife.crud/<pkg>@x.y.z —— 单包发布：在包目录执行 pnpm version patch
+#                                   （tag 前缀见各包 .npmrc 的 tag-version-prefix），
+#                                   postversion 钩子自动 push commit 与 tag
+on:
+  push:
+    tags:
+      - "v*"
+      - "@ys.knife.crud/*"
+
+permissions:
+  contents: read
+  # npm provenance（来源证明）需要向 Sigstore 换取 OIDC 签名
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org/
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build libraries
+        # demo 是私有应用不发布，只构建 5 个库包
+        run: pnpm -r --filter "!@ys.knife.crud/element-plus-demo" run build
+
+      - name: Publish to npm
+        # -r 递归发布：private 包自动跳过；已发布过的版本 pnpm 会自动跳过（单包 tag 也安全）
+        # workspace:* 依赖在发布时自动替换为具体版本号；--provenance 生成来源证明
+        run: pnpm -r publish --access public --no-git-checks --provenance
+        env:
+          # npm Automation Token，在仓库 Settings → Secrets and variables → Actions 配置
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

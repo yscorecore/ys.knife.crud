@@ -1,5 +1,5 @@
 import type { InjectionKey, Ref } from "vue";
-import type { AdvancedConditionGroup, Column, EnumOption, FilterInfo } from "@ys.knife.crud/core";
+import type { AdvancedConditionGroup, Column, EnumOption } from "@ys.knife.crud/core";
 import type { useAdvancedFilter } from "@ys.knife.crud/vue";
 
 /**
