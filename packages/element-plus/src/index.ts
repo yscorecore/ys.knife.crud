@@ -14,6 +14,7 @@ import YsAdvancedValueEditor from "./advancedFilter/advancedValueEditor.vue";
 import YsAdvancedConditionGroup from "./advancedFilter/advancedConditionGroup.vue";
 import YsTablePage from "./tablepage/tablePage.vue";
 import YsImportExcel from "./importExcel/importExcel.vue";
+import { openModal, setDefaultModalAppContext } from "./modal/openModal";
 
 export {
   YsTable,
@@ -31,7 +32,11 @@ export {
   YsAdvancedFilterPanel,
   YsAdvancedValueEditor,
   YsAdvancedConditionGroup,
+  // 代码式弹窗服务：openModal({ component, props }) 直接挂载任意 SFC 到弹窗
+  openModal,
 };
+
+export type { ModalOptions, ModalHandle } from "./modal/openModal";
 
 // 枚举 FilterItem 的选项数据源类型:函数,返回 Promise<EnumOption[]>。
 // 类型与工厂函数(EnumOption/EnumOptionsSource/fromOptions/fromObjectItems/fromArray/fromBool)
@@ -79,6 +84,8 @@ export type { TablePageDataFun } from "./tablepage/tablePageTypes";
  */
 const YsCrudElementPlus: Plugin = {
   install(app: App) {
+    // 让 openModal 动态挂载的弹窗继承应用上下文（provide/inject、全局组件/指令、i18n 等）
+    setDefaultModalAppContext(app._context);
     app.component("YsTable", YsTable);
     app.component("YsTableActionMenuButton", YsTableActionMenuButton);
     app.component("YsCommandBar", YsCommandBar);
