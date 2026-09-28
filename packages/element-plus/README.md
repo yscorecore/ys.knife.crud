@@ -221,6 +221,170 @@ You normally don't need this — `actions` receive the `TableApi` automatically,
 
 The package also exports the individual building blocks for when you need finer control than `YsTablePage`: `YsTable`, `YsFilterPanel` (+ `YsTextFilterItem` / `YsDateFilterItem` / `YsDateRangeFilterItem` / `YsEnumFilterItem` / `YsFilterItemLayout`), `YsCommandBar`, `YsTableActionMenuButton`, `YsMainPanel`, and the advanced-filter trio (`YsAdvancedFilterPanel` / `YsAdvancedValueEditor` / `YsAdvancedConditionGroup`). `YsTablePage` is the recommended starting point; drop down to the primitives only when its fixed layout doesn't fit.
 
+---
+
+## `openModal` — code-driven dialogs
+
+A small service that mounts **any component** inside an `ElDialog` from plain code — no `<el-dialog v-model="...">` declaration in the template, no boolean ref to maintain. It is useful for row-action edit forms, one-off confirm forms, and any dialog whose trigger lives in an event handler (`Action.execute`, a command-bar button, a context-menu item, …).
+
+```ts
+import { openModal } from "@ys-knife-crud/element-plus";
+```
+
+### Quick start
+
+```ts
+import { openModal } from "@ys-knife-crud/element-plus";
+import UserEditForm from "./UserEditForm.vue";
+
+openModal({
+  title: "编辑用户",
+  width: "600px",
+  component: UserEditForm,
+  props: { userId: 123 },
+  onConfirm: async () => {
+    const ok = await saveUser();
+    return ok;          // returning false keeps the dialog open (validation failed)
+  },
+  onCancel: () => console.log("cancelled"),
+  onClosed: () => console.log("dialog destroyed"),
+});
+```
+
+The content component only needs to render its body. An `onClose` listener is injected automatically, so `emit("close")` closes the dialog:
+
+```vue
+<!-- UserEditForm.vue -->
+<script setup lang="ts">
+import { ref } from "vue";
+import type { FormInstance, FormRules } from "element-plus";
+
+defineProps<{ userId: number }>();
+const emit = defineEmits<{
+  (e: "close"): void;
+  (e: "saved", row: { name: string }): void;
+}>();
+
+const formRef = ref<FormInstance>();
+const form = ref({ name: "" });
+const rules: FormRules = { name: [{ required: true, message: "必填", trigger: "blur" }] };
+
+// expose data/validation for the caller's onConfirm if you don't use listeners
+defineExpose({
+  validate: () => formRef.value?.validate(),
+  getData: () => form.value,
+});
+</script>
+
+<template>
+  <el-form ref="formRef" :model="form" :rules="rules" label-width="80px">
+    <el-form-item label="姓名" prop="name">
+      <el-input v-model="form.name" />
+    </el-form-item>
+  </el-form>
+</template>
+```
+
+### Options (`ModalOptions`)
+
+| Option | Type | Default | Description |
+| --- | --- | --- | --- |
+| `component` | `Component` | — **required** | The component rendered as the dialog body. |
+| `props` | `P` | — | Props forwarded to `component`. An `onClose` listener is always injected in addition. |
+| `listeners` | `Record<string, (...args) => void>` | — | Extra event handlers in Vue `onXxx` form, e.g. `{ onSaved: (row) => … }` maps to `emit("saved", row)`. |
+| `title` | `string` | `""` | Dialog title (passed to `el-dialog`). |
+| `width` | `string \| number` | `"500px"` | Dialog width. |
+| `showFooter` | `boolean` | `true` | Render the built-in 取消 / 确定 footer. Set `false` when the content component renders its own buttons. |
+| `confirmText` | `string` | `"确定"` | Confirm button label. |
+| `cancelText` | `string` | `"取消"` | Cancel button label. |
+| `onConfirm` | `() => unknown \| Promise<unknown>` | — | Click handler for 确定. While the returned promise is pending the confirm button shows a loading spinner and all cancel paths are disabled. **Returning `false` keeps the dialog open**; any other return value (including `undefined`) closes it. |
+| `onCancel` | `() => void` | — | Fired on any cancel-style close: the 取消 button, the ✕ icon, ESC (if enabled), or modal-click (if enabled). Not fired after a successful confirm. |
+| `onClosed` | `() => void` | — | Fired after the close transition finishes and the dialog DOM has been destroyed. |
+| `closeOnClickModal` | `boolean` | `false` | Clicking the overlay closes the dialog. Disabled by default to avoid losing form input. |
+| `closeOnPressEscape` | `boolean` | `false` | ESC closes the dialog. Disabled by default. |
+| `appContext` | `AppContext` | plugin default | Explicit app context for `inject` / global components inside the dialog. Usually unnecessary when the plugin is installed. |
+
+### Returned handle (`ModalHandle`)
+
+```ts
+const handle = openModal({ component: MyForm });
+
+handle.close();                          // close with transition, then destroy
+handle.getContentInstance();             // the mounted body component instance,
+                                         // so you can call its defineExpose() methods
+```
+
+### Async confirm and validation
+
+`onConfirm` is the single async gate for the built-in footer:
+
+- While it is pending, the confirm button shows `loading`, the cancel button is disabled, and the ✕ icon is hidden — preventing a half-submitted close.
+- Return `false` (or a promise resolving to `false`) to **keep the dialog open**, typically after failed validation; re-throw is unnecessary.
+
+```ts
+const handle = openModal({
+  component: UserEditForm,
+  onConfirm: async () => {
+    const form = handle.getContentInstance() as InstanceType<typeof UserEditForm> | null;
+    if (!form) return false;
+    try {
+      await form.validate();
+    } catch {
+      return false; // Element Plus validation failed → stay open
+    }
+    await api.update(form.getData());
+    // undefined → close
+  },
+});
+```
+
+> A common alternative that avoids `getContentInstance()` is to have the body component own its buttons (`showFooter: false`) and call the API itself, then `emit("close")` on success.
+
+### Custom footer (body owns the buttons)
+
+For multi-step forms, dynamic button labels, or cases where the body already has a button bar:
+
+```ts
+openModal({
+  title: "详情",
+  component: DetailPanel,
+  props: { id },
+  showFooter: false, // no built-in 取消/确定
+});
+```
+
+The body can then render its own buttons and close via the injected `onClose`:
+
+```vue
+<template>
+  <div class="detail">…</div>
+  <div class="footer">
+    <el-button @click="emit('close')">关闭</el-button>
+    <el-button type="primary" @click="submitAndClose">保存</el-button>
+  </div>
+</template>
+```
+
+### App context (inject / i18n / pinia)
+
+Because the dialog is mounted imperatively, it does not automatically inherit the calling component's app context. After registering the plugin (`app.use(YsCrudElementPlus)`), the application context is captured during `install` and used by every `openModal` call, so `inject`, global components, directives, `ElConfigProvider` locale, Pinia, etc. work inside dialog bodies with no extra setup. If you use local imports without the plugin, pass the context explicitly:
+
+```ts
+import { getCurrentInstance } from "vue";
+
+const { appContext } = getCurrentInstance()!;
+openModal({ component: MyForm, appContext });
+```
+
+### Notes & gotchas
+
+- **Cleanup is automatic.** The service listens to `el-dialog`'s `closed` event and calls `render(null, container)` + removes the mount node after the leave transition. Reopening later creates a fresh instance — do not reuse the container yourself.
+- **Teleport still applies.** `el-dialog` teleports to `<body>` as usual; the internal mount node is only the vnode anchor, so dialogs are not trapped inside an `overflow:hidden` parent.
+- **`destroy-on-close` is always on.** Body component state is not retained across close/reopen; initialise from `props` (e.g. fetch by `userId` in `onMounted`).
+- **Prefer it for dialogs triggered from handlers.** For dialogs whose open state is naturally bound to template state (e.g. a panel-level edit dialog co-located with a table), a plain `<el-dialog v-model>` is still the simpler choice.
+
+---
+
 ## Relationship to other packages
 
 ```
