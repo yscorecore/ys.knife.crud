@@ -15,6 +15,13 @@
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
     "resolveJsonModule": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "paths": {
+      "@ys-knife-crud/core": ["./packages/core/src/index.ts"],
+      "@ys-knife-crud/vue": ["./packages/vue/src/index.ts"],
+      "@ys-knife-crud/element-plus": ["./packages/element-plus/src/index.ts"],
+      "@ys-knife-crud/export-exceljs": ["./packages/export-exceljs/src/index.ts"],
+      "@ys-knife-crud/import-exceljs": ["./packages/import-exceljs/src/index.ts"]
+    }
   }
 }
