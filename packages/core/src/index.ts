@@ -33,8 +33,13 @@ export type { PageReq, PagedList,PageFunc } from "ys.knife.query.js";
 // --- 本地 framework-agnostic 类型与工具 ---
 // meta.ts 混合导出（constMetaFunc 是值，Column/Meta/MetaFunc 是类型）→ 用 export *
 export * from "./meta";
-// ui.ts 只有纯类型（interface/type）→ verbatimModuleSyntax 下必须用 export type *
-export type * from "./ui";
+// 拆分自原 ui.ts 的三个领域契约，均为纯类型 → verbatimModuleSyntax 下用 export type *
+// table.ts：表格输入/输出契约（TableProps/TableApi/ViewMode/ExportScope 等）
+export type * from "./table";
+// mainPanel.ts：主面板功能树契约（FunctionNode/MainPanelProps 等）
+export type * from "./mainPanel";
+// filter.ts：单字段与面板级查询条件契约（FilterItemApi/FilterPanelApi 等）
+export type * from "./filter";
 // page.ts 混合：constData/emptyData/listData 是值（用 export），ListFunc 是纯类型（用 export type）。
 // 分页契约 PageFunc/PageReq 已在上方直接从 ys.knife.query.js re-export，这里不再重复导出以免冲突。
 export { constData, emptyData, listData } from "./page";

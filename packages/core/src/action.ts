@@ -1,4 +1,4 @@
-import type { TableApi } from "./ui";
+import type { TableApi } from "./table";
 
 /** 行操作按钮类型，对应 el-button 的 type（core 层不依赖 element-plus，用字面量联合约束） */
 export type ActionType = "primary" | "success" | "warning" | "danger" | "info" | "default";
