@@ -35,6 +35,7 @@ import TablePageDemo from "./pages/tablePage/TablePageDemo.vue";
 import TablePageFillHeightDemo from "./pages/tablePage/TablePageFillHeightDemo.vue";
 import ImportExcelPage from "./pages/importExcel/ImportExcelPage.vue";
 import ImportExcelBatchPage from "./pages/importExcel/ImportExcelBatchPage.vue";
+import ModalDemoPage from "./pages/modal/ModalDemoPage.vue";
 
 /**
  * Demo 页面注册表：导航按钮与 App 动态渲染共用的唯一数据源。
@@ -201,6 +202,11 @@ export const demoPages = [
     id: "import-excel-batch",
     label: "Excel 批量导入（batchSize 分批，可切换批次大小）",
     component: ImportExcelBatchPage,
+  },
+  {
+    id: "modal-open",
+    label: "代码式弹窗（openModal，无需 template 声明）",
+    component: ModalDemoPage,
   },
 ] as const satisfies readonly DemoPageDef[];
 
