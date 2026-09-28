@@ -5,6 +5,12 @@ name: Release
 #   2) @ys-knife-crud/<pkg>@x.y.z —— 单包发布：在包目录执行 pnpm version patch
 #                                   （tag 前缀见各包 .npmrc 的 tag-version-prefix），
 #                                   postversion 钩子自动 push commit 与 tag
+#
+# 认证方式：npm Trusted Publishing（OIDC）—— 不使用长期 token，
+# GitHub Actions 运行时通过 OIDC 向 npm 证明身份，npm 验证通过后允许本次发布。
+# 配置前提：在 npm 后台为每个包配置 trusted publisher
+#           （repository=yscorecore/ys.knife.crud，workflow=.github/workflows/release.yml，
+#            environment=release）。已配置的包发布时不需 NPM_TOKEN secret。
 on:
   push:
     tags:
@@ -13,12 +19,19 @@ on:
 
 permissions:
   contents: read
-  # npm provenance（来源证明）需要向 Sigstore 换取 OIDC 签名
+  # npm Trusted Publishing / provenance 需要向 Sigstore 换取 OIDC 签名
   id-token: write
+
+# 与 npm 后台 Trusted Publisher 配置中的 environment 字段保持一致；
+# 显式声明 environment 触发 OIDC 主体claim，使 npm 能精确校验本次发布归属
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: release
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -32,7 +45,8 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          registry-url: https://registry.npmjs.org/
+          # 注意：不再设置 registry-url，也不再写 .npmrc token，
+          # 让 npm CLI 走 OIDC（Trusted Publishing）路径
           cache: pnpm
 
       - name: Install dependencies
@@ -42,26 +56,12 @@ jobs:
         # demo 是私有应用不发布，只构建 5 个库包
         run: pnpm -r --filter "!@ys-knife-crud/element-plus-demo" run build
 
-      - name: Verify npm token
-        # secret 为空时 setup-node 会静默不写认证，这里显式失败并给出明确原因
-        run: |
-          if [ -z "${NODE_AUTH_TOKEN}" ]; then
-            echo "::error::secrets.NPM_TOKEN 为空或当前运行无权读取，请在仓库 Settings → Secrets and variables → Actions 配置"
-            exit 1
-          fi
-          echo "NPM_TOKEN present (length=${#NODE_AUTH_TOKEN})"
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
       - name: Publish to npm
+        # Trusted Publishing：npm CLI 检测到 OIDC 环境（id-token: write + environment）后，
+        # 自动与 npm 注册表交换身份证明，无需任何 token；--provenance 生成来源证明
         # -r 递归发布：private 包自动跳过；已发布过的版本 pnpm 会自动跳过（单包 tag 也安全）
-        # workspace:* 依赖在发布时自动替换为具体版本号；--provenance 生成来源证明
-        # 1) pnpm config set 把 token 写入用户级 ~/.npmrc（pnpm 9 最终委托 npm CLI 发布，二者共用）
-        # 2) NPM_CONFIG_REGISTRY 强制官方源，覆盖仓库根 .npmrc 的 npmmirror 镜像
-        run: |
-          pnpm config set //registry.npmjs.org/:_authToken "$NODE_AUTH_TOKEN"
-          pnpm -r publish --access public --no-git-checks --provenance
+        # workspace:* 依赖在发布时自动替换为具体版本号
+        run: pnpm -r publish --access public --no-git-checks --provenance
         env:
-          # npm Automation Token，在仓库 Settings → Secrets and variables → Actions 配置
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # 强制官方源，覆盖仓库根 .npmrc 的 npmmirror 镜像（OIDC 必须用 npmjs.org）
           NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
