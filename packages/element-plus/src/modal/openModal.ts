@@ -236,7 +236,18 @@ export function openModal<P extends Record<string, unknown> = Record<string, unk
 
     const vnode: VNode = createVNode(Host);
     // 继承 AppContext，使弹窗内 inject / 全局指令 / 全局组件可用
-    vnode.appContext = appContext ?? defaultAppContext;
+    const resolvedAppContext = appContext ?? defaultAppContext;
+    if (!resolvedAppContext) {
+        // 未安装插件（app.use(YsCrudElementPlus)）也未显式传入 appContext 时，
+        // 弹窗内模板无法解析任何全局组件（el-* / app.component 注册的组件），
+        // 给出明确提示而非静默渲染成未解析的自定义元素
+        console.warn(
+            "[openModal] 未检测到 AppContext：弹窗内的全局组件（如 el-form）与 inject 将不可用。"
+            + "请在应用入口 app.use(YsCrudElementPlus)，或调用 openModal 时传入 "
+            + "appContext（getCurrentInstance()?.appContext）。",
+        );
+    }
+    vnode.appContext = resolvedAppContext;
     render(vnode, container);
 
     const exposed = vnode.component?.exposed as { close: () => void } | undefined;

@@ -7,15 +7,15 @@ import type { FormInstance, FormRules } from "element-plus";
  * 校验与取值经 defineExpose 暴露给外部 onConfirm 回调；
  * 内置 footer 模式下不需要 emit("close")——关闭由 openModal 内部控制。
  */
-defineProps<{
+const props = defineProps<{
   initialName?: string;
   initialEmail?: string;
 }>();
 
 const formRef = ref<FormInstance>();
 const form = reactive({
-  name: "",
-  email: "",
+  name: props.initialName ?? "",
+  email: props.initialEmail ?? "",
 });
 
 const rules: FormRules = {
