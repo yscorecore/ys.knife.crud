@@ -231,6 +231,8 @@ A small service that mounts **any component** inside an `ElDialog` from plain co
 import { openModal } from "@ys-knife-crud/element-plus";
 ```
 
+> **Prerequisite — register the plugin.** The dialog is mounted imperatively, so it does **not** automatically inherit the calling component's app context. Install the plugin once at the app entry (`app.use(YsCrudElementPlus)`); otherwise `el-*` tags inside the dialog body render as unresolved custom elements and `inject()` returns `undefined`. See [App context](#app-context-inject--i18n--pinia) for details and the local-import fallback.
+
 ### Quick start
 
 ```ts
@@ -365,23 +367,71 @@ The body can then render its own buttons and close via the injected `onClose`:
 </template>
 ```
 
-### App context (inject / i18n / pinia)
+### Using from a row action
 
-Because the dialog is mounted imperatively, it does not automatically inherit the calling component's app context. After registering the plugin (`app.use(YsCrudElementPlus)`), the application context is captured during `install` and used by every `openModal` call, so `inject`, global components, directives, `ElConfigProvider` locale, Pinia, etc. work inside dialog bodies with no extra setup. If you use local imports without the plugin, pass the context explicitly:
+The most common use in this library: an `Action.execute(row, table)` opens an edit form for the clicked row and refreshes the table after a successful save. Pass the row through `props`, and call `table.refresh()` (current page only) or `table.reload()` (back to page 1) after the dialog closes:
 
 ```ts
+import { constActions, type RowActionsFunc } from "@ys-knife-crud/core";
+import { openModal } from "@ys-knife-crud/element-plus";
+import UserEditForm from "./UserEditForm.vue";
+
+const rowActionsFunc: RowActionsFunc<UserRow> = constActions<UserRow>({
+  name: "edit",
+  desc: "编辑",
+  execute: (row, table) => {
+    const handle = openModal({
+      title: `编辑：${row.name}`,
+      component: UserEditForm,
+      // seed the form from the clicked row; the body initialises from props
+      props: { initialName: row.name, initialEmail: row.email },
+      onConfirm: async () => {
+        const form = handle.getContentInstance() as InstanceType<typeof UserEditForm> | null;
+        if (!form) return false;
+        try {
+          await form.validate();
+        } catch {
+          return false; // stay open on validation failure
+        }
+        await updateUser(row.id, form.getData());
+        table.refresh(); // re-fetch the current page after saving
+        // returning undefined closes the dialog
+      },
+    });
+    return Promise.resolve();
+  },
+});
+```
+
+> `execute` is called outside the Vue component tree (it is just a callback), which is exactly why `openModal` captures the app context from the plugin install rather than from the call site. There is no `getCurrentInstance()` available inside `execute`.
+
+### App context (inject / i18n / pinia)
+
+Because the dialog is mounted imperatively, it does not automatically inherit the calling component's app context. After registering the plugin (`app.use(YsCrudElementPlus)`), the application context is captured during `install` and used by every `openModal` call, so `inject`, global components, directives, `ElConfigProvider` locale, Pinia, etc. work inside dialog bodies with no extra setup. If you use local imports without the plugin, capture the context **inside `setup`** and pass it explicitly — `getCurrentInstance()` returns `null` inside the later event handler:
+
+```ts
+// inside <script setup>: capture once, use in handlers
 import { getCurrentInstance } from "vue";
 
-const { appContext } = getCurrentInstance()!;
-openModal({ component: MyForm, appContext });
+const appContext = getCurrentInstance()!.appContext;
+
+function openEdit() {
+  openModal({ component: MyForm, appContext });
+}
 ```
+
+**Troubleshooting — missing app context.** When neither the plugin nor an explicit `appContext` is available, `openModal` prints a console warning and the dialog body renders `el-*` tags as **unresolved custom elements** — inspecting the DOM shows literal `<el-form>` / `<el-input>` nodes instead of `<form class="el-form">`, and the inputs never appear. `inject()` inside the body also returns `undefined`. Fix it by installing the plugin in the app entry, or pass `appContext` as shown above.
 
 ### Notes & gotchas
 
+- **Register the plugin (or pass `appContext`).** This is the single most common failure: imperative `render()` does not inherit the caller's component tree, so without an app context the dialog shell (`ElDialog`, imported directly by the service) works but every globally-registered component inside the **body** silently fails to resolve. See [App context](#app-context-inject--i18n--pinia).
 - **Cleanup is automatic.** The service listens to `el-dialog`'s `closed` event and calls `render(null, container)` + removes the mount node after the leave transition. Reopening later creates a fresh instance — do not reuse the container yourself.
 - **Teleport still applies.** `el-dialog` teleports to `<body>` as usual; the internal mount node is only the vnode anchor, so dialogs are not trapped inside an `overflow:hidden` parent.
-- **`destroy-on-close` is always on.** Body component state is not retained across close/reopen; initialise from `props` (e.g. fetch by `userId` in `onMounted`).
+- **`destroy-on-close` is always on.** Body component state is not retained across close/reopen; initialise from `props` synchronously (e.g. `reactive({ name: props.initialName ?? "" })`) or fetch by id in `onMounted`.
+- **`onConfirm` is for the built-in footer only.** With `showFooter: false` it is never called — the body component owns its buttons and closes via `emit("close")`.
 - **Prefer it for dialogs triggered from handlers.** For dialogs whose open state is naturally bound to template state (e.g. a panel-level edit dialog co-located with a table), a plain `<el-dialog v-model>` is still the simpler choice.
+
+A runnable, three-scenario demo (built-in footer with async validation / `showFooter: false` / `listeners`) lives in [`packages/element-plus-demo/src/pages/modal`](./packages/element-plus-demo/src/pages/modal); run `pnpm --filter @ys-knife-crud/element-plus-demo dev` and open **代码式弹窗（openModal）**.
 
 ---
 
