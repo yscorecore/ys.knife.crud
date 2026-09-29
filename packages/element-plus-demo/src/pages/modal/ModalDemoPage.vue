@@ -67,6 +67,29 @@ function openWithListeners(): void {
     },
   });
 }
+
+function openMaximizable(): void {
+  const handle = openModal({
+    title: "可最大化弹窗（点标题栏 ⛶ 切换）",
+    width: "520px",
+    component: UserEditForm,
+    props: { initialName: "Dave", initialEmail: "dave@example.com" },
+    maximizable: true,
+    onConfirm: () => ElMessage.success("保存成功"),
+  });
+  console.log("[modal demo] initial maximized:", handle.isMaximized());
+}
+
+function openMaximizedByDefault(): void {
+  openModal({
+    title: "打开即最大化（defaultMaximized）",
+    component: UserEditForm,
+    props: { initialName: "Eve", initialEmail: "eve@example.com" },
+    maximizable: true,
+    defaultMaximized: true,
+    onConfirm: () => ElMessage.success("保存成功"),
+  });
+}
 </script>
 
 <template>
@@ -84,6 +107,12 @@ function openWithListeners(): void {
       </el-button>
       <el-button @click="openWithListeners">
         ③ listeners 透传事件
+      </el-button>
+      <el-button type="success" @click="openMaximizable">
+        ④ 可最大化（标题栏按钮切换）
+      </el-button>
+      <el-button type="warning" @click="openMaximizedByDefault">
+        ⑤ 打开即最大化（defaultMaximized）
       </el-button>
       <el-alert
         class="demo-modal-tip"
