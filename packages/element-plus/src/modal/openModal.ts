@@ -63,13 +63,16 @@ function ensureMaximizeStyles(): void {
     const style = document.createElement("style");
     style.id = MAXIMIZE_STYLE_ID;
     style.textContent = [
-        // 确保 header 是绝对定位锚点（EP 默认已是 relative，重复设置无副作用）
-        ".el-dialog__header{position:relative}",
+        // 注意：不要给 .el-dialog__header 加 position:relative——
+        // EP 默认 header 是 static，关闭按钮 .el-dialog__headerbtn 相对 .el-dialog(relative)
+        // 定位；一旦 header 变 relative，关闭按钮包含块改变（多出 header padding 偏移），
+        // 导致「有最大化按钮时关闭按钮位置与无最大化时不一致」。
+        // 最大化按钮同样 absolute，会自动跳过 static 的 header、以 .el-dialog 为包含块，
+        // 与关闭按钮处于完全相同的坐标系。
         ".ys-modal-dialog--maximized{--el-dialog-margin-top:0!important;width:100%!important;max-width:100%!important;margin-bottom:0!important;height:100vh;display:flex;flex-direction:column}",
         ".ys-modal-dialog--maximized .el-dialog__body{flex:1;min-height:0;overflow:auto}",
-        // 与 EP 原生关闭按钮(.el-dialog__headerbtn 实测 top:0 / 48x48 / right:0)
-        // 顶部与点击区尺寸完全一致，图标在区域内 flex 居中 → 两个图标水平对齐；
-        // 水平上紧贴关闭按钮左侧（48 宽 + 4 间距）
+        // 与 EP 关闭按钮同一包含块(.el-dialog)、同一基线(top:0/right:0)：
+        // 关闭热区 48x48，最大化按钮右移 48+4=52px 紧贴其左侧
         ".ys-modal-header__maximize{position:absolute;right:52px;top:0;width:48px;height:48px;padding:0;border:none;background:transparent;cursor:pointer;color:var(--el-color-info);display:inline-flex;align-items:center;justify-content:center;border-radius:4px}",
         ".ys-modal-header__maximize:hover{background:var(--el-fill-color-light);color:var(--el-color-primary)}",
         // EP 关闭图标在其 48px 热区中视觉中心偏上 2px（受其 line-height 影响），
@@ -291,24 +294,26 @@ export function openModal<P extends Record<string, unknown> = Record<string, unk
                         },
                     },
                     {
-                        // maximizable 时接管 header 插槽（标题 + 最大化按钮），
-                        // EP 的 ✕ 关闭按钮渲染在插槽内容之外，自动保留
+                        // maximizable 时接管 header 插槽：标题 span + 最大化按钮。
+                        // 不额外包裹 div——span 直接作为 header 子元素，与 EP 默认
+                        // 标题结构一致，避免 block 包裹改变标题的行盒/换行行为；
+                        // 按钮 absolute 脱离文档流，以 .el-dialog 为包含块定位。
+                        // EP 的 ✕ 关闭按钮渲染在插槽内容之外，自动保留且定位不受影响。
                         header: maximizable
-                            ? () =>
-                                  h("div", { class: "ys-modal-header" }, [
-                                      h("span", { class: "el-dialog__title" }, title),
-                                      h(
-                                          "button",
-                                          {
-                                              type: "button",
-                                              class: "ys-modal-header__maximize",
-                                              title: maximized.value ? "还原" : "最大化",
-                                              "aria-label": maximized.value ? "还原" : "最大化",
-                                              onClick: toggleMaximize,
-                                          },
-                                          maximized.value ? renderRestoreIcon() : renderMaximizeIcon(),
-                                      ),
-                                  ])
+                            ? () => [
+                                  h("span", { class: "el-dialog__title" }, title),
+                                  h(
+                                      "button",
+                                      {
+                                          type: "button",
+                                          class: "ys-modal-header__maximize",
+                                          title: maximized.value ? "还原" : "最大化",
+                                          "aria-label": maximized.value ? "还原" : "最大化",
+                                          onClick: toggleMaximize,
+                                      },
+                                      maximized.value ? renderRestoreIcon() : renderMaximizeIcon(),
+                                  ),
+                              ]
                             : undefined,
                         default: () =>
                             h(component, {
