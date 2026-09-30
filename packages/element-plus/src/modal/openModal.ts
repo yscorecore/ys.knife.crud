@@ -67,8 +67,14 @@ function ensureMaximizeStyles(): void {
         ".el-dialog__header{position:relative}",
         ".ys-modal-dialog--maximized{--el-dialog-margin-top:0!important;width:100%!important;max-width:100%!important;margin-bottom:0!important;height:100vh;display:flex;flex-direction:column}",
         ".ys-modal-dialog--maximized .el-dialog__body{flex:1;min-height:0;overflow:auto}",
-        ".ys-modal-header__maximize{position:absolute;right:44px;top:50%;transform:translateY(-50%);padding:6px;border:none;background:transparent;cursor:pointer;color:var(--el-color-info);display:inline-flex;align-items:center;justify-content:center;border-radius:4px}",
+        // 与 EP 原生关闭按钮(.el-dialog__headerbtn 实测 top:0 / 48x48 / right:0)
+        // 顶部与点击区尺寸完全一致，图标在区域内 flex 居中 → 两个图标水平对齐；
+        // 水平上紧贴关闭按钮左侧（48 宽 + 4 间距）
+        ".ys-modal-header__maximize{position:absolute;right:52px;top:0;width:48px;height:48px;padding:0;border:none;background:transparent;cursor:pointer;color:var(--el-color-info);display:inline-flex;align-items:center;justify-content:center;border-radius:4px}",
         ".ys-modal-header__maximize:hover{background:var(--el-fill-color-light);color:var(--el-color-primary)}",
+        // EP 关闭图标在其 48px 热区中视觉中心偏上 2px（受其 line-height 影响），
+        // 补偿使两个图标的视觉中心完全水平对齐
+        ".ys-modal-header__maximize svg{display:block;margin-top:-2px}",
     ].join("");
     document.head.appendChild(style);
 }
@@ -132,14 +138,14 @@ export interface ModalHandle {
     getContentInstance: () => ComponentPublicInstance | null;
 }
 
-/** 最大化图标（单框）：14px 线性 SVG，颜色跟随 currentColor */
+/** 最大化图标（单框）：16px 线性 SVG，与 EP 关闭图标同尺寸、颜色跟随 currentColor */
 function renderMaximizeIcon(): VNode {
     return h(
         "svg",
         {
             viewBox: "0 0 24 24",
-            width: 14,
-            height: 14,
+            width: 16,
+            height: 16,
             fill: "none",
             stroke: "currentColor",
             "stroke-width": 2,
@@ -156,8 +162,8 @@ function renderRestoreIcon(): VNode {
         "svg",
         {
             viewBox: "0 0 24 24",
-            width: 14,
-            height: 14,
+            width: 16,
+            height: 16,
             fill: "none",
             stroke: "currentColor",
             "stroke-width": 2,
