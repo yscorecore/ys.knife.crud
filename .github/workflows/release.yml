@@ -6,10 +6,9 @@ name: Release
 #                                   （tag 前缀见各包 .npmrc 的 tag-version-prefix），
 #                                   postversion 钩子自动 push commit 与 tag
 #
-# 认证方式：NPM_TOKEN（Classic Automation 类型，专为 CI 设计，自动豁免 2FA）
-#           首次发布须在本地手动 npm publish 创建包，之后由本 workflow 后续发布。
-#           之所以需要本地首发：npm 包首次发布时 2FA 不可绕过、新包名注册等场景
-#           只能在交互式终端完成；包一旦创建，CI 即可用 Automation token 续发新版本。
+# 认证方式：npm Trusted Publisher（通过 GitHub OIDC 自动认证，无需 NPM_TOKEN）
+#           在 npm 网站为每个包配置 Trusted Publisher（仓库 + workflow 文件名），
+#           CI 发布时 npm CLI 自动通过 GitHub OIDC 完成认证，不需要 NPM_TOKEN secret。
 on:
   push:
     tags:
@@ -18,7 +17,7 @@ on:
 
 permissions:
   contents: read
-  # npm provenance（来源证明）需要向 Sigstore 换取 OIDC 签名
+  # Trusted Publisher 通过 GitHub OIDC 认证，id-token: write 是必须的
   id-token: write
 
 jobs:
@@ -37,9 +36,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          # registry-url 让 setup-node 写入 .npmrc 模板：
-          #   //registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}
-          # 下面的 Publish 步骤注入 NODE_AUTH_TOKEN env 后，npm CLI 自动读取
+          # registry-url 让 setup-node 写入 .npmrc，Trusted Publisher 通过 OIDC 自动认证
           registry-url: https://registry.npmjs.org/
           cache: pnpm
 
@@ -52,14 +49,8 @@ jobs:
 
       - name: Publish to npm
         # -r 递归发布：private 包自动跳过；已发布过的版本 pnpm 会自动跳过（单包 tag 也安全）
-        # workspace:* 依赖在发布时自动替换为具体版本号；--provenance 生成来源证明
-        # 1) pnpm config set 把 token 写入用户级 ~/.npmrc（pnpm 9 最终委托 npm CLI 发布，二者共用）
-        # 2) NPM_CONFIG_REGISTRY 强制官方源，覆盖仓库根 .npmrc 的 npmmirror 镜像
-        run: |
-          pnpm config set //registry.npmjs.org/:_authToken "$NODE_AUTH_TOKEN"
-          pnpm -r publish --access public --no-git-checks --provenance
+        # workspace:* 依赖在发布时自动替换为具体版本号
+        # NPM_CONFIG_REGISTRY 强制官方源，覆盖仓库根 .npmrc 的 npmmirror 镜像
+        run: pnpm -r publish --access public --no-git-checks
         env:
-          # npm Automation Token，在仓库 Settings → Secrets and variables → Actions 配置
-          # 必须是 Automation 类型：Publish token 在 2FA 账号会强制 OTP，CI 无法输入
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
