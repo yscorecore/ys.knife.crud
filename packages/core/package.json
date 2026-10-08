@@ -1,6 +1,6 @@
 {
   "name": "@ys-knife-crud/core",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Framework-agnostic CRUD core: data source contract, in-memory implementation and queryable CRUD manager",
   "type": "module",
   "main": "./dist/index.js",
