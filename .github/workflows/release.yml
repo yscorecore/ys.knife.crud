@@ -51,6 +51,6 @@ jobs:
         # -r 递归发布：private 包自动跳过；已发布过的版本 pnpm 会自动跳过（单包 tag 也安全）
         # workspace:* 依赖在发布时自动替换为具体版本号
         # NPM_CONFIG_REGISTRY 强制官方源，覆盖仓库根 .npmrc 的 npmmirror 镜像
-        run: pnpm -r publish --access public --no-git-checks
+        run: pnpm -r publish --access public --no-git-checks --provenance
         env:
           NPM_CONFIG_REGISTRY: https://registry.npmjs.org/
