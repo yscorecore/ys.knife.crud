@@ -304,6 +304,8 @@ defineExpose({
 | `onClosed` | `() => void` | — | Fired after the close transition finishes and the dialog DOM has been destroyed. |
 | `closeOnClickModal` | `boolean` | `false` | Clicking the overlay closes the dialog. Disabled by default to avoid losing form input. |
 | `closeOnPressEscape` | `boolean` | `false` | ESC closes the dialog. Disabled by default. |
+| `maximizable` | `boolean` | `false` | Show a maximize/restore button in the header (left of ✕). Maximized dialogs fill the viewport (`width:100%`, `height:100vh`) with the body scrolling internally. See [Maximize / restore](#maximize--restore). |
+| `defaultMaximized` | `boolean` | `false` | Open already maximized. Only effective when `maximizable: true`. |
 | `appContext` | `AppContext` | plugin default | Explicit app context for `inject` / global components inside the dialog. Usually unnecessary when the plugin is installed. |
 
 ### Returned handle (`ModalHandle`)
@@ -312,6 +314,8 @@ defineExpose({
 const handle = openModal({ component: MyForm });
 
 handle.close();                          // close with transition, then destroy
+handle.toggleMaximize();                 // switch between maximized/restored (needs maximizable)
+handle.isMaximized();                    // boolean: current maximize state
 handle.getContentInstance();             // the mounted body component instance,
                                          // so you can call its defineExpose() methods
 ```
@@ -366,6 +370,39 @@ The body can then render its own buttons and close via the injected `onClose`:
   </div>
 </template>
 ```
+
+### Maximize / restore
+
+For forms/detail panels whose content is cramped at the default width, set `maximizable: true` to show a maximize button in the header (immediately left of ✕). Clicking it toggles between the normal `width` size and a viewport-filling layout; clicking again restores.
+
+```ts
+openModal({
+  title: "订单详情",
+  width: "520px",          // size when restored
+  component: OrderDetail,
+  props: { orderId },
+  maximizable: true,      // show the maximize/restore button
+  // defaultMaximized: true, // optional: open already maximized
+});
+```
+
+Behavior and layout:
+
+- **Restored** — the dialog uses your `width` exactly like a normal dialog.
+- **Maximized** — `width: 100%`, `height: 100vh`, top-aligned (no margin). The header and footer stay fixed while `.el-dialog__body` becomes `flex:1` with `overflow:auto`, so long content scrolls inside the dialog rather than the page.
+- The button icon switches between a single frame (maximize) and overlapping frames (restore), with `title`/`aria-label` tooltips.
+- The maximize state is internal to the service; the body component is not re-created on toggle (its state, e.g. partially filled form, is preserved).
+
+You can also drive it programmatically through the returned handle:
+
+```ts
+const handle = openModal({ component: WideForm, maximizable: true });
+
+// e.g. inside the body or an external toolbar:
+if (!handle.isMaximized()) handle.toggleMaximize();
+```
+
+> The maximize button shares the same positioning context (`.el-dialog`) as Element Plus's built-in ✕, so the close button stays in exactly the same place whether or not `maximizable` is enabled.
 
 ### Using from a row action
 
@@ -431,7 +468,7 @@ function openEdit() {
 - **`onConfirm` is for the built-in footer only.** With `showFooter: false` it is never called — the body component owns its buttons and closes via `emit("close")`.
 - **Prefer it for dialogs triggered from handlers.** For dialogs whose open state is naturally bound to template state (e.g. a panel-level edit dialog co-located with a table), a plain `<el-dialog v-model>` is still the simpler choice.
 
-A runnable, three-scenario demo (built-in footer with async validation / `showFooter: false` / `listeners`) lives in [`packages/element-plus-demo/src/pages/modal`](./packages/element-plus-demo/src/pages/modal); run `pnpm --filter @ys-knife-crud/element-plus-demo dev` and open **代码式弹窗（openModal）**.
+A runnable, five-scenario demo (built-in footer with async validation / `showFooter: false` / `listeners` / maximizable toggle / open maximized by default) lives in [`packages/element-plus-demo/src/pages/modal`](./packages/element-plus-demo/src/pages/modal); run `pnpm --filter @ys-knife-crud/element-plus-demo dev` and open **代码式弹窗（openModal）**.
 
 ---
 
