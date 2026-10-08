@@ -49,11 +49,12 @@ Then open <http://localhost:5173>. The demo depends on the workspace copy of `@y
 
 ## Release flow
 
-1. `pnpm changeset` — pick affected packages and bump level (`patch` / `minor` / `major`).
-2. `pnpm version-packages` — consumes pending changesets and bumps `package.json` versions.
-3. `pnpm release` — builds and runs `changeset publish` (requires `NODE_AUTH_TOKEN` set to a publish-capable npm token).
+Releases are triggered by pushing git tags; CI ([release.yml](./.github/workflows/release.yml)) publishes to npm via **Trusted Publisher (GitHub OIDC)** — no local npm login or token required.
 
-`@ys-knife-crud/element-plus-demo` is intentionally ignored by Changesets via `.changeset/config.json` and won't appear in release output even if a changeset is added for it.
+- `v*` tag — release every package whose version changed (already-published versions are skipped automatically)
+- `@ys-knife-crud/<pkg>@x.y.z` tag — release a single package
+
+See **[RELEASING.md](./RELEASING.md)** for the full step-by-step procedure, prerequisites and troubleshooting.
 
 ## Repo layout
 
