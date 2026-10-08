@@ -1,6 +1,6 @@
 {
   "name": "@ys-knife-crud/element-plus",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Vue 3 + element-plus UI components for ys.knife.crud",
   "type": "module",
   "main": "./dist/index.cjs",
