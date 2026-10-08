@@ -60,26 +60,33 @@ export { setDefaultModalAppContext };
  */
 
 /**
- * 最大化模式所需的少量全局样式：el-dialog teleport 到 body，
+ * 弹窗所需的少量全局样式：el-dialog teleport 到 body，
  * 组件内 scoped 样式无法命中，因此运行时向 head 注入一次（幂等）。
- * - 弹窗铺满视口（width 需 !important 覆盖 EP 的 inline width）
- * - 内容区 flex:1 + overflow:auto，长内容在弹窗内滚动
- * - 头部最大化按钮定位（absolute 锚定 .el-dialog__header 右上角 ✕ 左侧）
+ * 涵盖：
+ * - 最大化模式（铺满视口、内容区滚动）
+ * - 固定高度模式（height 由 CSS 变量 --ys-modal-height 传入，内容区滚动）
+ * - 头部最大化按钮定位
  */
-const MAXIMIZE_STYLE_ID = "ys-modal-maximize-style";
+const MODAL_STYLE_ID = "ys-modal-style";
 
-function ensureMaximizeStyles(): void {
-    if (document.getElementById(MAXIMIZE_STYLE_ID)) return;
+function ensureModalStyles(): void {
+    if (document.getElementById(MODAL_STYLE_ID)) return;
     const style = document.createElement("style");
-    style.id = MAXIMIZE_STYLE_ID;
+    style.id = MODAL_STYLE_ID;
     style.textContent = [
+        // 固定高度：height 由内联 CSS 变量 --ys-modal-height 传入（每个弹窗可不同）。
+        // .el-dialog 设为 flex column，body 区 flex:1 + overflow:auto，
+        // 内容超出时在弹窗内纵向滚动，不会撑大弹窗。
+        ".ys-modal-dialog--fixed-height{height:var(--ys-modal-height);display:flex;flex-direction:column}",
+        ".ys-modal-dialog--fixed-height .el-dialog__body{flex:1;min-height:0;overflow:auto}",
         // 注意：不要给 .el-dialog__header 加 position:relative——
         // EP 默认 header 是 static，关闭按钮 .el-dialog__headerbtn 相对 .el-dialog(relative)
         // 定位；一旦 header 变 relative，关闭按钮包含块改变（多出 header padding 偏移），
         // 导致「有最大化按钮时关闭按钮位置与无最大化时不一致」。
         // 最大化按钮同样 absolute，会自动跳过 static 的 header、以 .el-dialog 为包含块，
         // 与关闭按钮处于完全相同的坐标系。
-        ".ys-modal-dialog--maximized{--el-dialog-margin-top:0!important;width:100%!important;max-width:100%!important;margin-bottom:0!important;height:100vh;display:flex;flex-direction:column}",
+        // 最大化 height 用 !important 覆盖固定高度模式（最大化优先铺满视口）
+        ".ys-modal-dialog--maximized{--el-dialog-margin-top:0!important;width:100%!important;max-width:100%!important;margin-bottom:0!important;height:100vh!important;display:flex;flex-direction:column}",
         ".ys-modal-dialog--maximized .el-dialog__body{flex:1;min-height:0;overflow:auto}",
         // 与 EP 关闭按钮同一包含块(.el-dialog)、同一基线(top:0/right:0)：
         // 关闭热区 48x48，最大化按钮右移 48+4=52px 紧贴其左侧
@@ -138,6 +145,7 @@ export function openModal<
     const {
         title = "",
         width = "500px",
+        height,
         component,
         props,
         actions,
@@ -150,8 +158,12 @@ export function openModal<
         appContext,
     } = options;
 
-    // maximizable 才需要注入最大化样式（幂等，可提前调用）
-    if (maximizable) ensureMaximizeStyles();
+    // maximizable 或设置了 height 时都需要注入全局样式（幂等，可提前调用）
+    if (maximizable || height != null) ensureModalStyles();
+
+    // 把 height 归一化为带单位的字符串，作为 CSS 变量传给 .el-dialog
+    const heightValue =
+        height == null ? undefined : typeof height === "number" ? `${height}px` : height;
 
     // 占位容器：ElDialog 会 teleport 到 body，容器仅作为 vnode 渲染锚点，
     // 销毁时 render(null, container) 才能正确解除 vnode 与 teleport 内容
@@ -241,7 +253,17 @@ export function openModal<
                         width,
                         // 最大化时贴顶（配合样式中 --el-dialog-margin-top:0）
                         top: maximized.value ? "0vh" : undefined,
-                        class: maximized.value ? "ys-modal-dialog--maximized" : undefined,
+                        // 最大化 class 优先（height:100vh!important 覆盖固定高度）；
+                        // 否则若设置了 height 则用固定高度 class + CSS 变量
+                        class: maximized.value
+                            ? "ys-modal-dialog--maximized"
+                            : heightValue
+                                ? "ys-modal-dialog--fixed-height"
+                                : undefined,
+                        // 固定高度值通过 CSS 变量传递（每个弹窗可不同）
+                        style: heightValue && !maximized.value
+                            ? ({ "--ys-modal-height": heightValue } as Record<string, string>)
+                            : undefined,
                         closeOnClickModal,
                         closeOnPressEscape,
                         // 动作执行中隐藏右上角 ✕，与底部其余按钮禁用保持一致

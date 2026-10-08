@@ -127,11 +127,13 @@ function openMaximizedByDefault(): void {
   });
 }
 
-/** openDialog 内嵌 YsTablePage：弹窗里直接渲染完整的查询+命令+表格三合一 */
+/** openDialog 内嵌 YsTablePage：弹窗里直接渲染完整的查询+命令+表格三合一。
+ *  设置固定高度 500px，表格内容超出时在弹窗内滚动，不会撑大弹窗。 */
 function openDialogWithTable(): void {
   openDialog({
-    title: "弹窗内表格（YsTablePage）",
+    title: "弹窗内表格（YsTablePage，固定高度 500px）",
     width: "900px",
+    height: 500,
     component: TableInDialog,
     maximizable: true,
     // 表格场景确定按钮直接关闭；如需取选中行，可通过 ref 调用 table.getSelectedRows()

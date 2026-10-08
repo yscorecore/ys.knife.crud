@@ -79,8 +79,14 @@ export interface ModalOptions<
 > {
     /** 弹窗标题，默认 "" */
     title?: string;
-    /** 弹窗宽度，默认 "500px" */
+    /** 弹窗宽度（透传 el-dialog width），默认 "500px" */
     width?: string | number;
+    /**
+     * 弹窗固定高度。不设置时高度由内容组件撑开（默认行为）；
+     * 设置后弹窗为固定高度，内容区超出时在弹窗内纵向滚动，
+     * 不会撑大弹窗。支持数字（px）或带单位的字符串（如 "600px" / "70vh"）。
+     */
+    height?: string | number;
     /** 弹窗内容组件（SFC / 函数式组件均可）；驱动泛型 C 推断 actions.execute 的 instance 类型 */
     component: C;
     /**

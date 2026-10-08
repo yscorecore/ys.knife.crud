@@ -305,6 +305,7 @@ defineExpose({
 | `props` | `P` | — | Props forwarded to `component`. An `onClose` listener is always injected in addition. Vue 3 treats `onXxx` entries as event listeners, so a body `emit("saved", row)` is received via `props: { onSaved: (row) => … }`. |
 | `title` | `string` | `""` | Dialog title (passed to `el-dialog`). |
 | `width` | `string \| number` | `"500px"` | Dialog width. |
+| `height` | `string \| number` | — | Fixed dialog height. When omitted the dialog grows with its content (default). When set, the dialog has a fixed height and the body scrolls internally when content overflows — the dialog will not be stretched by its content. Numbers are treated as pixels; strings may carry any unit (`"600px"`, `"70vh"`). |
 | `actions` | `ModalAction[]` | — | Footer action buttons (取消 / 确定, …) rendered from data, same shape conventions as core's `TableAction`. Passing a **non-empty array renders the footer**; omitting it (or `[]`) renders **no footer** — the body then owns its buttons. While an action's `execute` promise is pending, that button shows a loading spinner, the other buttons are disabled and ✕ is hidden. See [Footer actions](#footer-actions-modalaction). |
 | `onCancel` | `() => void` | — | Fired on any cancel-style close **not triggered by a footer action**: the ✕ icon, ESC (if enabled), or modal-click (if enabled). |
 | `onClosed` | `() => void` | — | Fired after the close transition finishes and the dialog DOM has been destroyed. |
@@ -420,6 +421,26 @@ Semantics:
 - The footer buttons are fixed at 取消 / 确定. Need a different button set (e.g. three buttons, a custom action)? Use `openModal` with `actions`.
 
 All other `openModal` options (`maximizable`, `closeOnClickModal`, `onClosed`, …) are available on `openDialog` as well.
+
+### Fixed height
+
+By default the dialog grows with its content. For content with a known height budget (a table with many rows, a long log panel, …), pass `height` to cap the dialog. Numbers are pixels; strings carry any unit:
+
+```ts
+openDialog({
+  title: "用户列表",
+  width: "900px",
+  height: 500,            // or "600px" / "70vh"
+  component: UserTable,
+  maximizable: true,
+});
+```
+
+Behavior:
+
+- **Without `height`** — the dialog height follows its content (default Element Plus behavior).
+- **With `height`** — the dialog is fixed to that height. `.el-dialog__body` becomes `flex:1` with `overflow:auto`, so overflowing content scrolls inside the dialog instead of stretching it. Header and footer stay fixed.
+- **With `maximizable`** — maximize still wins (`height: 100vh !important`); restoring returns to the `height` you set.
 
 ### Maximize / restore
 
