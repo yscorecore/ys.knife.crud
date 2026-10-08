@@ -15,6 +15,7 @@ import YsAdvancedConditionGroup from "./advancedFilter/advancedConditionGroup.vu
 import YsTablePage from "./tablepage/tablePage.vue";
 import YsImportExcel from "./importExcel/importExcel.vue";
 import { openModal, setDefaultModalAppContext } from "./modal/openModal";
+import { openDialog } from "./modal/openDialog";
 
 export {
   YsTable,
@@ -34,9 +35,10 @@ export {
   YsAdvancedConditionGroup,
   // 代码式弹窗服务：openModal({ component, props }) 直接挂载任意 SFC 到弹窗
   openModal,
+  openDialog,
 };
 
-export type { ModalOptions, ModalHandle } from "./modal/openModal";
+export type { ModalOptions, ModalHandle, ModalAction, DialogOptions } from "@ys-knife-crud/vue";
 
 // 枚举 FilterItem 的选项数据源类型:函数,返回 Promise<EnumOption[]>。
 // 类型与工厂函数(EnumOption/EnumOptionsSource/fromOptions/fromObjectItems/fromArray/fromBool)

@@ -3,9 +3,9 @@ import { reactive, ref } from "vue";
 import type { FormInstance, FormRules } from "element-plus";
 
 /**
- * openModal 内置 footer 场景的内容组件：只渲染表单本身，确定/取消由弹窗外壳提供。
- * 校验与取值经 defineExpose 暴露给外部 onConfirm 回调；
- * 内置 footer 模式下不需要 emit("close")——关闭由 openModal 内部控制。
+ * openModal actions 场景的内容组件：只渲染表单本身，取消/保存按钮由 actions 数组提供。
+ * 校验与取值经 defineExpose 暴露给 actions.execute(handle)（handle.getContentInstance()）；
+ * 组件自身不需要 emit("close")——关闭由动作内 handle.close() 控制。
  */
 const props = defineProps<{
   initialName?: string;

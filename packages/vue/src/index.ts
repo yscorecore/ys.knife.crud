@@ -26,3 +26,14 @@ export * from "./filter/dateFilterItem";
 export * from "./filter/dateRangeFilterItem";
 export * from "./filter/enumFilterItem";
 export * from "./advancedFilter/advancedFilter";
+
+// ---------------- 代码式弹窗（modal） ----------------
+// 框架无关契约：类型定义 + AppContext 管理，不依赖具体 UI 组件库
+export type {
+    ModalHandle,
+    ModalAction,
+    ModalOptions,
+    DialogOptions,
+    ExtractComponentInstance,
+} from "./modal";
+export { setDefaultModalAppContext, getDefaultModalAppContext } from "./modal";

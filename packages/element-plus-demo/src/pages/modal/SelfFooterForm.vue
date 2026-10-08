@@ -3,7 +3,7 @@ import { reactive, ref } from "vue";
 import type { FormInstance } from "element-plus";
 
 /**
- * openModal showFooter:false 场景的内容组件：按钮自渲染，提交逻辑自控，
+ * openModal 不传 actions 场景的内容组件：底部按钮区不渲染，按钮自渲染、提交逻辑自控，
  * 成功后 emit("close") 让 openModal 外壳销毁弹窗。
  * 适用于多步表单、按钮文案随状态变化、提交后还要做其他事（如 ElMessage）的场景。
  */

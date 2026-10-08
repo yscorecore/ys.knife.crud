@@ -2,18 +2,31 @@ import {
     createVNode,
     defineComponent,
     h,
+    isVNode,
     ref,
     render,
-    type AppContext,
     type Component,
     type ComponentPublicInstance,
     type VNode,
 } from "vue";
 import { ElButton, ElDialog } from "element-plus";
+import {
+    getDefaultModalAppContext,
+    setDefaultModalAppContext,
+    type ExtractComponentInstance,
+    type ModalAction,
+    type ModalHandle,
+    type ModalOptions,
+} from "@ys-knife-crud/vue";
+
+// 重新导出 setDefaultModalAppContext，保持 element-plus 的对外 API 不变
+// （插件 install 时调用此函数写入 AppContext）
+export { setDefaultModalAppContext };
 
 /**
- * 代码式弹窗服务：无需在 template 中预先声明 <el-dialog>，
- * 直接 openModal({ component, props }) 即可把任意 SFC 挂进弹窗。
+ * 代码式弹窗服务（Element Plus 适配层）：
+ * 类型契约与 AppContext 管理定义在 @ys-knife-crud/vue，本文件只负责
+ * 用 ElDialog / ElButton 实现具体的外壳渲染、底部按钮渲染、最大化样式。
  *
  * 典型用法：
  * ```ts
@@ -24,30 +37,27 @@ import { ElButton, ElDialog } from "element-plus";
  *   title: "编辑用户",
  *   component: UserEditForm,
  *   props: { userId: 123 },
- *   onConfirm: async () => {
- *     const ok = await saveUser();
- *     return ok;          // 返回 false 不关闭（校验失败）；其他值关闭
- *   },
+ *   actions: [
+ *     { name: "cancel", desc: "取消", execute: (handle) => handle.close() },
+ *     {
+ *       name: "save",
+ *       desc: "保存",
+ *       type: "primary",
+ *       execute: async (handle) => {
+ *         // 校验/保存……校验失败时不调用 close，弹窗保持打开
+ *         await saveUser();
+ *         handle.close();
+ *       },
+ *     },
+ *   ],
  * });
  * ```
  *
  * 内容组件侧：
  * - 会被注入一个 onClose 监听器，内部 emit("close") 即可主动关闭弹窗
- * - 其余自定义事件（如 emit("saved", row)）经 listeners 选项透传
- * - showFooter: false 时底部按钮不渲染，由内容组件自行决定按钮与关闭时机
+ * - 其余自定义事件（如 emit("saved", row)）由调用方在 props 里传 onSaved 接收
+ * - 不传 actions 时底部按钮区不渲染，由内容组件自行决定按钮与关闭时机
  */
-
-/**
- * 模块级默认 AppContext：app.use(YsCrudElementPlus) 时由插件 install 写入，
- * 使动态挂载的弹窗能继承应用的 provide/inject（i18n / pinia / ElConfigProvider 等）。
- * 未使用插件时为 null，也可经 options.appContext 显式传入（getCurrentInstance()?.appContext）。
- */
-let defaultAppContext: AppContext | null = null;
-
-/** @internal 供插件 install 写入默认 AppContext，业务代码不要直接调用 */
-export function setDefaultModalAppContext(ctx: AppContext | null): void {
-    defaultAppContext = ctx;
-}
 
 /**
  * 最大化模式所需的少量全局样式：el-dialog teleport 到 body，
@@ -80,65 +90,6 @@ function ensureMaximizeStyles(): void {
         ".ys-modal-header__maximize svg{display:block;margin-top:-2px}",
     ].join("");
     document.head.appendChild(style);
-}
-
-/** openModal 选项 */
-export interface ModalOptions<P extends Record<string, unknown> = Record<string, unknown>> {
-    /** 弹窗标题，默认 "" */
-    title?: string;
-    /** 弹窗宽度（透传 el-dialog width），默认 "500px" */
-    width?: string | number;
-    /** 弹窗内容组件（SFC / 函数式组件均可） */
-    component: Component;
-    /** 传给内容组件的 props；同时自动注入 onClose 监听器（组件内 emit("close") 即关闭弹窗） */
-    props?: P;
-    /**
-     * 透传给内容组件的事件监听器（Vue onXxx 命名），
-     * 例如 { onSaved: (row) => ... } 对应内容组件 emit("saved", row)
-     */
-    listeners?: Record<string, (...args: unknown[]) => void>;
-    /** 是否渲染底部「取消/确定」按钮，默认 true；false 时由内容组件自行渲染按钮 */
-    showFooter?: boolean;
-    /** 确定按钮文案，默认 "确定" */
-    confirmText?: string;
-    /** 取消按钮文案，默认 "取消" */
-    cancelText?: string;
-    /**
-     * 点击「确定」的回调，支持异步：执行期间确定按钮显示 loading、
-     * 取消按钮与右上角 ✕ 禁用。返回 false 表示校验未通过、弹窗不关闭；
-     * 返回其他值（含 undefined）则关闭。未提供时点击确定直接关闭。
-     */
-    onConfirm?: () => unknown | Promise<unknown>;
-    /** 取消类关闭回调：点击「取消」/ 右上角 ✕ / ESC（若开启）/ 遮罩（若开启）触发 */
-    onCancel?: () => void;
-    /** 弹窗完全关闭（关闭动画结束、DOM 销毁后）回调 */
-    onClosed?: () => void;
-    /** 点击遮罩是否关闭，默认 false（防止表单误关） */
-    closeOnClickModal?: boolean;
-    /** 按 ESC 是否关闭，默认 false（防止表单误关） */
-    closeOnPressEscape?: boolean;
-    /**
-     * 是否在标题栏显示「最大化 / 还原」按钮，默认 false。
-     * 最大化时弹窗铺满视口（width 100% + height 100vh），内容区纵向滚动；
-     * 再点还原回到 width 指定的尺寸。
-     */
-    maximizable?: boolean;
-    /** 打开时即最大化，默认 false；仅 maximizable 为 true 时生效 */
-    defaultMaximized?: boolean;
-    /** 显式指定 AppContext，默认取插件注册时写入的全局 AppContext */
-    appContext?: AppContext;
-}
-
-/** openModal 返回的弹窗句柄 */
-export interface ModalHandle {
-    /** 关闭弹窗（走关闭动画，动画结束后销毁 DOM），等同于内容组件 emit("close") */
-    close: () => void;
-    /** 切换最大化 / 还原（仅 maximizable 为 true 时有效果） */
-    toggleMaximize: () => void;
-    /** 当前是否处于最大化状态 */
-    isMaximized: () => boolean;
-    /** 获取内容组件实例（挂载完成后可用），便于调用其 defineExpose 的方法 */
-    getContentInstance: () => ComponentPublicInstance | null;
 }
 
 /** 最大化图标（单框）：16px 线性 SVG，与 EP 关闭图标同尺寸、颜色跟随 currentColor */
@@ -180,19 +131,16 @@ function renderRestoreIcon(): VNode {
     );
 }
 
-export function openModal<P extends Record<string, unknown> = Record<string, unknown>>(
-    options: ModalOptions<P>,
-): ModalHandle {
+export function openModal<
+    P extends Record<string, unknown> = Record<string, unknown>,
+    C extends Component = Component,
+>(options: ModalOptions<P, C>): ModalHandle {
     const {
         title = "",
         width = "500px",
         component,
         props,
-        listeners,
-        showFooter = true,
-        confirmText = "确定",
-        cancelText = "取消",
-        onConfirm,
+        actions,
         onCancel,
         onClosed,
         closeOnClickModal = false,
@@ -212,12 +160,23 @@ export function openModal<P extends Record<string, unknown> = Record<string, unk
 
     let contentInstance: ComponentPublicInstance | null = null;
     let destroyed = false;
+    // Host setup 的 expose() 结果，render 后回填；handle 方法均惰性解引用，
+    // 因此可先构造 handle 并传给 actions.execute，点击时 exposed 已就绪
+    let exposed: Pick<ModalHandle, "close" | "toggleMaximize" | "isMaximized"> | undefined;
 
     const destroy = () => {
         if (destroyed) return;
         destroyed = true;
         render(null, container);
         container.remove();
+    };
+
+    /** 弹窗句柄：返回给调用方，同时作为 execute(handle) 传给底部动作 */
+    const handle: ModalHandle = {
+        close: () => exposed?.close(),
+        toggleMaximize: () => exposed?.toggleMaximize(),
+        isMaximized: () => exposed?.isMaximized() ?? false,
+        getContentInstance: () => contentInstance,
     };
 
     /**
@@ -229,7 +188,9 @@ export function openModal<P extends Record<string, unknown> = Record<string, unk
         name: "YsModalHost",
         setup(_, { expose }) {
             const visible = ref(true);
-            const confirmLoading = ref(false);
+            // 正在执行的 actions 下标（-1 = 空闲）：执行中该按钮 loading、
+            // 其余按钮禁用、右上角 ✕ 隐藏，与旧的异步提交体验保持一致
+            const pendingIndex = ref(-1);
             // 最大化状态：仅 maximizable 时可切换；defaultMaximized 决定初始值
             const maximized = ref(maximizable && defaultMaximized);
 
@@ -237,31 +198,29 @@ export function openModal<P extends Record<string, unknown> = Record<string, unk
                 if (maximizable) maximized.value = !maximized.value;
             };
 
-            /** 主动关闭（确定成功 / 内容组件 emit close / 外部 handle.close） */
+            /** 主动关闭（动作内 handle.close() / 内容组件 emit close / 外部 handle.close） */
             const close = () => {
                 visible.value = false;
             };
 
-            /** 取消类关闭：取消按钮 / ✕ / ESC / 遮罩 */
+            /** 取消类关闭：✕ / ESC / 遮罩 */
             const cancelClose = () => {
-                if (confirmLoading.value) return; // 异步提交进行中，忽略取消
+                if (pendingIndex.value >= 0) return; // 动作执行中，忽略取消
                 onCancel?.();
                 visible.value = false;
             };
 
-            const handleConfirm = async () => {
-                if (confirmLoading.value) return;
-                if (!onConfirm) {
-                    close();
-                    return;
-                }
-                confirmLoading.value = true;
+            /** 执行底部动作：执行中忽略重复点击，Promise 结束后解除 loading。
+             *  第二个参数传当前内容组件实例。底部按钮可点击意味着内容组件已挂载，
+             *  故 contentInstance 此时非 null，直接透传给 execute 的 instance 参数。
+             */
+            const runAction = async (action: ModalAction<C>, index: number) => {
+                if (pendingIndex.value >= 0) return;
+                pendingIndex.value = index;
                 try {
-                    const result = await onConfirm();
-                    // 返回 false 表示校验失败，保持弹窗打开；其他返回值关闭
-                    if (result !== false) close();
+                    await action.execute(handle, contentInstance as ExtractComponentInstance<C>);
                 } finally {
-                    confirmLoading.value = false;
+                    pendingIndex.value = -1;
                 }
             };
 
@@ -285,8 +244,8 @@ export function openModal<P extends Record<string, unknown> = Record<string, unk
                         class: maximized.value ? "ys-modal-dialog--maximized" : undefined,
                         closeOnClickModal,
                         closeOnPressEscape,
-                        // 异步提交进行中隐藏右上角 ✕，与取消按钮禁用保持一致
-                        showClose: !confirmLoading.value,
+                        // 动作执行中隐藏右上角 ✕，与底部其余按钮禁用保持一致
+                        showClose: pendingIndex.value < 0,
                         destroyOnClose: true,
                         onClosed: () => {
                             onClosed?.();
@@ -319,34 +278,47 @@ export function openModal<P extends Record<string, unknown> = Record<string, unk
                             h(component, {
                                 ...(props ?? {}),
                                 // 注入关闭监听器：内容组件 defineEmits(["close"]) 后
-                                // emit("close") 即可关闭；无需在业务 props 里声明
+                                // emit("close") 即可关闭；无需在业务 props 里声明。
+                                // 注意 onClose 在 props 展开之后，业务 props 里的 onClose
+                                // 会被注入值覆盖（关闭行为不交给业务侧）
                                 onClose: close,
-                                ...(listeners ?? {}),
                                 ref: (instance: ComponentPublicInstance | null) => {
                                     contentInstance = instance;
                                 },
                             }),
                         footer: () =>
-                            showFooter
-                                ? [
+                            actions?.length
+                                ? actions.map((action, index) =>
                                       h(
                                           ElButton,
                                           {
-                                              disabled: confirmLoading.value,
-                                              onClick: cancelClose,
+                                              key: action.name,
+                                              // 与 commandBar 同构：'default' 归一化为 undefined
+                                              type: action.type === "default" ? undefined : action.type,
+                                              title: action.desc,
+                                              // 执行中：当前动作 loading，其余动作禁用
+                                              disabled: pendingIndex.value >= 0 && pendingIndex.value !== index,
+                                              loading: pendingIndex.value === index,
+                                              onClick: () => runAction(action, index),
                                           },
-                                          () => cancelText,
-                                      ),
-                                      h(
-                                          ElButton,
                                           {
-                                              type: "primary",
-                                              loading: confirmLoading.value,
-                                              onClick: handleConfirm,
+                                              default: () => [
+                                                  // 与模板 <component :is> 行为对齐：VNode 原样嵌入、组件 h() 渲染；
+                                                  // 外包 span 提供与 commandBar 图标一致的间距（teleport 内容无法用 scoped 样式命中）
+                                                  action.icon
+                                                      ? h(
+                                                            "span",
+                                                            {
+                                                                style: "margin-right:4px;display:inline-flex;align-items:center;vertical-align:-2px",
+                                                            },
+                                                            [isVNode(action.icon) ? action.icon : h(action.icon as Component)],
+                                                        )
+                                                      : null,
+                                                  action.desc,
+                                              ],
                                           },
-                                          () => confirmText,
                                       ),
-                                  ]
+                                  )
                                 : null,
                     },
                 );
@@ -355,7 +327,7 @@ export function openModal<P extends Record<string, unknown> = Record<string, unk
 
     const vnode: VNode = createVNode(Host);
     // 继承 AppContext，使弹窗内 inject / 全局指令 / 全局组件可用
-    const resolvedAppContext = appContext ?? defaultAppContext;
+    const resolvedAppContext = appContext ?? getDefaultModalAppContext();
     if (!resolvedAppContext) {
         // 未安装插件（app.use(YsCrudElementPlus)）也未显式传入 appContext 时，
         // 弹窗内模板无法解析任何全局组件（el-* / app.component 注册的组件），
@@ -369,14 +341,10 @@ export function openModal<P extends Record<string, unknown> = Record<string, unk
     vnode.appContext = resolvedAppContext;
     render(vnode, container);
 
-    const exposed = vnode.component?.exposed as
-        | { close: () => void; toggleMaximize: () => void; isMaximized: () => boolean }
+    // render 后回填 Host expose 的方法，handle 的惰性解引用自此生效
+    exposed = vnode.component?.exposed as
+        | Pick<ModalHandle, "close" | "toggleMaximize" | "isMaximized">
         | undefined;
 
-    return {
-        close: () => exposed?.close(),
-        toggleMaximize: () => exposed?.toggleMaximize(),
-        isMaximized: () => exposed?.isMaximized() ?? false,
-        getContentInstance: () => contentInstance,
-    };
+    return handle;
 }

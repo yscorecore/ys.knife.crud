@@ -244,11 +244,21 @@ openModal({
   width: "600px",
   component: UserEditForm,
   props: { userId: 123 },
-  onConfirm: async () => {
-    const ok = await saveUser();
-    return ok;          // returning false keeps the dialog open (validation failed)
-  },
-  onCancel: () => console.log("cancelled"),
+  // footer buttons are data-driven: pass actions to show them,
+  // omit them (or pass []) for a footer-less dialog
+  actions: [
+    { name: "cancel", desc: "取消", execute: (handle) => handle.close() },
+    {
+      name: "save",
+      desc: "保存",
+      type: "primary",
+      execute: async (handle) => {
+        await saveUser();
+        handle.close(); // closing is explicit — skip it (e.g. validation failed) to stay open
+      },
+    },
+  ],
+  onCancel: () => console.log("cancelled via ✕ / ESC / overlay"),
   onClosed: () => console.log("dialog destroyed"),
 });
 ```
@@ -271,7 +281,7 @@ const formRef = ref<FormInstance>();
 const form = ref({ name: "" });
 const rules: FormRules = { name: [{ required: true, message: "必填", trigger: "blur" }] };
 
-// expose data/validation for the caller's onConfirm if you don't use listeners
+// expose data/validation for the caller's footer actions (handle.getContentInstance())
 defineExpose({
   validate: () => formRef.value?.validate(),
   getData: () => form.value,
@@ -292,15 +302,11 @@ defineExpose({
 | Option | Type | Default | Description |
 | --- | --- | --- | --- |
 | `component` | `Component` | — **required** | The component rendered as the dialog body. |
-| `props` | `P` | — | Props forwarded to `component`. An `onClose` listener is always injected in addition. |
-| `listeners` | `Record<string, (...args) => void>` | — | Extra event handlers in Vue `onXxx` form, e.g. `{ onSaved: (row) => … }` maps to `emit("saved", row)`. |
+| `props` | `P` | — | Props forwarded to `component`. An `onClose` listener is always injected in addition. Vue 3 treats `onXxx` entries as event listeners, so a body `emit("saved", row)` is received via `props: { onSaved: (row) => … }`. |
 | `title` | `string` | `""` | Dialog title (passed to `el-dialog`). |
 | `width` | `string \| number` | `"500px"` | Dialog width. |
-| `showFooter` | `boolean` | `true` | Render the built-in 取消 / 确定 footer. Set `false` when the content component renders its own buttons. |
-| `confirmText` | `string` | `"确定"` | Confirm button label. |
-| `cancelText` | `string` | `"取消"` | Cancel button label. |
-| `onConfirm` | `() => unknown \| Promise<unknown>` | — | Click handler for 确定. While the returned promise is pending the confirm button shows a loading spinner and all cancel paths are disabled. **Returning `false` keeps the dialog open**; any other return value (including `undefined`) closes it. |
-| `onCancel` | `() => void` | — | Fired on any cancel-style close: the 取消 button, the ✕ icon, ESC (if enabled), or modal-click (if enabled). Not fired after a successful confirm. |
+| `actions` | `ModalAction[]` | — | Footer action buttons (取消 / 确定, …) rendered from data, same shape conventions as core's `TableAction`. Passing a **non-empty array renders the footer**; omitting it (or `[]`) renders **no footer** — the body then owns its buttons. While an action's `execute` promise is pending, that button shows a loading spinner, the other buttons are disabled and ✕ is hidden. See [Footer actions](#footer-actions-modalaction). |
+| `onCancel` | `() => void` | — | Fired on any cancel-style close **not triggered by a footer action**: the ✕ icon, ESC (if enabled), or modal-click (if enabled). |
 | `onClosed` | `() => void` | — | Fired after the close transition finishes and the dialog DOM has been destroyed. |
 | `closeOnClickModal` | `boolean` | `false` | Clicking the overlay closes the dialog. Disabled by default to avoid losing form input. |
 | `closeOnPressEscape` | `boolean` | `false` | ESC closes the dialog. Disabled by default. |
@@ -320,42 +326,55 @@ handle.getContentInstance();             // the mounted body component instance,
                                          // so you can call its defineExpose() methods
 ```
 
-### Async confirm and validation
+### Footer actions (`ModalAction`)
 
-`onConfirm` is the single async gate for the built-in footer:
-
-- While it is pending, the confirm button shows `loading`, the cancel button is disabled, and the ✕ icon is hidden — preventing a half-submitted close.
-- Return `false` (or a promise resolving to `false`) to **keep the dialog open**, typically after failed validation; re-throw is unnecessary.
+The built-in footer is **data-driven**: every entry in `actions` renders as an `el-button`, with the same shape conventions as core's `TableAction` — `name` is the key, `desc` is the visible button label (and `title` tooltip), `icon` / `type` map to the button like `Action.icon` does elsewhere.
 
 ```ts
-const handle = openModal({
-  component: UserEditForm,
-  onConfirm: async () => {
-    const form = handle.getContentInstance() as InstanceType<typeof UserEditForm> | null;
-    if (!form) return false;
-    try {
-      await form.validate();
-    } catch {
-      return false; // Element Plus validation failed → stay open
-    }
-    await api.update(form.getData());
-    // undefined → close
+import { openModal, type ModalAction } from "@ys-knife-crud/element-plus";
+
+const actions: ModalAction[] = [
+  { name: "cancel", desc: "取消", execute: (handle) => handle.close() },
+  {
+    name: "save",
+    desc: "保存",
+    type: "primary",      // el-button type; 'default' / undefined → plain default button
+    // icon: EditPen,     // same compatibility as Action.icon (component / VNode)
+    execute: async (handle, form) => {
+      // form is auto-typed as InstanceType<typeof UserEditForm> (non-null)
+      try {
+        await form.validate();
+      } catch {
+        return;           // validation failed → don't close, the dialog stays open
+      }
+      await api.update(form.getData());
+      handle.close();     // closing is explicit — call it when the action succeeded
+    },
   },
-});
+];
+
+openModal({ component: UserEditForm, actions });
 ```
 
-> A common alternative that avoids `getContentInstance()` is to have the body component own its buttons (`showFooter: false`) and call the API itself, then `emit("close")` on success.
+Behavior:
 
-### Custom footer (body owns the buttons)
+- **A non-empty `actions` array renders the footer; omitting it (or `[]`) renders no footer** — the body component then owns its buttons and closes via `emit("close")`.
+- `execute(handle, instance)` receives the [dialog handle](#returned-handle-modalhandle) and the mounted body component instance. The instance type is **auto-inferred from `component`** (e.g. `InstanceType<typeof UserEditForm>`) and is non-null (footer buttons are only clickable after the body mounts). Closing is **explicit** (`handle.close()`), which makes "keep the dialog open on validation failure" trivial — just don't call `close`.
+- While `execute` returns a pending promise: that button shows `loading`, the other action buttons are disabled, the ✕ icon is hidden, and further clicks are ignored — no half-submitted close.
+- `onCancel` is **not** called for footer actions; it only covers non-action close paths (✕ / ESC / overlay).
 
-For multi-step forms, dynamic button labels, or cases where the body already has a button bar:
+> A common alternative that avoids `getContentInstance()` is to omit `actions` and have the body component own its buttons, calling the API itself, then `emit("close")` on success.
+
+### No actions (body owns the buttons)
+
+For multi-step forms, dynamic button labels, or cases where the body already has a button bar, just omit `actions`:
 
 ```ts
 openModal({
   title: "详情",
   component: DetailPanel,
   props: { id },
-  showFooter: false, // no built-in 取消/确定
+  // no actions → no built-in footer
 });
 ```
 
@@ -370,6 +389,37 @@ The body can then render its own buttons and close via the injected `onClose`:
   </div>
 </template>
 ```
+
+### `openDialog` — built-in 取消 / 确定 footer
+
+`openDialog` is a thin convenience wrapper around `openModal` that provides a built-in **取消 / 确定** footer by default — you only supply `onConfirm`:
+
+```ts
+import { openDialog } from "@ys-knife-crud/element-plus";
+
+openDialog({
+  title: "编辑用户",
+  width: "600px",
+  component: UserEditForm,
+  props: { userId: 123 },
+  onConfirm: async (_handle, form) => {
+    // form is auto-typed as InstanceType<typeof UserEditForm> (non-null)
+    const ok = await form.validate().catch(() => false);
+    if (!ok) return false;   // validation failed → return false to keep the dialog open
+    await api.update(form.getData());
+    // returning undefined (or any non-false value) closes the dialog
+  },
+});
+```
+
+Semantics:
+
+- **取消** closes the dialog immediately. (Use `onCancel` only for non-button close paths like ✕ / ESC / overlay; the 取消 button does not fire it.)
+- **确定** runs `onConfirm(handle, instance)`. While it is pending, 确定 shows `loading`, 取消 and ✕ are disabled/hidden. Return `false` (or a promise resolving to `false`) to **keep the dialog open**; any other return value closes it.
+- `confirmText` / `cancelText` / `confirmType` customize the default 取消 / 确定 buttons.
+- The footer buttons are fixed at 取消 / 确定. Need a different button set (e.g. three buttons, a custom action)? Use `openModal` with `actions`.
+
+All other `openModal` options (`maximizable`, `closeOnClickModal`, `onClosed`, …) are available on `openDialog` as well.
 
 ### Maximize / restore
 
@@ -417,23 +467,29 @@ const rowActionsFunc: RowActionsFunc<UserRow> = constActions<UserRow>({
   name: "edit",
   desc: "编辑",
   execute: (row, table) => {
-    const handle = openModal({
+    openModal({
       title: `编辑：${row.name}`,
       component: UserEditForm,
       // seed the form from the clicked row; the body initialises from props
       props: { initialName: row.name, initialEmail: row.email },
-      onConfirm: async () => {
-        const form = handle.getContentInstance() as InstanceType<typeof UserEditForm> | null;
-        if (!form) return false;
-        try {
-          await form.validate();
-        } catch {
-          return false; // stay open on validation failure
-        }
-        await updateUser(row.id, form.getData());
-        table.refresh(); // re-fetch the current page after saving
-        // returning undefined closes the dialog
-      },
+      actions: [
+        { name: "cancel", desc: "取消", execute: (handle) => handle.close() },
+        {
+          name: "save",
+          desc: "保存",
+          type: "primary",
+          execute: async (handle, form) => {
+            try {
+              await form.validate();
+            } catch {
+              return; // stay open on validation failure
+            }
+            await updateUser(row.id, form.getData());
+            table.refresh(); // re-fetch the current page after saving
+            handle.close();
+          },
+        },
+      ],
     });
     return Promise.resolve();
   },
@@ -465,10 +521,10 @@ function openEdit() {
 - **Cleanup is automatic.** The service listens to `el-dialog`'s `closed` event and calls `render(null, container)` + removes the mount node after the leave transition. Reopening later creates a fresh instance — do not reuse the container yourself.
 - **Teleport still applies.** `el-dialog` teleports to `<body>` as usual; the internal mount node is only the vnode anchor, so dialogs are not trapped inside an `overflow:hidden` parent.
 - **`destroy-on-close` is always on.** Body component state is not retained across close/reopen; initialise from `props` synchronously (e.g. `reactive({ name: props.initialName ?? "" })`) or fetch by id in `onMounted`.
-- **`onConfirm` is for the built-in footer only.** With `showFooter: false` it is never called — the body component owns its buttons and closes via `emit("close")`.
+- **Footer buttons are opt-in via `actions`.** No `actions` (or an empty array) renders no footer — the body component owns its buttons and closes via `emit("close")`. `onCancel` only fires for non-action close paths (✕ / ESC / overlay), never for footer action clicks.
 - **Prefer it for dialogs triggered from handlers.** For dialogs whose open state is naturally bound to template state (e.g. a panel-level edit dialog co-located with a table), a plain `<el-dialog v-model>` is still the simpler choice.
 
-A runnable, five-scenario demo (built-in footer with async validation / `showFooter: false` / `listeners` / maximizable toggle / open maximized by default) lives in [`packages/element-plus-demo/src/pages/modal`](./packages/element-plus-demo/src/pages/modal); run `pnpm --filter @ys-knife-crud/element-plus-demo dev` and open **代码式弹窗（openModal）**.
+A runnable, eight-scenario demo (footer actions with async validation / no-actions body-owned buttons / `props.onXxx` event forwarding / `openDialog` with built-in 取消·确定 / maximizable toggle / open maximized by default / `openDialog` embedding `YsTablePage` / `openDialog` embedding `YsImportExcel`) lives in [`packages/element-plus-demo/src/pages/modal`](./packages/element-plus-demo/src/pages/modal); run `pnpm --filter @ys-knife-crud/element-plus-demo dev` and open **代码式弹窗（openModal）**.
 
 ---
 
