@@ -33,6 +33,11 @@ interface UseExportExcelOptions {
   exportPageSize: Ref<number>;
   /** 是否还有下一页（决定「导出所有」选项是否出现） */
   hasMorePage: Ref<boolean>;
+  /**
+   * 「page」范围的文案前缀；缺省「导出当前页数据」。
+   * 无限滚动列表等无分页场景可改为「导出当前已加载」。
+   */
+  pageScopeLabel?: Ref<string | undefined>;
 }
 
 /**
@@ -53,6 +58,7 @@ export function useExportExcel({
   total,
   exportPageSize,
   hasMorePage,
+  pageScopeLabel,
 }: UseExportExcelOptions) {
   /** 导出选项：exportSelected=false 不含「导出选中」；只有一页（hasMorePage=false）不含「导出所有」 */
   const exportOptions = computed<ExportOption[]>(() => {
@@ -64,7 +70,7 @@ export function useExportExcel({
         disabled: selectedRows.value.length === 0,
       });
     }
-    opts.push({ value: "page", label: `导出当前页数据（${currentRows.value.length} 条）`, disabled: false });
+    opts.push({ value: "page", label: `${pageScopeLabel?.value ?? "导出当前页数据"}（${currentRows.value.length} 条）`, disabled: false });
     if (hasMorePage.value) {
       opts.push({ value: "all", label: "导出所有数据", disabled: false });
     }

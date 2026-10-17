@@ -36,6 +36,7 @@ import TablePageFillHeightDemo from "./pages/tablePage/TablePageFillHeightDemo.v
 import ImportExcelPage from "./pages/importExcel/ImportExcelPage.vue";
 import ImportExcelBatchPage from "./pages/importExcel/ImportExcelBatchPage.vue";
 import ModalDemoPage from "./pages/modal/ModalDemoPage.vue";
+import InfiniteListPage from "./pages/table/InfiniteListPage.vue";
 
 /**
  * Demo 页面注册表：导航按钮与 App 动态渲染共用的唯一数据源。
@@ -207,6 +208,11 @@ export const demoPages = [
     id: "modal-open",
     label: "代码式弹窗（openModal，无需 template 声明）",
     component: ModalDemoPage,
+  },
+  {
+    id: "infinite-list",
+    label: "无限滚动列表（YsInfiniteList，触底自动加载）",
+    component: InfiniteListPage,
   },
 ] as const satisfies readonly DemoPageDef[];
 

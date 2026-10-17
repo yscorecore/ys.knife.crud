@@ -14,6 +14,7 @@ import YsAdvancedValueEditor from "./advancedFilter/advancedValueEditor.vue";
 import YsAdvancedConditionGroup from "./advancedFilter/advancedConditionGroup.vue";
 import YsTablePage from "./tablepage/tablePage.vue";
 import YsImportExcel from "./importExcel/importExcel.vue";
+import YsInfiniteList from "./table/infiniteList.vue";
 import { openModal, setDefaultModalAppContext } from "./modal/openModal";
 import { openDialog } from "./modal/openDialog";
 
@@ -25,6 +26,7 @@ export {
   YsFilterPanel,
   YsTablePage,
   YsImportExcel,
+  YsInfiniteList,
   YsTextFilterItem,
   YsDateFilterItem,
   YsDateRangeFilterItem,
@@ -70,6 +72,7 @@ export type YsAdvancedValueEditorProps = InstanceType<typeof YsAdvancedValueEdit
 export type YsAdvancedConditionGroupProps = InstanceType<typeof YsAdvancedConditionGroup>["$props"];
 export type YsTablePageProps = InstanceType<typeof YsTablePage>["$props"];
 export type YsImportExcelProps = InstanceType<typeof YsImportExcel>["$props"];
+export type YsInfiniteListProps = InstanceType<typeof YsInfiniteList>["$props"];
 
 // 高级查询面板的已存查询预设类型（v-model:quick-queries / v-model:saved-queries 用）
 export type { SavedQuery } from "./advancedFilter/advancedFilterContext";
@@ -103,6 +106,7 @@ const YsCrudElementPlus: Plugin = {
     app.component("YsAdvancedConditionGroup", YsAdvancedConditionGroup);
     app.component("YsTablePage", YsTablePage);
     app.component("YsImportExcel", YsImportExcel);
+    app.component("YsInfiniteList", YsInfiniteList);
   },
 };
 

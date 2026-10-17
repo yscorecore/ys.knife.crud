@@ -37,6 +37,11 @@ const props = defineProps<{
   exportPageSize: number;
   /** 是否还有下一页（决定「导出所有」选项是否出现） */
   hasMorePage: boolean;
+  /**
+   * 「page」范围的文案前缀；缺省「导出当前页数据」。
+   * 无限滚动列表等无分页场景传「导出当前已加载」。
+   */
+  pageScopeLabel?: string;
 }>();
 
 const {
@@ -64,6 +69,7 @@ const {
   total: toRef(props, "total"),
   exportPageSize: toRef(props, "exportPageSize"),
   hasMorePage: toRef(props, "hasMorePage"),
+  pageScopeLabel: toRef(props, "pageScopeLabel"),
 });
 
 /** 剩余时间文案：不足 1 分钟显示「N 秒」，否则「M 分 S 秒」；总数未知时不显示 */
