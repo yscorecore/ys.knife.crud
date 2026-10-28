@@ -2,7 +2,7 @@
   "name": "ys-knife-crud-monorepo",
   "private": true,
   "type": "module",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "description": "Monorepo for ys.knife.crud — TypeScript CRUD toolkit libraries published to npm",
   "packageManager": "pnpm@9.15.9",
   "engines": {
