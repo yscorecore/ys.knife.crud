@@ -40,8 +40,10 @@ const MINI_TAGS = new Set([
 export default defineConfig({
   plugins: [
     vue({
-      compilerOptions: {
-        isCustomElement: (tag) => tag.includes("-") || MINI_TAGS.has(tag),
+      template: {
+        compilerOptions: {
+          isCustomElement: (tag) => tag.includes("-") || MINI_TAGS.has(tag),
+        },
       },
     }),
     // 把 SFC 编译产出的 style.css 以 import 形式注入产物入口，
