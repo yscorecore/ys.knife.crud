@@ -1,6 +1,6 @@
 {
   "name": "@ys-knife-crud/taro",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Taro + Vue 3 WeChat mini-program components for ys.knife.crud",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -48,7 +48,7 @@
     "build": "vite build",
     "typecheck": "vue-tsc --noEmit",
     "clean": "rimraf dist",
-    "postversion": "git push && git push --tags"
+    "postversion": "node ../../scripts/tag-version.mjs && git push && git push --tags"
   },
   "peerDependencies": {
     "@tarojs/taro": ">=4.0.0",

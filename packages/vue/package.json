@@ -45,7 +45,7 @@
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit",
     "clean": "rimraf dist",
-    "postversion": "git push && git push --tags"
+    "postversion": "node ../../scripts/tag-version.mjs && git push && git push --tags"
   },
   "dependencies": {
     "@ys-knife-crud/core": "workspace:*",

@@ -48,7 +48,7 @@
     "test:watch": "vitest",
     "typecheck": "vue-tsc --noEmit",
     "clean": "rimraf dist",
-    "postversion": "git push && git push --tags"
+    "postversion": "node ../../scripts/tag-version.mjs && git push && git push --tags"
   },
   "peerDependencies": {
     "element-plus": "^2.7.0",
