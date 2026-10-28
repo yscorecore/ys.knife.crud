@@ -1,0 +1,42 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "noEmit": true,
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"]
+  },
+  "include": ["src/**/*.ts", "vite.config.ts"],
+  "exclude": ["src/**/*.vue"],
+  "vueCompilerOptions": {
+    "extensions": [".vue"],
+    "nativeTags": [
+      "view",
+      "text",
+      "scroll-view",
+      "image",
+      "block",
+      "button",
+      "input",
+      "label",
+      "checkbox",
+      "checkbox-group",
+      "picker",
+      "navigator",
+      "cover-view",
+      "cover-image",
+      "rich-text",
+      "progress",
+      "icon",
+      "form",
+      "textarea",
+      "map",
+      "canvas",
+      "video",
+      "camera",
+      "swiper",
+      "swiper-item",
+      "slot"
+    ]
+  }
+}

@@ -6,6 +6,11 @@ coverage/
 
 # pnpm
 .pnpm-store/
+.pnpm-cache/
+
+# Taro/SWC 编译缓存与 Node 编译缓存
+.swc/
+.tmp/
 
 # changesets
 .changeset/*.md
@@ -39,3 +44,6 @@ _tarballs/
 *.ts.timestamp*
 */dist.bak/*
 /dist.bak/
+
+# 微信开发者工具本地私有配置（各开发者本地生成，非项目交付物）
+**/project.private.config.json

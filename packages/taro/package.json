@@ -1,0 +1,72 @@
+{
+  "name": "@ys-knife-crud/taro",
+  "version": "0.0.1",
+  "description": "Taro + Vue 3 WeChat mini-program components for ys.knife.crud",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./style.css": "./dist/index.css"
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "keywords": [
+    "crud",
+    "vue3",
+    "taro",
+    "weapp",
+    "miniprogram",
+    "component-library"
+  ],
+  "license": "MIT",
+  "author": "Pengbo",
+  "homepage": "https://github.com/yscorecore/ys.knife.crud#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yscorecore/ys.knife.crud.git",
+    "directory": "packages/taro"
+  },
+  "bugs": {
+    "url": "https://github.com/yscorecore/ys.knife.crud/issues"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "vite build",
+    "typecheck": "vue-tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "peerDependencies": {
+    "@tarojs/taro": ">=4.0.0",
+    "vue": "^3.5.0"
+  },
+  "dependencies": {
+    "@ys-knife-crud/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@tarojs/taro": "4.3.1",
+    "@types/node": "^22.10.5",
+    "@vitejs/plugin-vue": "^5.2.1",
+    "rimraf": "^6.0.1",
+    "sass": "^1.80.0",
+    "typescript": "^5.9.2",
+    "vite": "^5.4.21",
+    "vite-plugin-dts": "^5.1.0",
+    "vite-plugin-lib-inject-css": "^2.2.2",
+    "vue": "^3.5.13",
+    "vue-tsc": "^2.2.0"
+  }
+}
