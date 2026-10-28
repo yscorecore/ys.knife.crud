@@ -10,7 +10,9 @@ A typed CRUD toolkit for the web. Published as scoped npm packages from a pnpm +
 | [`@ys-knife-crud/vue`](./packages/vue) | `packages/vue` | published | UI-library-agnostic Vue 3 composables (column config, excel export, row actions, row selection) built on `core`. |
 | [`@ys-knife-crud/export-exceljs`](./packages/export-exceljs) | `packages/export-exceljs` | published | ExcelJS implementation of the `ExportApi` contract from `core`. |
 | [`@ys-knife-crud/element-plus`](./packages/element-plus) | `packages/element-plus` | published | Vue 3 + element-plus UI components built on top of `core` and `@ys-knife-crud/vue`. Distributed as a Vue plugin + individual components. |
+| [`@ys-knife-crud/taro`](./packages/taro) | `packages/taro` | **private, not published** | Vue 3 + Taro 4 小程序端组件库，包含 `YsInfiniteList`、`YsFilterPanel`、`YsCommandBar` 等，对齐 element-plus 版的 FilterInfo / TableAction 契约。 |
 | `@ys-knife-crud/element-plus-demo` | `packages/element-plus-demo` | **private, not published** | Vite-powered playground used to validate `element-plus` during development. |
+| `@ys-knife-crud/taro-demo` | `packages/taro-demo` | **private, not published** | Taro + Vue3 小程序宿主，用于在微信开发者工具里预览 `@ys-knife-crud/taro`。 |
 
 ## Requirements
 
@@ -65,7 +67,9 @@ ys.knife.crud/
 │   ├── vue/                     @ys-knife-crud/vue
 │   ├── export-exceljs/          @ys-knife-crud/export-exceljs
 │   ├── element-plus/            @ys-knife-crud/element-plus
-│   └── element-plus-demo/       @ys-knife-crud/element-plus-demo (private)
+│   ├── element-plus-demo/       @ys-knife-crud/element-plus-demo (private)
+│   ├── taro/                    @ys-knife-crud/taro (private)
+│   └── taro-demo/               @ys-knife-crud/taro-demo (private)
 ├── .changeset/
 ├── .github/workflows/ci.yml
 ├── eslint.config.js
