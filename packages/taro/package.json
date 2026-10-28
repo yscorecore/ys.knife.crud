@@ -1,6 +1,6 @@
 {
   "name": "@ys-knife-crud/taro",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Taro + Vue 3 WeChat mini-program components for ys.knife.crud",
   "type": "module",
   "main": "./dist/index.cjs",
