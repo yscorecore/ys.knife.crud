@@ -34,8 +34,6 @@ defineOptions({ name: "YsInfinitePage" });
  */
 const props = defineProps({
   /* ---------- FilterPanel ---------- */
-  /** 文本搜索框的值（v-model 绑定内部 FilterPanel） */
-  modelValue: { type: String, default: "" },
   /** 是否渲染顶部 FilterPanel，默认 true */
   showFilter: { type: Boolean, default: true },
   /** 文本搜索条件构造委托（FilterPanel 唯一入口） */
@@ -73,7 +71,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits<{
-  (e: "update:modelValue", value: string): void;
   (e: "search", filter: FilterInfo): void;
   (e: "reset"): void;
   (e: "expand-change", expanded: boolean): void;
@@ -100,11 +97,6 @@ defineExpose({
 
 /* ---------------- 事件适配 ---------------- */
 
-/** FilterPanel 的 input 事件 → InfinitePage 的 update:modelValue */
-function onFilterUpdate(value: string): void {
-  emit("update:modelValue", value);
-}
-
 /** InfiniteList data-loaded 的事件对象里 PagedList + isAppend 是分开的，InfinitePage 原样转发 */
 function onListDataLoaded(paged: unknown, isAppend: boolean): void {
   emit("data-loaded", paged, isAppend);
@@ -117,7 +109,6 @@ function onListDataLoaded(paged: unknown, isAppend: boolean): void {
     <view v-if="showFilter" class="yk-infinite-page__filter">
       <YsFilterPanel
         ref="filterRef"
-        :model-value="modelValue"
         :placeholder="placeholder"
         :filter-text="filterText"
         :search-button-text="searchButtonText"
@@ -128,7 +119,6 @@ function onListDataLoaded(paged: unknown, isAppend: boolean): void {
         :text-filter-builder="textFilterBuilder"
         :custom-class="filterCustomClass"
         :custom-style="filterCustomStyle"
-        @update:model-value="onFilterUpdate"
         @search="emit('search', $event)"
         @reset="emit('reset')"
         @expand-change="emit('expand-change', $event)"

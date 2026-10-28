@@ -20,16 +20,17 @@ import { FilterPanelKey } from "./context";
  * - 插槽内的自定义搜索项组件经 useFilterPanelItem 注册各自的 FilterInfo
  * - 点击「查询」时按 AND 聚合所有非空条件，最终派发一个 FilterInfo 对象
  *
+ * 文本框的值只在组件内部维护（不对外双向绑定）：输入即更新内部状态，
+ * 点「重置」时清空；使用方如需读取当前文本值，经 expose 的 keyword 获取。
+ *
  * 用法：
- * <ys-filter-panel v-model="keyword" :text-filter-builder="kw => filter('name', Operator.Contains, con(kw))" @search="onSearch" @reset="onReset">
+ * <ys-filter-panel :text-filter-builder="kw => filter('name', Operator.Contains, con(kw))" @search="onSearch" @reset="onReset">
  *   <!-- 自定义筛选条件（可注册 FilterInfo 的组件） -->
  * </ys-filter-panel>
  */
 defineOptions({ name: "YsFilterPanel" });
 
 const props = defineProps({
-  /** 文本搜索框的值（v-model） */
-  modelValue: { type: String, default: "" },
   /** 文本搜索框占位文案 */
   placeholder: { type: String, default: "请输入" },
   /** 展开/折叠触发器文案，默认「筛选」 */
@@ -69,8 +70,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits<{
-  /** 文本搜索值变更（v-model） */
-  (e: "update:modelValue", value: string): void;
   /** 点击「查询」（或在输入框确认）：携带按 AND 聚合后的 FilterInfo */
   (e: "search", filter: FilterInfo): void;
   /** 点击「重置」：文本与已注册条件均已重置 */
@@ -87,6 +86,9 @@ const hasConditions = computed<boolean>(() => !!slots.default);
 /** 条件区是否展开（初始取 defaultExpanded） */
 const expanded = ref(props.defaultExpanded);
 
+/** 文本搜索框的值：组件内部状态，不对外双向绑定 */
+const keyword = ref("");
+
 /* ---------------- 条件聚合 ---------------- */
 /** 已注册的自定义搜索项 */
 const items = shallowRef<FilterItemApi[]>([]);
@@ -102,7 +104,7 @@ provide(FilterPanelKey, registerItem);
 
 /** 文本搜索条件：输入 trim 后为空或没传 textFilterBuilder 委托时跳过；否则用委托构造 */
 const textFilter = computed<FilterInfo | null>(() => {
-  const value = props.modelValue?.trim() ?? "";
+  const value = keyword.value.trim();
   if (!value || !props.textFilterBuilder) return null;
   const built = props.textFilterBuilder(value);
   return built ?? null;
@@ -130,7 +132,7 @@ function toggleExpand(): void {
 /** 文本输入：小程序 input 的值在 event.detail.value（DOM 类型下 detail 非该结构，运行时按小程序取） */
 function onInput(e: Event): void {
   const detail = (e as unknown as { detail?: { value?: string } }).detail;
-  emit("update:modelValue", detail?.value ?? "");
+  keyword.value = detail?.value ?? "";
 }
 
 /** 查询：把聚合后的 FilterInfo 抛给使用方 */
@@ -140,12 +142,14 @@ function onSearch(): void {
 
 /** 重置：清空文本 + 重置已注册子项，再通知使用方 */
 function onReset(): void {
-  emit("update:modelValue", "");
+  keyword.value = "";
   for (const item of items.value) item.reset();
   emit("reset");
 }
 
 defineExpose({
+  /** 文本搜索框当前值（只读读取用，外部不能写入） */
+  keyword,
   /** 条件区是否展开 */
   expanded,
   /** 当前聚合后的查询条件 */
@@ -171,7 +175,7 @@ defineExpose({
       <view class="yk-filter-panel__field">
         <input
           class="yk-filter-panel__input"
-          :value="modelValue"
+          :value="keyword"
           :placeholder="placeholder"
           placeholder-class="yk-filter-panel__placeholder"
           @input="onInput"
@@ -232,13 +236,13 @@ defineExpose({
 
 .yk-filter-panel__trigger-text {
   font-size: 28rpx;
-  color: #409eff;
+  color: #35f;
 }
 
 .yk-filter-panel__arrow {
   margin-left: 6rpx;
   font-size: 20rpx;
-  color: #409eff;
+  color: #35f;
 }
 
 /* 输入框容器：撑开中间剩余空间，视觉样式（浅灰底、圆角）放在容器上。
@@ -293,7 +297,7 @@ defineExpose({
 /* 查询：主色实心 */
 .yk-filter-panel__btn--primary {
   color: #ffffff;
-  background-color: #409eff;
+  background-color: #35f;
 }
 
 /* 重置：浅灰底 */

@@ -30,7 +30,6 @@ const ROWS: MockRow[] = Array.from({ length: 100 }, (_, i) => ({
 }));
 
 /* ---------------- 筛选状态 ---------------- */
-const keyword = ref("");
 const providerIndex = ref(0);
 const appliedKeyword = ref("");
 const appliedProviderIndex = ref(0);
@@ -67,14 +66,14 @@ const loadLog = ref<string[]>([]);
 const lastFilter = ref("");
 
 function onSearch(filter: FilterInfo): void {
-  appliedKeyword.value = keyword.value;
+  // 文本框由 FilterPanel 内部维护，经 expose 的 keyword 读取当前值
+  appliedKeyword.value = pageRef.value?.filterPanel?.keyword ?? "";
   appliedProviderIndex.value = providerIndex.value;
   lastFilter.value = filter.toString();
   pageRef.value?.list?.reload();
 }
 
 function onReset(): void {
-  keyword.value = "";
   providerIndex.value = 0;
   appliedKeyword.value = "";
   appliedProviderIndex.value = 0;
@@ -130,7 +129,6 @@ function onReload(): void {
 
   <YsInfinitePage
     ref="pageRef"
-    v-model="keyword"
     :data-fun="dataFun"
     :page-size="10"
     :show-checkbox="true"

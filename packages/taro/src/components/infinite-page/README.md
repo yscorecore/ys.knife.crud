@@ -69,7 +69,6 @@ function onReset(): void { pageRef.value?.list?.reload(); }
 <template>
   <YsInfinitePage
     ref="pageRef"
-    v-model="keyword"
     :data-fun="dataFun"
     :text-filter-builder="kw => filter('name', Operator.Contains, con(kw)) as unknown as FilterInfo"
     :actions="actions"
@@ -100,7 +99,6 @@ function onReset(): void { pageRef.value?.list?.reload(); }
 
 | 属性 | 所属子组件 | 类型 | 默认值 | 说明 |
 | --- | --- | --- | --- | --- |
-| **modelValue** | FilterPanel | `string` | `""` | 文本搜索框值，支持 `v-model` |
 | **showFilter** | 容器 | `boolean` | `true` | 是否渲染顶部 FilterPanel |
 | **textFilterBuilder** | FilterPanel | `(kw: string) => FilterInfo \| null` | `undefined` | 文本条件委托（FilterPanel 唯一入口） |
 | placeholder / filterText / searchButtonText / resetButtonText | FilterPanel | `string` | — | 透传 |
@@ -119,7 +117,6 @@ function onReset(): void { pageRef.value?.list?.reload(); }
 
 | 事件 | 来源 | 说明 |
 | --- | --- | --- |
-| update:modelValue | FilterPanel | 文本搜索值变化 |
 | search | FilterPanel | 点击查询 / 输入框确认，携带聚合后的 FilterInfo |
 | reset | FilterPanel | 点击重置 |
 | expand-change | FilterPanel | 条件区展开/折叠 |

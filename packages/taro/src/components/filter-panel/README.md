@@ -7,6 +7,7 @@
 - 条件区由默认插槽承载（下拉选择、日期区间等业务条件），收起时仅隐藏（`v-show`），插槽内控件保持挂载、状态不丢失
 - 点「查询」时按 **AND** 聚合条件，最终构造一个 `FilterInfo` 对象派发 `search` 事件
 - 文本搜索的 `FilterInfo` 构造完全由 `textFilterBuilder` 委托——最基础的 contains/equals 到 OR 多属性匹配都走同一条入口，不再单独暴露 `searchPropertyPath` / `searchOp`
+- 文本框的值只在组件内部维护（不提供 `v-model`）：输入即写入内部状态，点「重置」时清空；需要读取当前值可经 expose 的 `keyword`
 - 只使用小程序内置元素（`view` / `text` / `input`），不使用 `div`
 
 ## 引入
@@ -21,12 +22,9 @@ import { YsFilterPanel, useFilterPanelItem } from "@ys-knife-crud/taro";
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue";
 import { YsFilterPanel } from "@ys-knife-crud/taro";
 import { Operator, con, filter } from "@ys-knife-crud/core";
 import type { FilterInfo } from "@ys-knife-crud/core";
-
-const keyword = ref("");
 
 /** 最简单的单属性 contains：等价于旧版 search-property-path + search-op */
 function buildTextFilter(kw: string): FilterInfo {
@@ -41,7 +39,6 @@ function onSearch(filter: FilterInfo): void {
 <template>
   <!-- 只有搜索框 + 查询/重置，不显示「筛选」按钮（插槽为空） -->
   <YsFilterPanel
-    v-model="keyword"
     placeholder="请输入姓名"
     :text-filter-builder="buildTextFilter"
     @search="onSearch"
@@ -55,11 +52,8 @@ function onSearch(filter: FilterInfo): void {
 
 ```vue
 <script setup lang="ts">
-import { ref } from "vue";
 import { YsFilterPanel } from "@ys-knife-crud/taro";
 import { FilterInfo, Operator, con, filter } from "@ys-knife-crud/core";
-
-const keyword = ref("");
 
 /** 输入框同时匹配「名称」或「编码」任一包含——最终语义是 OR */
 function buildTextFilter(kw: string): FilterInfo {
@@ -72,7 +66,6 @@ function buildTextFilter(kw: string): FilterInfo {
 
 <template>
   <YsFilterPanel
-    v-model="keyword"
     placeholder="请输入名称或编码"
     :text-filter-builder="buildTextFilter"
   />
@@ -130,7 +123,6 @@ function onChange(e: Event): void {
 
 ```vue
 <YsFilterPanel
-  v-model="keyword"
   placeholder="请输入姓名"
   :text-filter-builder="kw => filter('name', Operator.Contains, con(kw))"
   @search="onSearch"
@@ -157,7 +149,6 @@ function onChange(e: Event): void {
 
 | 属性 | 说明 | 类型 | 默认值 |
 | --- | --- | --- | --- |
-| modelValue | 文本搜索框的值（`v-model`） | `string` | `""` |
 | placeholder | 文本搜索框占位文案 | `string` | `"请输入"` |
 | filterText | 展开/折叠触发器文案 | `string` | `"筛选"` |
 | searchButtonText | 查询按钮文案 | `string` | `"查询"` |
@@ -173,7 +164,6 @@ function onChange(e: Event): void {
 
 | 事件 | 说明 | 回调参数 |
 | --- | --- | --- |
-| update:modelValue | 文本搜索值变化 | `(value: string)` |
 | search | 点击「查询」或在输入框确认（键盘回车） | `(filter: FilterInfo)` 聚合后的完整条件；无任何条件时为 `emptyFilter()` |
 | reset | 点击「重置」：文本已清空、已注册子项已重置 | — |
 | expand-change | 条件区展开/折叠状态变化 | `(expanded: boolean)` |
@@ -182,6 +172,7 @@ function onChange(e: Event): void {
 
 | 方法/属性 | 说明 |
 | --- | --- |
+| keyword | 文本搜索框当前值（`Ref<string>`，供读取，外部不写入） |
 | filter | 当前聚合后的 `FilterInfo`（`ComputedRef<FilterInfo>`） |
 | expanded | 条件区当前是否展开（`Ref<boolean>`） |
 | toggle() | 切换条件区展开/折叠 |
@@ -225,9 +216,10 @@ function onChange(e: Event): void {
 5. **只允许小程序原生标签**：`view` / `text` / `input` / `picker` / `scroll-view` 等，禁止 `div`。
 6. **样式非 scoped**：小程序端 scoped 支持有限，靠 `.yk-` 前缀防泄漏；自定义条件建议同样使用带前缀的类名。
 7. **重置语义**：面板会清空文本并调用所有已注册子项的 `reset()`，但插槽内没有注册的控件需由使用方在 `@reset` 中自行复位。
-8. **使用方要在自己的页面模板里登记一次 `input`**：Taro 只为「应用源码模板中出现过的原生组件」生成 WXML 模板，组件库产物里的 `<input>` 不会被扫描登记。若页面此前没有用过 `input`，搜索框会不渲染（placeholder 也看不到）。解决办法是在页面模板里放一个占位：`<input v-if="false" />`。
-9. **`textFilterBuilder` 的返回值会直接进 AND 聚合**：builder 里可以用 `FilterInfo.createOr` 做 OR 语义，面板不会改写它——最终 AND 聚合时一个分支里嵌着 OR 是完全合法的 FilterInfo 结构。
-10. **委托签名返回 `FilterInfo` 可能不满足严格类型检查**：`ys.knife.query.js` 包产出的对象是具体类实例，跨包类型比对时有时需要 `as unknown as FilterInfo` 兜底（上面示例都有）。这是 `@ys-knife-crud/core` 与 `ys.knife.query.js` 两个包之间的结构性比较问题，小程序端和 web 版同样受影响。
+8. **文本值不对外双向绑定**：搜索框内容由组件内部维护，没有 `modelValue` prop 与 `update:modelValue` 事件；查询结果只经 `search` 事件的 `FilterInfo` 体现，需要读取当前输入时用 `filterPanel.keyword` 或 `textFilterBuilder` 的入参。
+9. **使用方要在自己的页面模板里登记一次 `input`**：Taro 只为「应用源码模板中出现过的原生组件」生成 WXML 模板，组件库产物里的 `<input>` 不会被扫描登记。若页面此前没有用过 `input`，搜索框会不渲染（placeholder 也看不到）。解决办法是在页面模板里放一个占位：`<input v-if="false" />`。
+10. **`textFilterBuilder` 的返回值会直接进 AND 聚合**：builder 里可以用 `FilterInfo.createOr` 做 OR 语义，面板不会改写它——最终 AND 聚合时一个分支里嵌着 OR 是完全合法的 FilterInfo 结构。
+11. **委托签名返回 `FilterInfo` 可能不满足严格类型检查**：`ys.knife.query.js` 包产出的对象是具体类实例，跨包类型比对时有时需要 `as unknown as FilterInfo` 兜底（上面示例都有）。这是 `@ys-knife-crud/core` 与 `ys.knife.query.js` 两个包之间的结构性比较问题，小程序端和 web 版同样受影响。
 
 ## 与 element-plus 版的差异
 
