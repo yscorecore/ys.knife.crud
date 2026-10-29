@@ -172,9 +172,9 @@ export function openModal<
 
     let contentInstance: ComponentPublicInstance | null = null;
     let destroyed = false;
-    // Host setup 的 expose() 结果，render 后回填；handle 方法均惰性解引用，
-    // 因此可先构造 handle 并传给 actions.execute，点击时 exposed 已就绪
-    let exposed: Pick<ModalHandle, "close" | "toggleMaximize" | "isMaximized"> | undefined;
+    // Host setup 的 expose() 结果在 render 后以 const 回填；handle 方法均惰性
+    // 解引用（闭包捕获绑定而非值），因此可先构造 handle 并传给 actions.execute，
+    // 点击时 exposed 已就绪
 
     const destroy = () => {
         if (destroyed) return;
@@ -363,8 +363,8 @@ export function openModal<
     vnode.appContext = resolvedAppContext;
     render(vnode, container);
 
-    // render 后回填 Host expose 的方法，handle 的惰性解引用自此生效
-    exposed = vnode.component?.exposed as
+    // render 后 Host expose 的方法在此以 const 落定，handle 的惰性解引用自此生效
+    const exposed = vnode.component?.exposed as
         | Pick<ModalHandle, "close" | "toggleMaximize" | "isMaximized">
         | undefined;
 
