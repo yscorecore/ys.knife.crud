@@ -66,11 +66,11 @@ const loadLog = ref<string[]>([]);
 const lastFilter = ref("");
 
 function onSearch(filter: FilterInfo): void {
-  // 文本框由 FilterPanel 内部维护，经 expose 的 keyword 读取当前值
-  appliedKeyword.value = pageRef.value?.filterPanel?.keyword ?? "";
+  // 文本框由 FilterPanel 内部维护，经 InfinitePage 平铺暴露的 keyword 读取
+  appliedKeyword.value = pageRef.value?.keyword ?? "";
   appliedProviderIndex.value = providerIndex.value;
   lastFilter.value = filter.toString();
-  pageRef.value?.list?.reload();
+  pageRef.value?.reload();
 }
 
 function onReset(): void {
@@ -78,7 +78,7 @@ function onReset(): void {
   appliedKeyword.value = "";
   appliedProviderIndex.value = 0;
   lastFilter.value = "";
-  pageRef.value?.list?.reload();
+  pageRef.value?.reload();
 }
 
 function onDataLoaded(paged: unknown, isAppend: boolean): void {
@@ -88,14 +88,14 @@ function onDataLoaded(paged: unknown, isAppend: boolean): void {
 }
 
 /* ---------------- 底部 CommandBar 的 actions ---------------- */
-// CommandBar 是空壳子，execute 通过闭包抓 pageRef.list
+// CommandBar 是空壳子，execute 通过闭包抓 pageRef（平铺暴露的 list 方法）
 const actions: TableAction[] = [
   {
     name: "export",
     desc: "导出 Excel",
     plain: true,
     async execute() {
-      const allRows = pageRef.value?.list?.items ?? [];
+      const allRows = pageRef.value?.items ?? [];
       wx.showToast({ title: `将导出 ${allRows.length} 行`, icon: "none" });
       loadLog.value.unshift(`导出 Excel：${allRows.length} 行`);
       if (loadLog.value.length > 5) loadLog.value.pop();
@@ -105,7 +105,7 @@ const actions: TableAction[] = [
     name: "load-next",
     desc: "加载更多",
     async execute() {
-      pageRef.value?.list?.loadNextPage();
+      pageRef.value?.loadNextPage();
     },
   },
 ];
@@ -116,10 +116,10 @@ function onSelectionChange(rows: unknown[]): void {
   selectedCount.value = rows.length;
 }
 function onClearSelection(): void {
-  pageRef.value?.list?.clearSelection();
+  pageRef.value?.clearSelection();
 }
 function onReload(): void {
-  pageRef.value?.list?.reload();
+  pageRef.value?.reload();
 }
 </script>
 

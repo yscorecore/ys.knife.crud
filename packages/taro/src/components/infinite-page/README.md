@@ -15,7 +15,7 @@
 ```
 
 - 整个面板 `height: 100vh`，外部不需要再包一层 page
-- CommandBar 是空壳子（只有按钮 + 插槽，不持状态），业务侧的 `TableAction.execute()` 通过闭包抓 `pageRef.list`
+- CommandBar 是空壳子（只有按钮 + 插槽，不持状态），业务侧的 `TableAction.execute()` 通过闭包抓 `pageRef`（列表能力已平铺暴露）
 - InfinitePage 本身不做任何自动联调（不会把 search 事件 reload 自动串起来），所有事件原样转发，业务侧自己接
 
 只使用小程序内置元素（`view` / `text` / `input` / `scroll-view`）。
@@ -45,7 +45,7 @@ const actions: TableAction[] = [
     desc: "导出 Excel",
     plain: true,
     async execute() {
-      const rows = pageRef.value?.list?.items ?? [];
+      const rows = pageRef.value?.items ?? [];
       wx.showToast({ title: `将导出 ${rows.length} 行`, icon: "none" });
     },
   },
@@ -53,7 +53,7 @@ const actions: TableAction[] = [
     name: "load-next",
     desc: "加载更多",
     async execute() {
-      pageRef.value?.list?.loadNextPage();
+      pageRef.value?.loadNextPage();
     },
   },
 ];
@@ -62,8 +62,8 @@ async function dataFun(req: { limit: number; offset: number }) {
   // ...
 }
 
-function onSearch(_filter: FilterInfo): void { pageRef.value?.list?.reload(); }
-function onReset(): void { pageRef.value?.list?.reload(); }
+function onSearch(_filter: FilterInfo): void { pageRef.value?.reload(); }
+function onReset(): void { pageRef.value?.reload(); }
 </script>
 
 <template>
@@ -89,7 +89,7 @@ function onReset(): void { pageRef.value?.list?.reload(); }
     <!-- CommandBar 默认插槽：选中提示条 / 刷新按钮 / 其他自定义内容 -->
     <template #cmd-default>
       <view class="selection-bar">已选 {{ selectedCount }} 项</view>
-      <view class="reload-btn" @tap="pageRef?.list?.reload()">刷新</view>
+      <view class="reload-btn" @tap="pageRef?.reload()">刷新</view>
     </template>
   </YsInfinitePage>
 </template>
@@ -126,12 +126,23 @@ function onReset(): void { pageRef.value?.list?.reload(); }
 
 ## Expose
 
-| 字段 | 说明 |
-| --- | --- |
-| `list` | `YsInfiniteList` 实例 |
-| `filterPanel` | `YsFilterPanel` 实例 |
+列表与筛选面板的常用能力已平铺到页面级，直接 `pageRef.reload()` 调用，不必多一层 `list` / `filterPanel`：
 
-CommandBar 是空壳子，不暴露任何 ref——业务侧通过 list ref 调 `reload()` / `clearSelection()` / `loadNextPage()` 等。
+| 字段 | 来源 | 说明 |
+| --- | --- | --- |
+| `reload()` / `refresh()` | InfiniteList | 重置并从第一页重新加载（两者同义） |
+| `loadNextPage()` | InfiniteList | 手动加载下一页（一般触底自动触发） |
+| `items` / `rows` | InfiniteList | 当前已加载的全部数据（未挂载时返回 `[]`） |
+| `loading` / `loadingMore` / `hasMore` | InfiniteList | 首屏加载态 / 追加加载态 / 是否还有下一页 |
+| `selectedRows` | InfiniteList | 跨页累计选中的行 |
+| `isRowSelected(row)` / `toggleRowSelection(row, selected?)` | InfiniteList | 单行选中查询 / 切换 |
+| `clearSelection()` / `selectAllOnPage()` / `invertSelectionOnPage()` | InfiniteList | 清空 / 全选已加载行 / 反选 |
+| `keyword` | FilterPanel | 文本搜索框当前值 |
+| `filter` | FilterPanel | 当前聚合后的 `FilterInfo` |
+| `filterExpanded` / `toggleFilter()` / `resetFilter()` | FilterPanel | 条件区展开态 / 切换 / 重置 |
+| `list` / `filterPanel` | — | 子组件实例（未平铺能力的逃生舱） |
+
+方法为惰性转发，状态为 getter 惰性读取（保持响应式）；组件挂载前调用方法静默无操作。CommandBar 是空壳子，不暴露任何能力。
 
 ## Slots
 
@@ -159,8 +170,8 @@ CommandBar 是空壳子，不暴露任何 ref——业务侧通过 list ref 调 
 1. **不要用整个 InfinitePage 里的 `height: 100vh` 再套一个页面级容器**——会导致页面整体变高、scroll-view 滚动异常。`YsInfinitePage` 自己就是页面根节点。
 2. **中间 InfiniteList 必须给 `height="100%"`**——组件内部已经硬编码了（不需要外部再传），因为中间 flex 子项的高度由父容器决定，InfinitePage 会把这个 prop 写死。
 3. **`min-height: 0` 是 flex 中间子项能正确触发 scroll-view 滚动的关键**——如果用了其他布局容器替换中间段，也要保留这条规则。
-4. **CommandBar 的 TableAction.execute() 里 table 参数是 undefined**——闭包抓 `pageRef.list`。
-5. **InfinitePage 不自动联调 search → reload**——业务侧需要自己在 `@search` / `@reset` 回调里调 `pageRef.list.reload()`，因为不同业务查询后可能需要额外处理（如重置分页偏移量、清空选中）。
+4. **CommandBar 的 TableAction.execute() 里 table 参数是 undefined**——闭包抓 `pageRef`（如 `pageRef.value?.reload()`）。
+5. **InfinitePage 不自动联调 search → reload**——业务侧需要自己在 `@search` / `@reset` 回调里调 `pageRef.reload()`，因为不同业务查询后可能需要额外处理（如重置分页偏移量、清空选中）。
 6. **底部 CommandBar 用 `position: fixed` 固定在视口底部**——不依赖 `100vh` 与可视高度是否一致，任何机型/工具栏形态下都停留在可视区域；列表容器已预留 `padding-bottom`，但如果你在 `cmd-default` 插槽里塞了多行内容让命令条变高，需要自己调大预留值（默认按单行 96rpx 计算）。
 
 ## 与 element-plus 版的 `YsTablePage` 的差异

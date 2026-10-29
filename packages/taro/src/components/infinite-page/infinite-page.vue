@@ -23,7 +23,8 @@ import YsInfiniteList from "../infinite-list/infinite-list.vue";
  * └─────────────────────────────┘
  *
  * CommandBar 是空壳子，execute() 里的 table 参数收到 undefined——
- * 业务侧在 TableAction.execute() 里通过闭包抓 pageRef.list（InfinitePage 会暴露 list 实例）。
+ * 业务侧在 TableAction.execute() 里通过闭包抓 pageRef（InfinitePage 已把
+ * 列表/面板的常用方法与状态平铺暴露，如 reload() / selectedRows / keyword 等）。
  */
 defineOptions({ name: "YsInfinitePage" });
 
@@ -84,8 +85,81 @@ const emit = defineEmits<{
 const listRef = ref<InstanceType<typeof YsInfiniteList> | null>(null);
 const filterRef = ref<InstanceType<typeof YsFilterPanel> | null>(null);
 
+type Row = Record<string, unknown>;
+
+/**
+ * 把两个子组件的常用能力平铺到页面级，业务侧直接 pageRef.reload() 即可，
+ * 不必多一层 list / filterPanel。方法用箭头函数惰性转发（挂载前 ref 为 null，
+ * 直接调用静默无操作）；状态用 getter 惰性读取，保持响应式跟踪。
+ */
 defineExpose({
-  /** YsInfiniteList 实例（空壳子 CommandBar 没有 list 引用，业务侧通过这个 ref 调 reload / clearSelection 等） */
+  /* ---------- 数据加载（转发 YsInfiniteList） ---------- */
+  /** 重置并从第一页重新加载 */
+  reload: () => listRef.value?.reload(),
+  /** 刷新：重置为第一页重新加载（与 reload 同义） */
+  refresh: () => listRef.value?.refresh(),
+  /** 手动加载下一页（一般触底自动触发，无需手动调） */
+  loadNextPage: () => listRef.value?.loadNextPage(),
+
+  /* ---------- 列表状态 ---------- */
+  /** 当前已加载的全部数据 */
+  get items() {
+    return listRef.value?.items ?? [];
+  },
+  /** items 别名（与 YsTable 的 rows 同名） */
+  get rows() {
+    return listRef.value?.rows ?? [];
+  },
+  /** 首屏加载态 */
+  get loading() {
+    return listRef.value?.loading ?? false;
+  },
+  /** 追加加载态 */
+  get loadingMore() {
+    return listRef.value?.loadingMore ?? false;
+  },
+  /** 是否还有下一页 */
+  get hasMore() {
+    return listRef.value?.hasMore ?? false;
+  },
+
+  /* ---------- 多选（showCheckbox 开启时有意义） ---------- */
+  /** 跨页累计选中的行 */
+  get selectedRows() {
+    return listRef.value?.selectedRows ?? [];
+  },
+  /** 某行当前是否选中 */
+  isRowSelected: (row: Row) => listRef.value?.isRowSelected(row) ?? false,
+  /** 切换某行选中态（selected 缺省时取反） */
+  toggleRowSelection: (row: Row, selected?: boolean) =>
+    listRef.value?.toggleRowSelection(row, selected),
+  /** 清空全部选中 */
+  clearSelection: () => listRef.value?.clearSelection(),
+  /** 选中当前已加载的全部行 */
+  selectAllOnPage: () => listRef.value?.selectAllOnPage(),
+  /** 反选当前已加载的行 */
+  invertSelectionOnPage: () => listRef.value?.invertSelectionOnPage(),
+
+  /* ---------- 筛选面板（转发 YsFilterPanel） ---------- */
+  /** 文本搜索框当前值 */
+  get keyword() {
+    return filterRef.value?.keyword ?? "";
+  },
+  /** 当前聚合后的查询条件 */
+  get filter() {
+    return filterRef.value?.filter;
+  },
+  /** 条件区是否展开 */
+  get filterExpanded() {
+    return filterRef.value?.expanded ?? false;
+  },
+  /** 切换条件区展开/折叠 */
+  toggleFilter: () => filterRef.value?.toggle(),
+  /** 重置筛选（清空文本 + 重置已注册子项 + 派发 reset） */
+  resetFilter: () => filterRef.value?.reset(),
+
+  /* ---------- 子组件实例（未平铺能力的逃生舱） ---------- */
+  /** YsInfiniteList 实例 */
   get list() {
     return listRef.value;
   },
