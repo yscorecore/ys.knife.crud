@@ -1,0 +1,82 @@
+.yk-filter-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  align-items: flex-end;
+  padding: 12px 16px;
+  background: var(--ant-color-bg-container, #fff);
+  border: 1px solid var(--ant-color-border, #d9d9d9);
+  border-radius: 6px;
+  position: relative; /* 给单行模式 toggle 按钮 absolute 定位做参照 */
+}
+
+/* filter items 容器：非单行模式 display:contents 透明，子项直接参与根 flex 布局 */
+.yk-filter-panel__items {
+  display: contents;
+}
+
+/* 单行模式 toggle 按钮：右上角 absolute 定位 */
+.yk-filter-panel__toggle {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  padding: 4px;
+  height: auto;
+  min-height: 0;
+}
+
+/* ---- 单行模式折叠态 ---- */
+.yk-filter-panel.is-single-line.is-collapsed {
+  flex-wrap: wrap;
+  padding-right: 40px;
+}
+.yk-filter-panel.is-single-line.is-collapsed .yk-filter-panel__items {
+  display: flex;
+  flex-wrap: nowrap;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  gap: 16px;
+  max-width: calc(100% - 160px); /* 默认预留 actions 空间，JS 精确覆盖 */
+}
+.yk-filter-panel.is-single-line.is-collapsed .yk-filter-panel__actions {
+  flex-shrink: 0;
+}
+
+/* ---- 单行模式展开态：恢复多行 wrap ---- */
+.yk-filter-panel.is-single-line:not(.is-collapsed) {
+  flex-wrap: wrap;
+}
+.yk-filter-panel.is-single-line:not(.is-collapsed) .yk-filter-panel__items {
+  display: contents;
+}
+
+.yk-filter-panel__actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* 高级模式顶部切换条 */
+.yk-filter-panel__mode-bar {
+  width: 100%;
+  display: flex;
+  align-items: center;
+}
+
+/* 已存/快速查询标签行（独立一行） */
+.yk-filter-panel__saved {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.yk-filter-panel__saved-label {
+  font-size: 0.9em;
+  color: var(--ant-color-text-secondary, #8c8c8c);
+  white-space: nowrap;
+}
+.yk-filter-panel__saved-tag {
+  cursor: pointer;
+}

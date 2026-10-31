@@ -1,0 +1,22 @@
+.yk-export-options {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.yk-export-options .yk-export-option {
+  margin-left: 0;
+}
+
+.yk-export-progress-text {
+  margin: 10px 0 0;
+  color: #666;
+  font-size: 0.92em;
+  text-align: center;
+}
+
+.yk-export-cancelled-text {
+  margin: 0;
+  color: #666;
+}

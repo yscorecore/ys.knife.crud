@@ -1,0 +1,21 @@
+/* 命令面板容器：flex 流式布局，宽度不足时整体换行 */
+.yk-command-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin: 12px 0;
+}
+
+/* 左侧命令组：命令按钮 + 插槽内容流式排列 */
+.yk-command-bar__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+/* 内置表格操作下拉：margin-left:auto 推到面板最右端，换行时仍恒定居最右 */
+.yk-command-bar__menu {
+  margin-left: auto;
+}

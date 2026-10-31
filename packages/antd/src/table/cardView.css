@@ -1,0 +1,53 @@
+.yk-table__cards {
+  display: grid;
+  /* 自适应列宽：容器够宽时一行多张，窄屏自动降为单列 */
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  /* 加载遮罩始终有可挂载的高度，避免空容器遮罩塌陷 */
+  min-height: 120px;
+  position: relative;
+}
+
+.yk-table__card {
+  position: relative;
+  padding: 12px 14px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.yk-table__card.is-selected {
+  border-color: #1677ff;
+  /* inset 光晕勾边，比改 border-width 更不引发布局位移 */
+  box-shadow: 0 0 0 1px #1677ff inset;
+}
+
+/* 配置了行操作的卡片：右键可弹操作菜单 */
+.yk-table__card.has-actions {
+  cursor: context-menu;
+}
+
+.yk-table__card-checkbox {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  z-index: 1;
+}
+
+.yk-table__card-json {
+  /* 右侧给悬浮 checkbox 留位 */
+  margin: 0;
+  padding-right: 24px;
+  max-height: 260px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+/* 空态占满整行，而非挤进单列格子 */
+.yk-table__cards-empty {
+  grid-column: 1 / -1;
+}

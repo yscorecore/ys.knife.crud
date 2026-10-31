@@ -1,0 +1,17 @@
+.yk-filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+
+.yk-filter-item__label {
+  font-size: 12px;
+  color: var(--ant-color-text-secondary, #8c8c8c);
+  line-height: 1.4;
+}
+
+.yk-filter-item__control {
+  display: flex;
+  align-items: center;
+}

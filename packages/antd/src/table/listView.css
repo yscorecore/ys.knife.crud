@@ -1,0 +1,51 @@
+.yk-table__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  /* 加载遮罩始终有可挂载的高度，避免空容器遮罩塌陷 */
+  min-height: 120px;
+  position: relative;
+}
+
+.yk-table__list-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid #d9d9d9;
+  border-radius: 6px;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.yk-table__list-item.is-selected {
+  border-color: #1677ff;
+  /* inset 光晕勾边，与卡片选中态一致，且不引发布局位移 */
+  box-shadow: 0 0 0 1px #1677ff inset;
+}
+
+/* 配置了行操作的列表行：右键可弹操作菜单（与卡片共用） */
+.yk-table__list-item.has-actions {
+  cursor: context-menu;
+}
+
+.yk-table__list-item-checkbox {
+  flex-shrink: 0;
+}
+
+/* 行内容占满剩余宽度；min-width:0 允许插槽内容内部收缩/截断而不撑破行 */
+.yk-table__list-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* JSON 兜底样式：与卡片视图的 yk-table__card-json 一致 */
+.yk-table__list-item-json {
+  margin: 0;
+  max-height: 160px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-all;
+}

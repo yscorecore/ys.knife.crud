@@ -1,0 +1,32 @@
+/* 默认纯图标触发按钮：方形统一尺寸（trigger 自定义时不套用） */
+.yk-table-action-menu-button__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  padding: 0;
+}
+
+.yk-table-action-menu-button__btn svg {
+  display: block;
+}
+
+/* 自定义触发元素容器 */
+.yk-table-action-menu-button__trigger {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 下拉项里的行内图标与文字对齐 */
+.yk-table-action-menu-button__icon {
+  margin-right: 6px;
+  vertical-align: -2px;
+}
+
+/* 下拉项里的选中标记列：固定宽度，文案不随勾选状态左右抖动 */
+.yk-table-action-menu-button__check {
+  display: inline-block;
+  width: 1.2em;
+  color: #1677ff;
+  font-weight: 700;
+}

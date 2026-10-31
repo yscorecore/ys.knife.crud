@@ -1,0 +1,55 @@
+{
+  "name": "@ys-knife-crud/react",
+  "version": "0.0.0",
+  "description": "React hooks for ys.knife.crud (column config, excel export, row actions, row selection) — UI-library agnostic",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "keywords": [
+    "crud",
+    "react",
+    "hooks",
+    "table"
+  ],
+  "license": "MIT",
+  "author": "Pengbo",
+  "homepage": "https://github.com/yscorecore/ys.knife.crud#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yscorecore/ys.knife.crud.git",
+    "directory": "packages/react"
+  },
+  "bugs": {
+    "url": "https://github.com/yscorecore/ys.knife.crud/issues"
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@ys-knife-crud/core": "workspace:*",
+    "ys.knife.query.js": "^0.0.24"
+  },
+  "peerDependencies": {
+    "react": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.6",
+    "typescript": "^5.9.2"
+  }
+}

@@ -1,0 +1,73 @@
+/* 弹窗标题：标题文本 + 最大化按钮；右侧留出 antd 关闭按钮的位置 */
+.yk-modal__title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 40px;
+}
+
+.yk-modal__title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yk-modal__maximize {
+  flex: none;
+  margin-left: auto;
+}
+
+.yk-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.yk-modal__action-icon {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: -2px;
+}
+
+/* 固定高度模式：height 由内联 CSS 变量 --yk-modal-height 传入（每个弹窗可不同）。
+   .ant-modal-content 设为 flex column，body 区 flex:1 + overflow:auto，
+   内容超出时在弹窗内纵向滚动，不会撑大弹窗。 */
+.yk-modal--fixed-height .ant-modal {
+  height: var(--yk-modal-height);
+}
+
+.yk-modal--fixed-height .ant-modal-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.yk-modal--fixed-height .ant-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* 最大化模式：铺满视口、内容区滚动；优先级高于固定高度 */
+.yk-modal--maximized .ant-modal {
+  top: 0 !important;
+  margin: 0 !important;
+  padding-bottom: 0 !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100vh;
+}
+
+.yk-modal--maximized .ant-modal-content {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  border-radius: 0;
+}
+
+.yk-modal--maximized .ant-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}

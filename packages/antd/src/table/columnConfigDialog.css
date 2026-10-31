@@ -1,0 +1,16 @@
+.yk-col-config-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.yk-col-config-name {
+  flex: 1;
+  margin-right: 0;
+}
+
+.yk-col-config-width {
+  width: 120px;
+}

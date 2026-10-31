@@ -1,0 +1,51 @@
+/* 透明遮罩：铺满视口，捕获菜单外的点击/右键以关闭菜单 */
+.yk-table__menu-mask {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+}
+
+.yk-table__context-menu {
+  position: fixed;
+  z-index: 2001;
+  box-sizing: border-box;
+  min-width: 120px;
+  margin: 4px 0;
+  padding: 4px 0;
+  list-style: none;
+  background: #fff;
+  border: 1px solid #f0f0f0;
+  border-radius: 4px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08), 0 3px 6px -4px rgba(0, 0, 0, 0.12);
+}
+
+.yk-table__context-menu-item {
+  padding: 0 16px;
+  font-size: 14px;
+  line-height: 34px;
+  color: rgba(0, 0, 0, 0.88);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.yk-table__context-menu-item:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: #1677ff;
+}
+
+.yk-table__context-menu-item.is-disabled {
+  color: rgba(0, 0, 0, 0.25);
+  cursor: not-allowed;
+}
+
+.yk-table__context-menu-item.is-disabled:hover {
+  background: transparent;
+  color: rgba(0, 0, 0, 0.25);
+}
+
+/* 右键菜单项图标：颜色跟随 li 的 color（currentColor），hover 变蓝 / disabled 变灰自动联动 */
+.yk-table__context-menu-icon {
+  display: inline-flex;
+  margin-right: 6px;
+  vertical-align: middle;
+}

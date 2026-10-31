@@ -1,0 +1,107 @@
+/* ---------------- 根容器：flex 纵向，支持「占满父容器 → 内容滚动 + 分页固定」 ---------------- */
+.yk-table {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 选中提示条插槽：位于视图区上方（内容有无选中由外部插槽自行判定） */
+.yk-table__selection-bar-slot {
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+
+/* ---------------- 视图区域 + 加载遮罩（三视图统一由 Table 渲染） ---------------- */
+/* view-area 为加载遮罩提供定位上下文；flex:1 + min-height:0 让它占满剩余高度并可收缩滚动 */
+.yk-table__view-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* 表格视图的外层包裹（仅表格视图用；卡片/列表视图的容器在其各自组件内） */
+.yk-table__table-wrap {
+  position: relative;
+}
+
+/* ---------------- 表头锁定（sticky header） ---------------- */
+/* antd 5 的表头就是表格里的 thead > tr > th，直接对 th 设 position:sticky 即可；
+   需要把 antd 容器上可能存在的 overflow:hidden 放开，sticky 才能吸附到 view-area。
+   不透明背景由 antd 表头自带的 background 提供（滚动内容不会透出）。 */
+.yk-table__table-wrap--sticky-header .ant-table,
+.yk-table__table-wrap--sticky-header .ant-table-container {
+  overflow: visible;
+}
+.yk-table__table-wrap--sticky-header .ant-table-thead > tr > th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+/* ---------------- 列宽拖拽手柄 ---------------- */
+/* th 作为手柄定位上下文；手柄绘制在表头右缘（pseudo 元素不参与文本省略裁切） */
+.yk-table__col-header {
+  position: relative;
+}
+.yk-table__col-header--resizable::after {
+  content: "";
+  position: absolute;
+  top: 25%;
+  right: 0;
+  width: 4px;
+  height: 50%;
+  cursor: col-resize;
+  z-index: 1;
+}
+.yk-table__col-header--resizable:hover::after {
+  background: rgba(22, 119, 255, 0.45);
+}
+
+/* ---------------- 加载遮罩 ---------------- */
+.yk-table__loading-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 4px;
+}
+
+/* 默认 spinner：纯 CSS 圆环旋转 */
+.yk-table__loading-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #1677ff;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: yk-table-loading-spin 0.8s linear infinite;
+}
+
+@keyframes yk-table-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------------- 底部栏 ---------------- */
+.yk-table__footer {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-top: 12px;
+  gap: 12px;
+}
+
+/* 左侧 footer 插槽区域：占剩余空间，min-width:0 防止内容撑破 flex 布局 */
+.yk-table__footer-extra {
+  flex: 1;
+  min-width: 0;
+}
+
+.yk-table__pagination {
+  flex-shrink: 0;
+  margin-left: auto;
+  justify-content: flex-end;
+}

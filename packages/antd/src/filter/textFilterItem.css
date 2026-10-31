@@ -1,0 +1,5 @@
+/* YsTextFilterItem 复用 YsFilterItemLayout 的样式；控件为 antd Input，默认撑满布局宽度。 */
+.yk-filter-item__control > .ant-input-affix-wrapper,
+.yk-filter-item__control > .ant-input {
+  width: 100%;
+}

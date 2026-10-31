@@ -1,0 +1,20 @@
+.yk-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+/* antd link 按钮默认有左右内边距，行操作列内收紧避免按钮组过宽 */
+.yk-row-actions .yk-row-action {
+  padding: 0;
+  height: auto;
+}
+
+/* 行操作按钮图标与文字对齐：图标 svg 经 margin-right 与文字间隔 */
+.yk-row-action__icon {
+  display: inline-flex;
+  margin-right: 4px;
+  vertical-align: -2px;
+}

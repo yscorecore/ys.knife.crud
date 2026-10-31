@@ -1,0 +1,47 @@
+.yk-advanced-value-editor {
+  width: 100%;
+  min-width: 0;
+}
+
+.yk-advanced-value-editor--range {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 日期区间 + 最近 N 天按钮 */
+.yk-advanced-value-editor--daterange {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.yk-advanced-value-editor__daterange-picker {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.yk-advanced-value-editor__recent-trigger {
+  flex: 0 0 auto;
+}
+
+.yk-advanced-value-editor__recent-pop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.yk-advanced-value-editor__recent-input {
+  width: 80px;
+}
+
+.yk-advanced-value-editor__num {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+}
+
+.yk-advanced-value-editor__sep {
+  color: var(--ant-color-text-secondary, #8c8c8c);
+  flex: 0 0 auto;
+}

@@ -1,0 +1,239 @@
+.yk-import-excel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 320px;
+}
+
+.yk-import-excel__file {
+  display: none;
+}
+
+.yk-import-excel__title {
+  flex-shrink: 0;
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 500;
+  color: #303133;
+}
+
+.yk-import-excel__toolbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 8px 0;
+}
+
+.yk-import-excel__file-name {
+  color: #606266;
+  font-size: 0.92em;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yk-import-excel__stats {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: 0.88em;
+}
+
+/* 统计项：圆角胶囊；失败项红底红字 */
+.yk-import-excel__stat {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: #f4f4f5;
+  color: #606266;
+  white-space: nowrap;
+}
+
+.yk-import-excel__stat--danger {
+  background: #fef0f0;
+  color: #f56c6c;
+}
+
+.yk-import-excel__danger-text,
+.yk-import-excel__msg--danger {
+  color: #f56c6c;
+}
+
+.yk-import-excel__progress {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0 8px;
+  font-size: 0.9em;
+  color: #606266;
+}
+
+.yk-import-excel__progress-bar {
+  flex: 1;
+  max-width: 480px;
+  margin: 0;
+}
+
+.yk-import-excel__progress-eta {
+  color: #409eff;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.yk-import-excel__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.yk-import-excel__body .yk-import-excel__loading,
+.yk-import-excel__body .yk-import-excel__loading .ant-spin-container {
+  width: 100%;
+  height: 100%;
+}
+
+.yk-import-excel__body .yk-import-excel__table {
+  width: 100%;
+}
+
+.yk-import-excel__row-alt > td {
+  background: #fafafa;
+}
+
+/* 初始空态：虚线投放区，点击/拖拽均可加载文件 */
+.yk-import-excel__empty {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 1.5px dashed #c0ccda;
+  border-radius: 8px;
+  color: #909399;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    border-color 0.2s,
+    color 0.2s,
+    background-color 0.2s;
+}
+
+.yk-import-excel__empty:hover {
+  border-color: #409eff;
+  color: #409eff;
+  background-color: rgba(64, 158, 255, 0.04);
+}
+
+.yk-import-excel__empty-icon {
+  width: 48px;
+  height: 48px;
+}
+
+.yk-import-excel__empty-title {
+  margin: 4px 0 0;
+  font-size: 15px;
+  color: #606266;
+}
+
+.yk-import-excel__empty:hover .yk-import-excel__empty-title {
+  color: #409eff;
+}
+
+.yk-import-excel__empty-hint {
+  margin: 0;
+  font-size: 12px;
+  color: #a8abb2;
+}
+
+/* 文件拖入遮罩：铺满组件，蓝色虚线框 + 提示，不拦截事件 */
+.yk-import-excel__drop-mask {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(64, 158, 255, 0.08);
+  pointer-events: none;
+}
+
+.yk-import-excel__drop-tip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  justify-content: center;
+  border: 2px dashed #409eff;
+  border-radius: 10px;
+  background: #fff;
+  color: #409eff;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.yk-import-excel__drop-tip svg {
+  width: 44px;
+  height: 44px;
+}
+
+/* 状态列允许错误信息换行完整展示 */
+.yk-import-excel__status-cell {
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.5;
+}
+
+.yk-import-excel__msg {
+  margin-top: 2px;
+  font-size: 12px;
+  color: #606266;
+}
+
+/* 处理中标签内的 CSS 转圈（不依赖图标库，currentColor 跟随标签文字色） */
+.yk-import-excel__spin {
+  display: inline-block;
+  width: 11px;
+  height: 11px;
+  margin-right: 4px;
+  vertical-align: -2px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: yk-import-excel-spin 0.8s linear infinite;
+}
+
+@keyframes yk-import-excel-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.yk-import-excel__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.yk-import-excel__action-placeholder {
+  color: #c0c4cc;
+}
+
+/* 行内操作按钮图标：14px 线性，currentColor 跟随按钮颜色 */
+.yk-import-excel__action-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: 4px;
+  vertical-align: -2px;
+}
