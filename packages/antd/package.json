@@ -1,6 +1,6 @@
 {
   "name": "@ys-knife-crud/antd",
-  "version": "0.0.0",
+  "version": "0.0.7",
   "description": "React + antd UI components for ys.knife.crud",
   "type": "module",
   "main": "./dist/index.cjs",
