@@ -4,6 +4,7 @@ import YsTableActionMenuButton from "./commandBar/tableActionMenuButton.vue";
 import YsCommandBar from "./commandBar/commandBar.vue";
 import YsMainPanel from "./mainPanel/mainPanel.vue";
 import YsFilterPanel from "./filter/filterPanel.vue";
+import YsRootFilterPanel from "./filter/rootFilterPanel.vue";
 import YsTextFilterItem from "./filter/textFilterItem.vue";
 import YsDateFilterItem from "./filter/dateFilterItem.vue";
 import YsDateRangeFilterItem from "./filter/dateRangeFilterItem.vue";
@@ -24,6 +25,7 @@ export {
   YsCommandBar,
   YsMainPanel,
   YsFilterPanel,
+  YsRootFilterPanel,
   YsTablePage,
   YsImportExcel,
   YsInfiniteList,
@@ -62,6 +64,7 @@ export type YsTableActionMenuButtonProps = InstanceType<typeof YsTableActionMenu
 export type YsCommandBarProps = InstanceType<typeof YsCommandBar>["$props"];
 export type YsMainPanelProps = InstanceType<typeof YsMainPanel>["$props"];
 export type YsFilterPanelProps = InstanceType<typeof YsFilterPanel>["$props"];
+export type YsRootFilterPanelProps = InstanceType<typeof YsRootFilterPanel>["$props"];
 export type YsTextFilterItemProps = InstanceType<typeof YsTextFilterItem>["$props"];
 export type YsDateFilterItemProps = InstanceType<typeof YsDateFilterItem>["$props"];
 export type YsDateRangeFilterItemProps = InstanceType<typeof YsDateRangeFilterItem>["$props"];
@@ -96,6 +99,7 @@ const YsCrudElementPlus: Plugin = {
     app.component("YsCommandBar", YsCommandBar);
     app.component("YsMainPanel", YsMainPanel);
     app.component("YsFilterPanel", YsFilterPanel);
+    app.component("YsRootFilterPanel", YsRootFilterPanel);
     app.component("YsTextFilterItem", YsTextFilterItem);
     app.component("YsDateFilterItem", YsDateFilterItem);
     app.component("YsDateRangeFilterItem", YsDateRangeFilterItem);

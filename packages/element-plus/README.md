@@ -219,7 +219,31 @@ You normally don't need this — `actions` receive the `TableApi` automatically,
 
 ### Other components
 
-The package also exports the individual building blocks for when you need finer control than `YsTablePage`: `YsTable`, `YsFilterPanel` (+ `YsTextFilterItem` / `YsDateFilterItem` / `YsDateRangeFilterItem` / `YsEnumFilterItem` / `YsFilterItemLayout`), `YsCommandBar`, `YsTableActionMenuButton`, `YsMainPanel`, and the advanced-filter trio (`YsAdvancedFilterPanel` / `YsAdvancedValueEditor` / `YsAdvancedConditionGroup`). `YsTablePage` is the recommended starting point; drop down to the primitives only when its fixed layout doesn't fit.
+The package also exports the individual building blocks for when you need finer control than `YsTablePage`: `YsTable`, `YsFilterPanel` (+ `YsTextFilterItem` / `YsDateFilterItem` / `YsDateRangeFilterItem` / `YsEnumFilterItem` / `YsFilterItemLayout`), `YsRootFilterPanel`, `YsCommandBar`, `YsTableActionMenuButton`, `YsMainPanel`, and the advanced-filter trio (`YsAdvancedFilterPanel` / `YsAdvancedValueEditor` / `YsAdvancedConditionGroup`). `YsTablePage` is the recommended starting point; drop down to the primitives only when its fixed layout doesn't fit.
+
+#### `YsRootFilterPanel` — UI-free registration & aggregation
+
+`YsFilterPanel` renders its filter items inside an internal `YsRootFilterPanel`, which owns the `provide(FilterPanelKey, register)` channel and the AND aggregation — but renders **no visual elements at all** (its template is only `<slot />`, so it adds no DOM node either). Reach for it when you want your own panel chrome while keeping the item registration contract:
+
+```vue
+<YsRootFilterPanel ref="rootRef" :extra-filter="extraFilter">
+  <YsTextFilterItem property-path="name" />
+  <YsDateRangeFilterItem property-path="createdAt" />
+</YsRootFilterPanel>
+<!-- your own toolbar -->
+<el-button type="primary" @click="emit('search', rootRef.filter)">查询</el-button>
+```
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `extraFilter` | `FilterInfo \| null` | `null` | Extra condition AND-ed with all registered items (e.g. a text search). Pass `null` when empty. |
+
+| Exposed | Description |
+| --- | --- |
+| `filter` | Aggregated `FilterInfo` (extraFilter AND every registered item); `emptyFilter()` when nothing is set |
+| `reset()` | Calls `reset()` on every registered item (does not touch `extraFilter`) |
+
+The registration contract is unchanged: `YsFilterItem` children (and anything calling `useFilterPanelItem`) inject the nearest `FilterPanelKey`, so nesting them in `YsRootFilterPanel` works exactly as inside `YsFilterPanel`.
 
 ---
 

@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import { computed, provide, ref, shallowRef, useSlots } from "vue";
+import { computed, ref, useSlots } from "vue";
 import type { PropType } from "vue";
 import { FilterInfo, emptyFilter } from "@ys-knife-crud/core";
-import type { FilterItemApi } from "@ys-knife-crud/core";
-import { FilterPanelKey } from "./context";
+import YsRootFilterPanel from "./root-filter-panel.vue";
 
 /**
  * YsFilterPanel（小程序版）—— 筛选面板
@@ -90,17 +89,8 @@ const expanded = ref(props.defaultExpanded);
 const keyword = ref("");
 
 /* ---------------- 条件聚合 ---------------- */
-/** 已注册的自定义搜索项 */
-const items = shallowRef<FilterItemApi[]>([]);
-
-/** 注册子项（provide 给插槽内的自定义搜索项），返回注销函数 */
-function registerItem(api: FilterItemApi): () => void {
-  items.value = [...items.value, api];
-  return () => {
-    items.value = items.value.filter((item) => item !== api);
-  };
-}
-provide(FilterPanelKey, registerItem);
+/** 聚合容器：子项注册与 AND 聚合下沉到无 UI 的 YsRootFilterPanel */
+const rootRef = ref<InstanceType<typeof YsRootFilterPanel> | null>(null);
 
 /** 文本搜索条件：输入 trim 后为空或没传 textFilterBuilder 委托时跳过；否则用委托构造 */
 const textFilter = computed<FilterInfo | null>(() => {
@@ -110,18 +100,10 @@ const textFilter = computed<FilterInfo | null>(() => {
   return built ?? null;
 });
 
-/** 最终查询条件：文本搜索 + 所有已注册子项，按 AND 聚合；全空时返回 emptyFilter() */
-const filterInfo = computed<FilterInfo>(() => {
-  const parts: FilterInfo[] = [];
-  if (textFilter.value) parts.push(textFilter.value);
-  for (const item of items.value) {
-    const itemFilter = item.filter;
-    if (itemFilter) parts.push(itemFilter);
-  }
-  if (parts.length === 0) return emptyFilter() as unknown as FilterInfo;
-  if (parts.length === 1) return parts[0] as FilterInfo;
-  return FilterInfo.createAnd(...parts) as unknown as FilterInfo;
-});
+/** 最终查询条件：文本搜索作为 extraFilter 交给 root，与子项条件按 AND 聚合；全空时由 root 返回 emptyFilter() */
+const filterInfo = computed<FilterInfo>(
+  () => (rootRef.value?.filter ?? emptyFilter()) as unknown as FilterInfo,
+);
 
 /** 切换条件区展开/折叠 */
 function toggleExpand(): void {
@@ -140,10 +122,10 @@ function onSearch(): void {
   emit("search", filterInfo.value);
 }
 
-/** 重置：清空文本 + 重置已注册子项，再通知使用方 */
+/** 重置：清空文本 + 让 root 重置所有已注册子项，再通知使用方 */
 function onReset(): void {
   keyword.value = "";
-  for (const item of items.value) item.reset();
+  rootRef.value?.reset();
   emit("reset");
 }
 
@@ -201,9 +183,11 @@ defineExpose({
       </view>
     </view>
 
-    <!-- 条件区：默认插槽放置日期区间、下拉选择等业务筛选条件；收起时隐藏但保持挂载 -->
+    <!-- 条件区：root 只做注册与聚合，不渲染额外节点；子项直接落在此 view 内，布局不变 -->
     <view v-if="hasConditions" v-show="expanded" class="yk-filter-panel__conditions">
-      <slot />
+      <YsRootFilterPanel ref="rootRef" :extra-filter="textFilter">
+        <slot />
+      </YsRootFilterPanel>
     </view>
   </view>
 </template>

@@ -1,5 +1,6 @@
 export { default as YsInfiniteList } from "./components/infinite-list/infinite-list.vue";
 export { default as YsFilterPanel } from "./components/filter-panel/filter-panel.vue";
+export { default as YsRootFilterPanel } from "./components/filter-panel/root-filter-panel.vue";
 export { FilterPanelKey, useFilterPanelItem } from "./components/filter-panel/context";
 export {
   YsFilterItemLayout,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, watch } from "vue";
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import type { PropType } from "vue";
 import { ElMessage, ElMessageBox } from "element-plus";
 import type {
@@ -9,9 +9,10 @@ import type {
   FilterInfo,
 } from "@ys-knife-crud/core";
 import { emptyFilter } from "@ys-knife-crud/core";
-import { FilterPanelKey, useAdvancedFilter, useFilterPanel } from "@ys-knife-crud/vue";
+import { useAdvancedFilter } from "@ys-knife-crud/vue";
 import YsAdvancedFilterPanel from "../advancedFilter/advancedFilterPanel.vue";
 import type { SavedQuery } from "../advancedFilter/advancedFilterContext";
+import YsRootFilterPanel from "./rootFilterPanel.vue";
 
 // 组件名统一带 ys 前缀：模板中以 <ys-filter-panel>（或 <YsFilterPanel>）使用，
 // 同时保证全局注册（app.component）与 devtools 中名称稳定。
@@ -20,7 +21,8 @@ defineOptions({ name: "YsFilterPanel" });
 /**
  * YsFilterPanel：查询面板。聚合多个 YsFilterItem 子组件的 FilterInfo 为一个 AND 组合：
  *
- * - 默认插槽放多个 <ys-filter-item>，子组件经 provide/inject 自动注册到本面板
+ * - 默认插槽放多个 <ys-filter-item>，子组件经 provide/inject 自动注册到内置的
+ *   YsRootFilterPanel（无 UI，只管注册与聚合）
  * - 内置「查询」「重置」按钮（showSearch/showReset 开关，默认 true）
  * - 面板级 keydown.enter 等价于点击「查询」按钮
  * - enableAdvancedFilter=true 时可切换到内置 YsAdvancedFilterPanel，两种模式经同一对
@@ -97,8 +99,8 @@ const emit = defineEmits<{
   (e: "update:quickQueries", queries: SavedQuery[]): void;
 }>();
 
-const { filter, register, reset } = useFilterPanel();
-provide(FilterPanelKey, register);
+/** 聚合容器（子项注册与 AND 聚合下沉到无 UI 的 YsRootFilterPanel） */
+const rootRef = ref<InstanceType<typeof YsRootFilterPanel> | null>(null);
 
 /** 当前查询模式：simple=固定条件插槽，advanced=内置高级查询面板 */
 const mode = ref<"simple" | "advanced">("simple");
@@ -132,7 +134,7 @@ const currentFilter = computed<FilterInfo>(() => {
   if (mode.value === "advanced") {
     return (advancedPanelRef.value?.filter ?? emptyFilter()) as unknown as FilterInfo;
   }
-  return filter.value;
+  return (rootRef.value?.filter ?? emptyFilter()) as unknown as FilterInfo;
 });
 
 function onSearch(): void {
@@ -143,7 +145,7 @@ function onReset(): void {
   if (mode.value === "advanced") {
     advancedPanelRef.value?.reset();
   } else {
-    reset();
+    rootRef.value?.reset();
   }
   emit("reset");
 }
@@ -371,8 +373,13 @@ defineExpose({
       </el-button>
 
       <!-- filter items 容器：非单行模式 display:contents 透明（子项参与根 flex，保持原换行行为）；
-           单行折叠态切 display:flex 可测量溢出并隐藏超宽项 -->
-      <div class="yk-filter-panel__items" ref="itemsEl"><slot /></div>
+           单行折叠态切 display:flex 可测量溢出并隐藏超宽项。
+           root 只做注册与聚合、不渲染额外节点，子项 DOM 仍直接落在本容器内 -->
+      <div class="yk-filter-panel__items" ref="itemsEl">
+        <YsRootFilterPanel ref="rootRef">
+          <slot />
+        </YsRootFilterPanel>
+      </div>
       <div
         v-if="showSearch || showReset || enableAdvancedFilter"
         class="yk-filter-panel__actions"

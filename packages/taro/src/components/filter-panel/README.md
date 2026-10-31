@@ -134,11 +134,54 @@ function onChange(e: Event): void {
 
 完整可运行示例见 `packages/taro-demo/src/pages/index/index.vue` + `packages/taro-demo/src/components/provider-filter.vue`。
 
+## YsRootFilterPanel（无 UI 的聚合容器）
+
+面板的条件注册与 AND 聚合并不在 `YsFilterPanel` 里，而是下沉到 `YsRootFilterPanel`——它**不渲染任何视觉元素**（模板只有 `<slot />`，不额外包节点，因此也不会改变布局）：
+
+1. 提供注册通道：`provide(FilterPanelKey, register)`，插槽内的自定义搜索项经 `useFilterPanelItem` 自动注册/注销
+2. 聚合条件：`extraFilter` + 所有已注册子项按 AND 合并，全空返回 `emptyFilter()`
+
+`YsFilterPanel` 只是它的一个 UI 外壳（工具栏 + 文本搜索框 + 展开/折叠）。需要自己的面板外框时直接用它：
+
+```vue
+<script setup lang="ts">
+import { ref } from "vue";
+import { YsRootFilterPanel } from "@ys-knife-crud/taro";
+
+const rootRef = ref();
+
+function onQuery(): void {
+  const filter = rootRef.value?.filter;   // 聚合后的 FilterInfo
+  // 调用自己的查询逻辑
+}
+</script>
+
+<template>
+  <!-- 自定义外框 -->
+  <view class="my-panel">
+    <YsRootFilterPanel ref="rootRef">
+      <ProviderFilter v-model="providerIndex" :options="PROVIDERS" />
+      <YsDateRangeFilterItem ... />
+    </YsRootFilterPanel>
+    <view @tap="onQuery">查询</view>
+  </view>
+</template>
+```
+
+| Prop | 类型 | 默认值 | 说明 |
+| --- | --- | --- | --- |
+| extraFilter | `FilterInfo \| null` | `null` | 外部追加条件，与所有子项条件按 AND 合并（如文本搜索）；为空传 `null` |
+
+| Expose | 说明 |
+| --- | --- |
+| filter | 聚合后的 `FilterInfo`（`extraFilter` AND 全部子项）；无任何条件时为 `emptyFilter()` |
+| reset() | 遍历已注册子项各自 `reset()`（不负责清空 `extraFilter`，由外部自行维护） |
+
 ## 条件聚合规则
 
-点「查询」时，面板会按以下顺序收集所有非空条件，再用 `FilterInfo.createAnd(...)` 合成最终结果：
+点「查询」时，面板会按以下顺序收集所有非空条件，再用 `FilterInfo.createAnd(...)` 合成最终结果（聚合逻辑位于内部的 `YsRootFilterPanel`）：
 
-1. 文本搜索条件（`textFilter` computed）：输入 trim 后为空或没传 `textFilterBuilder` → 跳过；否则取委托返回值（null/undefined 也视为跳过）
+1. 文本搜索条件（`textFilter` computed）：输入 trim 后为空或没传 `textFilterBuilder` → 跳过；否则取委托返回值（null/undefined 也视为跳过）。该条件作为 `extraFilter` 传给 root
 2. 默认插槽内所有经 `useFilterPanelItem` 注册的子项（取各自的 `.filter` getter，null 跳过）
 
 全部为空 → 返回 `emptyFilter()`（单例，`FilterInfo.equals(emptyFilter(), filterInfo)` 为 true）。
@@ -188,7 +231,8 @@ function onChange(e: Event): void {
 
 | 导出 | 说明 |
 | --- | --- |
-| `useFilterPanelItem(api)` | 在自定义搜索项组件中调用，把 `{ filter, reset }` 注册到最近的 YsFilterPanel |
+| `YsRootFilterPanel` | 无 UI 的注册与聚合容器，`YsFilterPanel` 基于它实现；自定义面板外框时使用 |
+| `useFilterPanelItem(api)` | 在自定义搜索项组件中调用，把 `{ filter, reset }` 注册到最近的 YsFilterPanel / YsRootFilterPanel |
 | `FilterPanelKey` | 面板注入键（`InjectionKey<RegisterFilterItem>`），需要手动 `inject` 时使用 |
 
 ## 样式类
@@ -210,12 +254,12 @@ function onChange(e: Event): void {
 ## 注意事项
 
 1. **「筛选」按钮显隐**：由默认插槽是否有内容决定（`slots.default` 存在即显示）；没有自定义条件时不要传空插槽。
-2. **注册项的 `filter` 必须是 getter**：`useFilterPanelItem` 传入的对象里用 `get filter()` 读 `computed`，面板的聚合 `computed` 才能追踪变化；直接传 `filter: computed.value` 会失去响应性。
+2. **注册项的 `filter` 必须是 getter**：`useFilterPanelItem` 传入的对象里用 `get filter()` 读 `computed`，root 的聚合 `computed` 才能追踪变化；直接传 `filter: computed.value` 会失去响应性。
 3. **不要给 `input` 直接加 `flex:1` 当 flex 子项**：小程序端会塌陷成极小宽度（placeholder 不可见、输入无回显）。组件内已用 `.yk-filter-panel__field`（普通块容器，`flex:1`）撑开，input 自身只用 `width:100%`。
 4. **`input` 事件取值方式**：小程序 `event.detail.value` 与 DOM `InputEvent` 类型冲突，组件以 `Event` 接收后按 `(e as { detail?: { value?: string } }).detail?.value` 读取，业务侧无需处理。
 5. **只允许小程序原生标签**：`view` / `text` / `input` / `picker` / `scroll-view` 等，禁止 `div`。
 6. **样式非 scoped**：小程序端 scoped 支持有限，靠 `.yk-` 前缀防泄漏；自定义条件建议同样使用带前缀的类名。
-7. **重置语义**：面板会清空文本并调用所有已注册子项的 `reset()`，但插槽内没有注册的控件需由使用方在 `@reset` 中自行复位。
+7. **重置语义**：面板会清空文本并让 root 调用所有已注册子项的 `reset()`，但插槽内没有注册的控件需由使用方在 `@reset` 中自行复位。
 8. **文本值不对外双向绑定**：搜索框内容由组件内部维护，没有 `modelValue` prop 与 `update:modelValue` 事件；查询结果只经 `search` 事件的 `FilterInfo` 体现，需要读取当前输入时用 `filterPanel.keyword` 或 `textFilterBuilder` 的入参。
 9. **使用方要在自己的页面模板里登记一次 `input`**：Taro 只为「应用源码模板中出现过的原生组件」生成 WXML 模板，组件库产物里的 `<input>` 不会被扫描登记。若页面此前没有用过 `input`，搜索框会不渲染（placeholder 也看不到）。解决办法是在页面模板里放一个占位：`<input v-if="false" />`。
 10. **`textFilterBuilder` 的返回值会直接进 AND 聚合**：builder 里可以用 `FilterInfo.createOr` 做 OR 语义，面板不会改写它——最终 AND 聚合时一个分支里嵌着 OR 是完全合法的 FilterInfo 结构。
