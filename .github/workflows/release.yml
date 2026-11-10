@@ -52,6 +52,25 @@ jobs:
         run: pnpm -r --filter "!@ys-knife-crud/element-plus-demo" run build
 
       - name: Publish to npm
-        # -r 递归发布：private 包自动跳过；已发布过的版本 pnpm 会自动跳过
+        # 逐包发布（按依赖拓扑顺序）：单个包失败不会中断其余包，且把错误摘要写入
+        # check-run 注解，便于无需登录也能排查失败原因。
         # publishConfig 中的 registry/provenance/access 覆盖 .npmrc 镜像源并启用 OIDC 认证
-        run: pnpm -r publish --no-git-checks
+        shell: bash
+        run: |
+          set -uo pipefail
+          failed=0
+          for pkg in core vue export-exceljs import-exceljs react taro element-plus antd; do
+            echo "::group::publish @ys-knife-crud/$pkg"
+            if out=$(pnpm --filter "@ys-knife-crud/$pkg" publish --access public --no-git-checks 2>&1); then
+              echo "$out" | tail -8
+            elif echo "$out" | grep -qiE "previously published|EPUBLISHCONFLICT|already published"; then
+              echo "skip @ys-knife-crud/$pkg: 该版本已发布"
+            else
+              echo "$out" | tail -40
+              msg=$(echo "$out" | grep -iE "npm error|npm ERR|ERR_|error" | tail -6 | tr '\n' ' ' | cut -c1-900)
+              echo "::error title=publish @ys-knife-crud/$pkg 失败::$msg"
+              failed=1
+            fi
+            echo "::endgroup::"
+          done
+          exit $failed

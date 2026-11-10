@@ -1,5 +1,17 @@
 # @ys-knife-crud/taro
 
+## 0.0.10
+
+### Patch Changes
+
+- chore(release): 全仓统一发布 0.0.10
+
+  - 补发 0.0.9 未成功发布的 element-plus / antd
+  - 8 个可发布包统一升到 0.0.10
+
+- Updated dependencies
+  - @ys-knife-crud/core@0.0.10
+
 ## 0.0.9
 
 ### Patch Changes
