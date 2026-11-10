@@ -19,7 +19,9 @@
     "src"
   ],
   "sideEffects": [
-    "**/*.css"
+    "*.vue",
+    "*.css",
+    "*.scss"
   ],
   "keywords": [
     "crud",

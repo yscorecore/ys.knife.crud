@@ -267,10 +267,14 @@ defineExpose({
 </script>
 
 <template>
+  <!-- scroll-y 必须显式绑定 true：Vue 对自定义元素的无值属性会编译成空字符串 ""，
+       而 Taro 小程序端的 xs.b(v, default) 只对 undefined 兜底，"" 会原样写进
+       WXML 成为 scroll-y=""，被微信按 Boolean("") === false 处理，竖向滚动直接失效
+       （连带 @scrolltolower 永不触发）。-->
   <scroll-view
     class="yk-infinite-list"
     :style="{ height }"
-    scroll-y
+    :scroll-y="true"
     :lower-threshold="threshold"
     @scrolltolower="onScrollToLower"
   >
