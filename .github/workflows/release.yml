@@ -14,6 +14,8 @@ on:
     tags:
       - "v*"
       - "@ys-knife-crud/*"
+  # 支持手动触发（补发个别包时无需重新打 tag）
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -61,9 +63,11 @@ jobs:
           failed=0
           for pkg in core vue export-exceljs import-exceljs react taro element-plus antd; do
             echo "::group::publish @ys-knife-crud/$pkg"
-            if out=$(pnpm --filter "@ys-knife-crud/$pkg" publish --access public --no-git-checks 2>&1); then
+            # 必须在包目录里发布：在仓库根执行 pnpm publish（即使加 -r/--filter）会被判定为
+            # 「没有需要发布的新包」而静默跳过，导致发布步骤空转成功
+            if out=$(cd "packages/$pkg" && pnpm publish --access public --no-git-checks 2>&1); then
               echo "$out" | tail -8
-            elif echo "$out" | grep -qiE "previously published|EPUBLISHCONFLICT|already published"; then
+            elif echo "$out" | grep -qiE "previously published|EPUBLISHCONFLICT|already published|no new packages"; then
               echo "skip @ys-knife-crud/$pkg: 该版本已发布"
             else
               echo "$out" | tail -40
