@@ -37,7 +37,6 @@ const props = defineProps({
   rowKey: { type: String, default: "id" },
   viewMode: { type: String as PropType<ViewMode>, default: "table" },
   actions: { type: Array as PropType<TableAction[]>, default: () => [] },
-  showActionMenuButton: { type: Boolean, default: true },
   showSearch: { type: Boolean, default: true },
   showReset: { type: Boolean, default: true },
   searchButtonText: { type: String, default: "查询" },
@@ -150,7 +149,6 @@ defineExpose({
       class="yk-table-page__command"
       :actions="props.actions"
       :table="tableRef"
-      :show-action-menu-button="props.showActionMenuButton"
     >
       <template v-if="$slots['command-bar']" #default>
         <slot name="command-bar" />

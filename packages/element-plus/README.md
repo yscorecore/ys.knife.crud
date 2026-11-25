@@ -47,7 +47,7 @@ A **three-in-one composition component**: `YsFilterPanel` + `YsCommandBar` + `Ys
 ┌─────────────────────────────────────────────┐
 │  YsFilterPanel  (filter items + 查询/重置)    │  ← default slot
 ├─────────────────────────────────────────────┤
-│  YsCommandBar   (actions + 选中提示条 + ⋮下拉) │  ← #command-bar slot
+│  YsCommandBar   (actions + 选中提示条)        │  ← #command-bar slot
 ├─────────────────────────────────────────────┤
 │  YsTable        (table / card / list + 分页)  │  ← #card #list #empty #loading #footer
 └─────────────────────────────────────────────┘
@@ -139,8 +139,7 @@ All props of the three wrapped components are **flattened** onto `YsTablePage` (
 
 | Prop | Type | Default | Description |
 | --- | --- | --- | --- |
-| `actions` | `TableAction[]` | `[]` | Table-level commands rendered as buttons on the left (each `execute(table)` receives the internal `TableApi`). |
-| `showActionMenuButton` | `boolean` | `true` | Show the built-in right-aligned ⋮ dropdown (refresh / export / column settings / view switch / select / column resize). |
+| `actions` | `TableAction[]` | `[]` | Table-level commands rendered as buttons (each `execute(table)` receives the internal `TableApi`). Set `align: "right"` on an action to push it to the far right of the command bar. |
 
 #### Filter panel (forwarded to `YsFilterPanel`)
 

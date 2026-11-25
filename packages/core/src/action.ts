@@ -47,6 +47,13 @@ export interface TableAction {
     type?: ActionType,
     /** 是否描边（plain）样式，对应 el-button plain；type 为 danger 等时差异明显 */
     plain?: boolean,
+    /**
+     * 按钮在命令面板中的对齐位置：
+     *  - left（默认）：与其它命令一起在左侧流式排列；
+     *  - right：推到命令面板最右端（margin-left:auto），常用于「导出」「刷新」等次要操作。
+     * 渲染层（commandBar）据此把 actions 拆成左右两组分别渲染。
+     */
+    align?: "left" | "right",
     /** 执行表级命令。table 为当前表格实例，可调用 reload/refresh 等刷新 */
     execute(table: TableApi): Promise<void>
 }

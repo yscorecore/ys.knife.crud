@@ -1,37 +1,45 @@
 <script setup lang="ts">
+import { computed } from "vue";
 import type { PropType } from "vue";
 import type { TableAction, TableApi } from "@ys-knife-crud/core";
-import YsTableActionMenuButton from "./tableActionMenuButton.vue";
 import YsSelectionBar from "../table/selectionBar.vue";
 
 /**
- * 表格级命令面板（commandBar）：数据驱动渲染表级命令按钮 + 内置选中提示条 + 内置表格操作下拉。
+ * 表格级命令面板（commandBar）：数据驱动渲染表级命令按钮 + 内置选中提示条。
  *
  * 与行操作列（rowActionsColumn）对照：
  *  - rowActionsColumn 渲染的是行级命令（Action<T>，execute 接收 item + table）；
  *  - commandBar 渲染的是表级命令（TableAction，execute 只接收 table），作用域为整个表格。
  *
- * 布局：左侧命令按钮流式排列，其后跟随内置 SelectionBar（table 有选中行时自动显示，
- * 提供全选/反选/清空），再接默认插槽追加额外内容；右侧恒居内置 TableActionMenuButton
- * （margin-left:auto），可用 showActionMenuButton 关闭。
- * table 允许为 null——未就绪时按钮照常渲染，点击被忽略；下拉按钮与选中提示条待 table 就绪后才出现。
+ * 布局：按 align 把 actions 拆成两组——
+ *  align !== 'right'（默认）的命令在左侧流式排列，其后跟随内置 SelectionBar
+ *  （table 有选中行时自动显示，提供全选/反选/清空），再接默认插槽追加额外内容；
+ *  align === 'right' 的命令推到面板最右端（margin-left:auto）。
+ * table 允许为 null——未就绪时按钮照常渲染，点击被忽略；选中提示条待 table 就绪后才出现。
+ *
+ * 内置表格操作下拉（刷新/导出/列设置/视图切换等）不再由 commandBar 自动渲染——
+ * 需要时请作为 TableAction 自行加入（可设 align: 'right' 放到右侧），
+ * 或在默认插槽中放置自定义按钮 / YsTableActionMenuButton。
  */
 const props = defineProps({
-  /** 表级命令列表，每条渲染为一个 el-button（type/plain/icon/desc），click 调 execute(table) */
+  /** 表级命令列表，每条渲染为一个 el-button（type/plain/icon/desc/align），click 调 execute(table) */
   actions: { type: Array as PropType<TableAction[]>, required: true, default: () => [] },
-  /** 当前表格实例；允许 null（表格未挂载时按钮仍可渲染，点击不执行，下拉按钮隐藏） */
+  /** 当前表格实例；允许 null（表格未挂载时按钮仍可渲染，点击不执行，选中提示条隐藏） */
   table: { type: Object as PropType<TableApi | null>, default: null },
-  /** 是否显示内置表格操作下拉按钮（刷新/列设置/导出/视图切换/选择行/列宽拖动），默认 true 居右 */
-  showActionMenuButton: { type: Boolean, default: true },
 });
+
+/** 左侧命令组：align 非 right（含未设置）的命令，与选中提示条、插槽一起流式排列 */
+const leftActions = computed(() => props.actions.filter((a) => a.align !== "right"));
+/** 右侧命令组：align === right 的命令，margin-left:auto 推到最右 */
+const rightActions = computed(() => props.actions.filter((a) => a.align === "right"));
 </script>
 
 <template>
   <div class="yk-command-bar">
-    <!-- 左侧命令组：命令按钮 + 内置选中提示条 + 默认插槽，流式排列 -->
+    <!-- 左侧命令组：左对齐命令按钮 + 内置选中提示条 + 默认插槽，流式排列 -->
     <div class="yk-command-bar__actions">
       <el-button
-        v-for="action in props.actions"
+        v-for="action in leftActions"
         :key="action.name"
         :type="action.type === 'default' ? undefined : action.type"
         :plain="action.plain"
@@ -51,12 +59,19 @@ const props = defineProps({
       />
       <slot />
     </div>
-    <!-- 右侧内置表格操作下拉：margin-left:auto 恒居最右，仅在 showActionMenuButton 且 table 就绪时渲染 -->
-    <YsTableActionMenuButton
-      v-if="props.showActionMenuButton && props.table"
-      :table="props.table"
-      class="yk-command-bar__menu"
-    />
+    <!-- 右侧命令组：align=right 的命令，margin-left:auto 恒居最右，换行时仍恒定居最右 -->
+    <div v-if="rightActions.length" class="yk-command-bar__right">
+      <el-button
+        v-for="action in rightActions"
+        :key="action.name"
+        :type="action.type === 'default' ? undefined : action.type"
+        :plain="action.plain"
+        @click="props.table && action.execute(props.table)"
+      >
+        <component v-if="action.icon" :is="action.icon" class="yk-command-bar__icon" />
+        {{ action.desc }}
+      </el-button>
+    </div>
   </div>
 </template>
 
@@ -70,7 +85,7 @@ const props = defineProps({
   margin: 12px 0;
 }
 
-/* 左侧命令组：命令按钮 + 内置选中提示条 + 默认插槽内容流式排列 */
+/* 左侧命令组：左对齐命令按钮 + 内置选中提示条 + 默认插槽内容流式排列 */
 .yk-command-bar__actions {
   display: flex;
   flex-wrap: wrap;
@@ -78,14 +93,18 @@ const props = defineProps({
   gap: 8px 12px;
 }
 
+/* 右侧命令组：margin-left:auto 推到面板最右端，换行时仍恒定居最右 */
+.yk-command-bar__right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-left: auto;
+}
+
 /* 命令按钮图标与文字对齐（el-button 内 inline-flex，图标经 margin-right + vertical-align 微调） */
 .yk-command-bar__icon {
   margin-right: 4px;
   vertical-align: -2px;
-}
-
-/* 内置表格操作下拉：margin-left:auto 推到面板最右端，换行时仍恒定居最右 */
-.yk-command-bar__menu {
-  margin-left: auto;
 }
 </style>

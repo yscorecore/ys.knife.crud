@@ -178,6 +178,39 @@ const tableCommands: TableAction[] = [
       message.success(`测试命令：批量删除 ${n} 行（演示入口，未真实删除）`);
     },
   },
+  // 右侧命令组（align: right）：推到命令面板最右端，演示 TableAction.align 用法。
+  // 把原来内置「表格操作下拉」里的导出 / 列设置改为显式右对齐命令，经 TableApi 驱动。
+  {
+    name: "export",
+    desc: "导出 Excel",
+    align: "right" as const,
+    icon: (
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" y1="15" x2="12" y2="3" />
+      </svg>
+    ),
+    execute: async (table) => {
+      table.openExportDialog();
+    },
+  },
+  {
+    name: "columnConfig",
+    desc: "列设置",
+    align: "right" as const,
+    icon: (
+      <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor"
+        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="3" />
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      </svg>
+    ),
+    execute: async (table) => {
+      table.openConfigDialog();
+    },
+  },
 ];
 
 const codeStyle = {
@@ -264,11 +297,11 @@ export default function SwitchableFilterPage({ onBack }: SwitchableFilterPagePro
       </YsFilterPanel>
 
       {/* 表格命令面板：YsCommandBar 数据驱动渲染表级命令（刷新/查看选中/新增/批量删除），
-          内置选中提示条（table 有选中行时自动显示）+ 右侧表格操作下拉按钮 */}
+          内置选中提示条（table 有选中行时自动显示），右侧 align:right 的导出 Excel / 列设置 */}
       <YsCommandBar actions={tableCommands} table={table} />
 
       {/* 全功能表格：Table 不内置任何命令 UI，列设置/导出/视图切换/选择行/列宽拖动
-          全部由上方 YsCommandBar 的操作下拉经 TableApi 驱动；
+          导出/列设置由上方 YsCommandBar 的右对齐命令经 TableApi 驱动（视图切换等见其它页面）；
           checkbox 列初始开启、视图初始表格——两者均非受控，由 TableApi 切换 */}
       <YsTable
         ref={setTable}

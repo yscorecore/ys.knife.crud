@@ -44,6 +44,18 @@ const BatchDeleteIcon = makeSvgIcon([
   h("line", { x1: 10, y1: 11, x2: 10, y2: 17 }),
   h("line", { x1: 14, y1: 11, x2: 14, y2: 17 }),
 ]);
+// 导出 / 列设置 图标（右侧命令组，align: right）
+const ExportIcon = makeSvgIcon([
+  h("path", { d: "M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" }),
+  h("polyline", { points: "7 10 12 15 17 10" }),
+  h("line", { x1: 12, y1: 15, x2: 12, y2: 3 }),
+]);
+const ConfigIcon = makeSvgIcon([
+  h("circle", { cx: 12, cy: 12, r: 3 }),
+  h("path", {
+    d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z",
+  }),
+]);
 
 /**
  * 演示用表级命令集合（SwitchableFilterPage / SingleLineFilterPage 共享）。
@@ -94,6 +106,27 @@ export const tableCommands: TableAction[] = [
         return;
       }
       ElMessage.success(`测试命令：批量删除 ${n} 行（演示入口，未真实删除）`);
+    },
+  },
+  // 右侧命令组（align: right）：推到命令面板最右端，演示 TableAction.align 用法。
+  // 这里把原来内置「表格操作下拉」里最常用的导出 / 列设置改为显式右对齐命令，
+  // 经 TableApi 驱动（openExportDialog / openConfigDialog）。
+  {
+    name: "export",
+    desc: "导出 Excel",
+    align: "right",
+    icon: ExportIcon,
+    execute: async (table) => {
+      table.openExportDialog();
+    },
+  },
+  {
+    name: "columnConfig",
+    desc: "列设置",
+    align: "right",
+    icon: ConfigIcon,
+    execute: async (table) => {
+      table.openConfigDialog();
     },
   },
 ];

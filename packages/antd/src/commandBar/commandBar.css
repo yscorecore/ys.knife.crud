@@ -15,7 +15,11 @@
   gap: 8px 12px;
 }
 
-/* 内置表格操作下拉：margin-left:auto 推到面板最右端，换行时仍恒定居最右 */
-.yk-command-bar__menu {
+/* 右侧命令组：margin-left:auto 推到面板最右端，换行时仍恒定居最右 */
+.yk-command-bar__right {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
   margin-left: auto;
 }

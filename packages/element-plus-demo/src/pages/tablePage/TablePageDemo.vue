@@ -29,7 +29,7 @@ const { loadCustomConfigFun, saveCustomConfigFun } = useLocalCustomConfig(
   "yk-crud-demo-table-page",
 );
 
-/** 真实导出实现（ExcelJS），commandBar 操作下拉的「导出 Excel」经 TableApi 驱动 */
+/** 真实导出实现（ExcelJS），由命令栏右对齐的「导出 Excel」经 TableApi 驱动 */
 const exportorFunc = createExcelJsExportApiFunc();
 
 /**
@@ -75,7 +75,7 @@ function onReset(): void {
 <template>
   <DemoPageLayout
     title="查询 + 命令 + 表格三合一（YsTablePage 自动联动）"
-    hint="YsTablePage 把 YsFilterPanel + YsCommandBar + YsTable 收敛为一个组件，并自动接好 filterPanel 的查询条件到 table 的数据加载：dataFun 用增强签名 (req, filter, signal)，搜索 / 重置时自动回第 1 页重载。commandBar 左侧表级命令 + 内置选中提示条，右侧表格操作下拉（刷新/导出/列设置/视图切换/选择行/列宽拖动）。姓名框输入片段（如 User1、5）→ 回车或点查询，表格仅显示匹配行并回第 1 页。"
+    hint="YsTablePage 把 YsFilterPanel + YsCommandBar + YsTable 收敛为一个组件，并自动接好 filterPanel 的查询条件到 table 的数据加载：dataFun 用增强签名 (req, filter, signal)，搜索 / 重置时自动回第 1 页重载。commandBar 左侧表级命令 + 内置选中提示条，右侧 align:right 的导出 Excel / 列设置命令（视图切换等见「表格/卡片/列表视图切换」页）。姓名框输入片段（如 User1、5）→ 回车或点查询，表格仅显示匹配行并回第 1 页。"
     @back="$emit('back')"
   >
     <ys-table-page

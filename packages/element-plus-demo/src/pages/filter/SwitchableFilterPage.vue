@@ -182,12 +182,12 @@ const exportorFunc = createExcelJsExportApiFunc();
       />
     </ys-filter-panel>
 
-    <!-- 表格命令面板：YsCommandBar 数据驱动渲染表级命令（刷新/查看选中/新增/批量删除），
-         内置选中提示条（table 有选中行时自动显示）+ 右侧表格操作下拉按钮 -->
+    <!-- 表格命令面板：YsCommandBar 数据驱动渲染表级命令——左侧刷新/查看选中/新增/批量删除，
+         内置选中提示条（table 有选中行时自动显示），右侧 align:right 的导出 Excel / 列设置 -->
     <YsCommandBar :actions="tableCommands" :table="tableRef" />
 
-    <!-- 全功能表格：Table 不内置任何命令 UI，列设置/导出/视图切换/选择行/列宽拖动
-         全部由上方 YsCommandBar 的操作下拉经 TableApi 驱动；
+    <!-- 全功能表格：Table 不内置命令 UI，导出/列设置由上方 YsCommandBar 的右对齐命令经 TableApi 驱动；
+         视图切换/选择行/列宽拖动等在「表格/卡片/列表视图切换」等页面单独演示；
          checkbox 列初始开启、视图初始表格——两者均非受控，由 TableApi 切换 -->
     <ys-table
       ref="tableRef"

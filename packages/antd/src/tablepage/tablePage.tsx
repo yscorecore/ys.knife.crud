@@ -60,7 +60,6 @@ export interface YsTablePageProps {
   rowKey?: string;
   viewMode?: ViewMode;
   actions?: TableAction[];
-  showActionMenuButton?: boolean;
   showSearch?: boolean;
   showReset?: boolean;
   searchButtonText?: string;
@@ -157,7 +156,6 @@ export const YsTablePage = forwardRef<YsTablePageApi, YsTablePageProps>(
       rowKey = "id",
       viewMode = "table",
       actions = EMPTY_ACTIONS,
-      showActionMenuButton = true,
       showSearch = true,
       showReset = true,
       searchButtonText = "查询",
@@ -318,11 +316,7 @@ export const YsTablePage = forwardRef<YsTablePageApi, YsTablePageProps>(
         </div>
 
         <div className="yk-table-page__command">
-          <YsCommandBar
-            actions={actions}
-            table={table}
-            showActionMenuButton={showActionMenuButton}
-          >
+          <YsCommandBar actions={actions} table={table}>
             {props.commandBar}
           </YsCommandBar>
         </div>
