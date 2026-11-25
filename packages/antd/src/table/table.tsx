@@ -189,28 +189,31 @@ export const YsTable = forwardRef<TableApi, YsTableProps>(function YsTable(props
   useEffect(() => {
     if (viewModeProp !== undefined) setInnerViewMode(viewModeProp);
   }, [viewModeProp]);
-  const currentViewMode: ViewMode = viewModeProp ?? innerViewMode;
+  // 与 element-plus 版一致：内部态为唯一数据源，prop 只做同步来源。
+  // 这样父级仅传初始值（非受控）时，TableApi.setViewMode 才能直接生效。
+  const currentViewMode: ViewMode = innerViewMode;
 
   const showCheckboxProp = props.showCheckbox;
   const [innerShowCheckbox, setInnerShowCheckbox] = useState(showCheckboxProp ?? false);
   useEffect(() => {
     if (showCheckboxProp !== undefined) setInnerShowCheckbox(showCheckboxProp);
   }, [showCheckboxProp]);
-  const currentShowCheckbox = showCheckboxProp ?? innerShowCheckbox;
+  // 同上：受控时由父级回写 prop 触发同步；未回写时内部切换不被打回
+  const currentShowCheckbox = innerShowCheckbox;
 
   const columnResizableProp = props.columnResizable;
   const [innerColumnResizable, setInnerColumnResizable] = useState(columnResizableProp ?? true);
   useEffect(() => {
     if (columnResizableProp !== undefined) setInnerColumnResizable(columnResizableProp);
   }, [columnResizableProp]);
-  const currentColumnResizable = columnResizableProp ?? innerColumnResizable;
+  const currentColumnResizable = innerColumnResizable;
 
   const stickyHeaderProp = props.stickyHeader;
   const [innerStickyHeader, setInnerStickyHeader] = useState(stickyHeaderProp ?? false);
   useEffect(() => {
     if (stickyHeaderProp !== undefined) setInnerStickyHeader(stickyHeaderProp);
   }, [stickyHeaderProp]);
-  const currentStickyHeader = stickyHeaderProp ?? innerStickyHeader;
+  const currentStickyHeader = innerStickyHeader;
 
   /* ---------------- 导出 Excel（useExportExcel） ---------------- */
   const {
