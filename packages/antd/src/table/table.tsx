@@ -736,6 +736,7 @@ export const YsTable = forwardRef<TableApi, YsTableProps>(function YsTable(props
           {showPagination ? (
             <Pagination
               className="yk-table__pagination"
+              size="small"
               current={currentPage}
               pageSize={innerPageSize}
               total={total}

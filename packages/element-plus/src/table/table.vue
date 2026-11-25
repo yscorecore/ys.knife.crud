@@ -622,7 +622,7 @@ const tableApi: TableApi = {
            两种模式：totalCount 已知 → layout 含 total，显示「共 N 条」；
            未知 → 隐藏「共 N 条」，total 绑定 hasNext 推导的估算值，
            仅驱动页码与上一页/下一页按钮状态（有下一页时可点） -->
-      <el-pagination v-if="showPagination" class="yk-table__pagination"
+      <el-pagination v-if="showPagination" class="yk-table__pagination" size="small" background
         :layout="totalKnown ? 'total, sizes, prev, pager, next' : 'sizes, prev, pager, next'"
         :total="total" :page-sizes="pageSizes" :page-size="innerPageSize" :current-page="currentPage"
         @current-change="onPageChange" @size-change="onSizeChange" />
@@ -735,7 +735,7 @@ const tableApi: TableApi = {
   display: flex;
   align-items: center;
   flex-shrink: 0;
-  margin-top: 12px;
+  margin-top: 8px;
   gap: 12px;
 }
 
