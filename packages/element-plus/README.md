@@ -45,7 +45,7 @@ A **three-in-one composition component**: `YsFilterPanel` + `YsCommandBar` + `Ys
 
 ```
 ┌─────────────────────────────────────────────┐
-│  YsFilterPanel  (filter items + 查询/重置)    │  ← default slot
+│  YsFilterPanel (filter items + 查询/重置) │ extra │  ← default slot / #filter-extra
 ├─────────────────────────────────────────────┤
 │  YsCommandBar   (actions + 选中提示条)        │  ← #command-bar slot
 ├─────────────────────────────────────────────┤
@@ -177,6 +177,7 @@ All events from the wrapped components are re-emitted, so `v-model` works throug
 | Slot | Scope | Forwarded to | Description |
 | --- | --- | --- | --- |
 | default | — | `YsFilterPanel` default | Filter items (`YsTextFilterItem` / `YsDateFilterItem` / `YsEnumFilterItem` / …). |
+| `filter-extra` | — | — | Custom area on the right of the filter panel (width fits its content). Defaults to `YsTableActionMenuButton` when omitted; pass an empty slot to let the filter span the full row. |
 | `command-bar` | — | `YsCommandBar` default | Extra content appended after the command buttons / selection bar. |
 | `card` | `{ row, index }` | `YsTable #card` | Card-view content per row. |
 | `list` | `{ row, index }` | `YsTable #list` | List-view content per row. |

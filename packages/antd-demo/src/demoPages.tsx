@@ -33,6 +33,7 @@ import SwitchableFilterPage from "./pages/filter/SwitchableFilterPage";
 import SingleLineFilterPage from "./pages/filter/SingleLineFilterPage";
 import TablePageDemo from "./pages/tablePage/TablePageDemo";
 import TablePageFillHeightDemo from "./pages/tablePage/TablePageFillHeightDemo";
+import TablePageFilterExtraDemo from "./pages/tablePage/TablePageFilterExtraDemo";
 import ImportExcelPage from "./pages/importExcel/ImportExcelPage";
 import ImportExcelBatchPage from "./pages/importExcel/ImportExcelBatchPage";
 import ModalPage from "./pages/modal/ModalPage";
@@ -199,6 +200,11 @@ export const demoPages = [
     id: "table-page-fill-height",
     label: "YsTablePage 占满高度（内容滚动 + 分页固定）",
     component: TablePageFillHeightDemo,
+  },
+  {
+    id: "table-page-filter-extra",
+    label: "filter-extra 插槽（filter 右侧自定义区域）",
+    component: TablePageFilterExtraDemo,
   },
   {
     id: "import-excel",

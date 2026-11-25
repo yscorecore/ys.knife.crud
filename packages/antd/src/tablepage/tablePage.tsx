@@ -24,6 +24,7 @@ import type { SavedQuery } from "../advancedFilter/advancedFilterContext";
 import type { TablePageDataFun } from "./tablePageTypes";
 import { YsFilterPanel } from "../filter/filterPanel";
 import { YsCommandBar } from "../commandBar/commandBar";
+import { YsTableActionMenuButton } from "../commandBar/tableActionMenuButton";
 import { YsTable } from "../table/table";
 import "./tablePage.css";
 
@@ -94,6 +95,9 @@ export interface YsTablePageProps {
   children?: ReactNode;
   /** commandBar 默认插槽：追加在表级命令按钮之后的内容 */
   commandBar?: ReactNode;
+  /** filter 右侧自定义区域：占用 filter 右侧空白，宽度按内容自适应；
+   *  不传（undefined）时默认渲染 YsTableActionMenuButton；传 null / 空片段则容器为空、filter 横向占满 */
+  filterExtra?: ReactNode;
   /** table 的 card / list 插槽 */
   card?: TablePageRowSlot;
   list?: TablePageRowSlot;
@@ -292,10 +296,13 @@ export const YsTablePage = forwardRef<YsTablePageApi, YsTablePageProps>(
 
     return (
       <div className="yk-table-page">
-        <div className="yk-table-page__filter">
-          <YsFilterPanel
-            ref={filterPanelRef}
-            showSearch={showSearch}
+        {/* filter 行：左侧面板占满剩余宽度，右侧 filter-extra 按内容宽度自适应；
+            未传 filterExtra 时默认渲染 YsTableActionMenuButton，传空则 :empty 隐藏、filter 横向占满 */}
+        <div className="yk-table-page__filter-row">
+          <div className="yk-table-page__filter">
+            <YsFilterPanel
+              ref={filterPanelRef}
+              showSearch={showSearch}
             showReset={showReset}
             searchButtonText={searchButtonText}
             resetButtonText={resetButtonText}
@@ -310,9 +317,18 @@ export const YsTablePage = forwardRef<YsTablePageApi, YsTablePageProps>(
             onSearch={handleSearch}
             onReset={handleReset}
             onUpdateQuickQueries={props.onUpdateQuickQueries}
-          >
-            {props.children}
-          </YsFilterPanel>
+            >
+              {props.children}
+            </YsFilterPanel>
+          </div>
+          <div className="yk-table-page__filter-extra">
+            {/* 仅未传 filterExtra（undefined）时渲染默认按钮；传 null/空片段则容器为空，:empty 隐藏、filter 占满 */}
+            {props.filterExtra === undefined
+              ? table
+                ? <YsTableActionMenuButton table={table} />
+                : null
+              : props.filterExtra}
+          </div>
         </div>
 
         <div className="yk-table-page__command">

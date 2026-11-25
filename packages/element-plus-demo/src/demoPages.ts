@@ -33,6 +33,7 @@ import SwitchableFilterPage from "./pages/filter/SwitchableFilterPage.vue";
 import SingleLineFilterPage from "./pages/filter/SingleLineFilterPage.vue";
 import TablePageDemo from "./pages/tablePage/TablePageDemo.vue";
 import TablePageFillHeightDemo from "./pages/tablePage/TablePageFillHeightDemo.vue";
+import TablePageFilterExtraDemo from "./pages/tablePage/TablePageFilterExtraDemo.vue";
 import ImportExcelPage from "./pages/importExcel/ImportExcelPage.vue";
 import ImportExcelBatchPage from "./pages/importExcel/ImportExcelBatchPage.vue";
 import ModalDemoPage from "./pages/modal/ModalDemoPage.vue";
@@ -193,6 +194,11 @@ export const demoPages = [
     id: "table-page-fill-height",
     label: "YsTablePage 占满高度（内容滚动 + 分页固定）",
     component: TablePageFillHeightDemo,
+  },
+  {
+    id: "table-page-filter-extra",
+    label: "filter-extra 插槽（filter 右侧自定义区域）",
+    component: TablePageFilterExtraDemo,
   },
   {
     id: "import-excel",

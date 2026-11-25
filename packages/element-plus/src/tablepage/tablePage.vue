@@ -17,6 +17,7 @@ import type { SavedQuery } from "../advancedFilter/advancedFilterContext";
 import type { TablePageDataFun } from "./tablePageTypes";
 import YsFilterPanel from "../filter/filterPanel.vue";
 import YsCommandBar from "../commandBar/commandBar.vue";
+import YsTableActionMenuButton from "../commandBar/tableActionMenuButton.vue";
 import YsTable from "../table/table.vue";
 
 defineOptions({ name: "YsTablePage" });
@@ -134,16 +135,30 @@ defineExpose({
        filterPanel/commandBar flex-shrink:0 固定不被压缩，table flex:1 + min-height:0 撑满剩余。
        table 高度被父容器约束后，其内部 view-area 出滚动条、footer 分页固定底部。 -->
   <div class="yk-table-page">
-    <YsFilterPanel
-      ref="filterPanelRef"
-      class="yk-table-page__filter"
-      v-bind="filterPanelProps"
-      @search="onSearch"
-      @reset="onReset"
-      @update:quick-queries="emit('update:quickQueries', $event)"
-    >
-      <slot />
-    </YsFilterPanel>
+    <!-- filter 行：左侧 filter 面板占满剩余宽度，右侧 filter-extra 插槽按内容宽度自适应。
+         未传插槽时默认渲染 YsTableActionMenuButton；插槽内容为空时 :empty 隐藏右侧容器，filter 横向占满。 -->
+    <div class="yk-table-page__filter-row">
+      <YsFilterPanel
+        ref="filterPanelRef"
+        class="yk-table-page__filter"
+        v-bind="filterPanelProps"
+        @search="onSearch"
+        @reset="onReset"
+        @update:quick-queries="emit('update:quickQueries', $event)"
+      >
+        <slot />
+      </YsFilterPanel>
+      <div class="yk-table-page__filter-extra">
+        <!-- 注意：默认按钮不能放在 <slot> 的 fallback 里——Vue 3 在插槽内容为空时会回退渲染
+             fallback，导致「传空插槽 → filter 占满」失效。改用 $slots 存在性判断：
+             传了插槽（即便内容为空）就不渲染默认按钮，空内容由 :empty 隐藏容器，filter 横向占满。 -->
+        <slot name="filter-extra" />
+        <YsTableActionMenuButton
+          v-if="!$slots['filter-extra'] && tableRef"
+          :table="tableRef"
+        />
+      </div>
+    </div>
 
     <YsCommandBar
       class="yk-table-page__command"
@@ -181,7 +196,25 @@ defineExpose({
   height: 100%;
 }
 
-.yk-table-page__filter,
+/* filter 行：左侧面板 flex:1 占满剩余，右侧 extra 按内容宽度自适应；垂直居中对齐 */
+.yk-table-page__filter-row {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.yk-table-page__filter {
+  flex: 1;
+  min-width: 0;
+}
+.yk-table-page__filter-extra {
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+/* 插槽内容为空（或默认按钮未就绪）时隐藏右侧容器，filter 横向占满且不留间隙 */
+.yk-table-page__filter-extra:empty {
+  display: none;
+}
+
 .yk-table-page__command {
   flex-shrink: 0;
 }

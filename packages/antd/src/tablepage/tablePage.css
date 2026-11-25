@@ -4,7 +4,25 @@
   height: 100%;
 }
 
-.yk-table-page__filter,
+/* filter 行：左侧面板 flex:1 占满剩余，右侧 extra 按内容宽度自适应；垂直居中对齐 */
+.yk-table-page__filter-row {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.yk-table-page__filter {
+  flex: 1;
+  min-width: 0;
+}
+.yk-table-page__filter-extra {
+  flex-shrink: 0;
+  margin-left: 12px;
+}
+/* filterExtra 为空（或默认按钮未就绪）时隐藏右侧容器，filter 横向占满且不留间隙 */
+.yk-table-page__filter-extra:empty {
+  display: none;
+}
+
 .yk-table-page__command {
   flex-shrink: 0;
 }
