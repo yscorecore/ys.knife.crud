@@ -1,6 +1,6 @@
 import { forwardRef, useImperativeHandle, useMemo } from "react";
 import { DatePicker } from "antd";
-import dayjs from "dayjs";
+import moment from "moment";
 import type { FilterItemApi, Operator } from "@ys-knife-crud/core";
 import { useDateFilterItem } from "@ys-knife-crud/react";
 import { YsFilterItemLayout } from "./filterItemLayout";
@@ -45,7 +45,7 @@ export const YsDateFilterItem = forwardRef<FilterItemApi, DateFilterItemProps>(
     return (
       <YsFilterItemLayout label={props.label} api={api}>
         <DatePicker
-          value={value ? dayjs(value) : null}
+          value={value ? moment(value) : null}
           format={valueFormat}
           onChange={(_date, dateString) =>
             setValue(typeof dateString === "string" ? dateString : "")

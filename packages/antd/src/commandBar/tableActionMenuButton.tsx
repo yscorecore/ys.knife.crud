@@ -1,5 +1,5 @@
 import { forwardRef, useReducer, type ReactNode } from "react";
-import { Button, Dropdown } from "antd";
+import { Button, Dropdown, Menu } from "antd";
 import type { MenuProps } from "antd";
 import type { TableApi } from "@ys-knife-crud/core";
 import "./tableActionMenuButton.css";
@@ -199,7 +199,12 @@ export const YsTableActionMenuButton = forwardRef<
       onOpenChange={(open) => {
         if (open) bump();
       }}
-      menu={{ items, onClick: ({ key }) => onCommand(key) }}
+      overlay={
+        <Menu
+          items={items}
+          onClick={({ key }) => onCommand(key)}
+        />
+      }
     >
       {trigger ? (
         <span className="yk-table-action-menu-button__trigger">{trigger}</span>

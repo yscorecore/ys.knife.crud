@@ -11,18 +11,18 @@ const logs = [
 export function LogsPanel() {
   return (
     <div style={{ background: "#fff", padding: 20, borderRadius: 6 }}>
-      <Timeline
-        items={logs.map((log) => ({
-          children: (
+      <Timeline>
+        {logs.map((log) => (
+          <Timeline.Item key={log.timestamp + log.content}>
             <div>
               <div>{log.content}</div>
               <div style={{ marginTop: 4, fontSize: 12, color: "#909399" }}>
                 {log.timestamp}
               </div>
             </div>
-          ),
-        }))}
-      />
+          </Timeline.Item>
+        ))}
+      </Timeline>
     </div>
   );
 }

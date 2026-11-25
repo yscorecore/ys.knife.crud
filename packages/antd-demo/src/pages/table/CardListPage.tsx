@@ -56,7 +56,7 @@ function renderCard(row: Record<string, unknown>): ReactNode {
           {user.email}
         </div>
         <div>
-          <Tag color="blue" bordered={false}>
+          <Tag color="blue">
             {user.age} 岁
           </Tag>
         </div>
@@ -86,7 +86,7 @@ function renderList(row: Record<string, unknown>): ReactNode {
       >
         {user.email}
       </span>
-      <Tag color="blue" bordered={false}>
+      <Tag color="blue">
         {user.age} 岁
       </Tag>
       <span style={{ fontSize: 12, color: "#c0c4cc", flexShrink: 0 }}>#{user.id}</span>

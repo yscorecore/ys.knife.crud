@@ -32,7 +32,7 @@ const renderMeta: Meta = {
       render: (_row, value) => {
         const age = value as number;
         return (
-          <Tag color={age >= 30 ? "red" : "green"} bordered={false}>
+          <Tag color={age >= 30 ? "red" : "green"}>
             {age} 岁
           </Tag>
         );

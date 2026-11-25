@@ -1,8 +1,8 @@
 import { useState } from "react";
 import type { ReactNode } from "react";
 import { Button, DatePicker, Input, InputNumber, Popover, Select } from "antd";
-import type { Dayjs } from "dayjs";
-import dayjs from "dayjs";
+import type { Moment } from "moment";
+import moment from "moment";
 import { Operator } from "@ys-knife-crud/core";
 import type {
   AdvancedFieldType,
@@ -35,10 +35,10 @@ const boolOptions: EnumOption[] = [
   { label: "否", value: false },
 ];
 
-/** 最近 N 天区间（返回 dayjs，供 RangePicker presets 使用） */
-function recentRange(days: number): [Dayjs, Dayjs] {
-  const end = dayjs();
-  return [end.subtract(days, "day"), end];
+/** 最近 N 天区间（返回 moment，供 RangePicker ranges 使用） */
+function recentRange(days: number): [Moment, Moment] {
+  const end = moment();
+  return [end.clone().subtract(days, "day"), end];
 }
 
 /**
@@ -66,12 +66,12 @@ export function YsAdvancedValueEditor(props: AdvancedValueEditorProps) {
       ? raw
       : undefined;
   const multiValue = Array.isArray(raw) ? (raw as (string | number | boolean)[]) : [];
-  const dateRangeValue: [Dayjs, Dayjs] | null =
+  const dateRangeValue: [Moment, Moment] | null =
     Array.isArray(raw) &&
     raw.length === 2 &&
     typeof raw[0] === "string" &&
     typeof raw[1] === "string"
-      ? [dayjs(raw[0]), dayjs(raw[1])]
+      ? [moment(raw[0]), moment(raw[1])]
       : null;
   const rangeStart =
     Array.isArray(raw) && typeof raw[0] === "number" ? raw[0] : undefined;
@@ -152,11 +152,11 @@ export function YsAdvancedValueEditor(props: AdvancedValueEditorProps) {
           value={dateRangeValue}
           format={valueFormat}
           placeholder={["开始日期", "结束日期"]}
-          presets={[
-            { label: "最近 7 天", value: () => recentRange(7) },
-            { label: "最近 30 天", value: () => recentRange(30) },
-            { label: "最近 90 天", value: () => recentRange(90) },
-          ]}
+          ranges={{
+            "最近 7 天": recentRange(7),
+            "最近 30 天": recentRange(30),
+            "最近 90 天": recentRange(90),
+          }}
           onChange={(dates, dateStrings) => {
             if (!dates) emit(null);
             else emit([dateStrings[0], dateStrings[1]]);
@@ -191,7 +191,7 @@ export function YsAdvancedValueEditor(props: AdvancedValueEditorProps) {
   } else if (props.fieldType === "date") {
     editor = (
       <DatePicker
-        value={typeof raw === "string" ? dayjs(raw) : null}
+        value={typeof raw === "string" ? moment(raw) : null}
         format={valueFormat}
         onChange={(_date, dateString) => emit(dateString || null)}
         placeholder="选择日期"

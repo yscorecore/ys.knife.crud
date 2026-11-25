@@ -15,7 +15,7 @@
     "@ys-knife-crud/core": "workspace:*",
     "@ys-knife-crud/export-exceljs": "workspace:*",
     "@ys-knife-crud/import-exceljs": "workspace:*",
-    "antd": "^5.22.0",
+    "antd": "^4.24.16",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

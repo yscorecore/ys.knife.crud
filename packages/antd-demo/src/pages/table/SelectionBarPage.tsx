@@ -52,7 +52,7 @@ function renderSelectionBar(ctx: YsSelectionBarContext): ReactNode {
         }}
       >
         {selected.map((row) => (
-          <Tag key={row.id} color="blue" bordered={false}>
+          <Tag key={row.id} color="blue">
             {row.name}
           </Tag>
         ))}

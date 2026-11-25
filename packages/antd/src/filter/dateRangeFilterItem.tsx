@@ -1,7 +1,7 @@
 import { forwardRef, useImperativeHandle, useMemo } from "react";
 import { DatePicker } from "antd";
-import dayjs from "dayjs";
-import type { Dayjs } from "dayjs";
+import moment from "moment";
+import type { Moment } from "moment";
 import type { FilterItemApi } from "@ys-knife-crud/core";
 import { useDateRangeFilterItem } from "@ys-knife-crud/react";
 import { YsFilterItemLayout } from "./filterItemLayout";
@@ -48,9 +48,9 @@ export const YsDateRangeFilterItem = forwardRef<FilterItemApi, DateRangeFilterIt
 
     useImperativeHandle(ref, () => api, [api]);
 
-    const rangeValue: [Dayjs, Dayjs] | null =
+    const rangeValue: [Moment, Moment] | null =
       value && value.length === 2
-        ? [dayjs(value[0]), dayjs(value[1])]
+        ? [moment(value[0]), moment(value[1])]
         : null;
 
     return (
