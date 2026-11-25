@@ -257,59 +257,61 @@ export const YsAdvancedFilterPanel = forwardRef<
   };
 
   return (
-    <div
-      className="yk-advanced-filter"
-      onKeyDown={(e) => {
-        if (e.key === "Enter") onSearch();
-      }}
-    >
-      <YsAdvancedConditionGroup group={rootGroup} level={0} />
-
-      {(showSearch || showReset || showSaveQuery) && (
-        <div className="yk-advanced-filter__actions">
-          {showSearch && (
-            <Button type="primary" onClick={onSearch}>
-              {searchButtonText}
-            </Button>
-          )}
-          {showReset && <Button onClick={onReset}>{resetButtonText}</Button>}
-          {showSaveQuery && <Button onClick={openSaveDialog}>保存</Button>}
-        </div>
-      )}
-
-      <Modal
-        open={saveDialogVisible}
-        title="保存查询"
-        width={440}
-        onCancel={() => setSaveDialogVisible(false)}
-        onOk={confirmSaveQuery}
-        okText="确定"
-        cancelText="取消"
-        okButtonProps={{ disabled: !saveQueryName.trim() }}
+    <ADVANCED_FILTER_CONTEXT.Provider value={contextValue}>
+      <div
+        className="yk-advanced-filter"
+        onKeyDown={(e) => {
+          if (e.key === "Enter") onSearch();
+        }}
       >
-        <div className="yk-advanced-filter__form-item">
-          <label className="yk-advanced-filter__form-label">名称</label>
-          <Input
-            value={saveQueryName}
-            onChange={(e) => setSaveQueryName(e.target.value)}
-            placeholder="请输入查询名称"
-            maxLength={50}
-            showCount
-            onPressEnter={confirmSaveQuery}
-          />
-        </div>
-        <div className="yk-advanced-filter__form-item">
-          <label className="yk-advanced-filter__form-label">描述</label>
-          <Input.TextArea
-            value={saveQueryDesc}
-            onChange={(e) => setSaveQueryDesc(e.target.value)}
-            rows={2}
-            placeholder="可选，描述此查询的用途（hover 标签时显示）"
-            maxLength={200}
-            showCount
-          />
-        </div>
-      </Modal>
-    </div>
+        <YsAdvancedConditionGroup group={rootGroup} level={0} />
+
+        {(showSearch || showReset || showSaveQuery) && (
+          <div className="yk-advanced-filter__actions">
+            {showSearch && (
+              <Button type="primary" onClick={onSearch}>
+                {searchButtonText}
+              </Button>
+            )}
+            {showReset && <Button onClick={onReset}>{resetButtonText}</Button>}
+            {showSaveQuery && <Button onClick={openSaveDialog}>保存</Button>}
+          </div>
+        )}
+
+        <Modal
+          open={saveDialogVisible}
+          title="保存查询"
+          width={440}
+          onCancel={() => setSaveDialogVisible(false)}
+          onOk={confirmSaveQuery}
+          okText="确定"
+          cancelText="取消"
+          okButtonProps={{ disabled: !saveQueryName.trim() }}
+        >
+          <div className="yk-advanced-filter__form-item">
+            <label className="yk-advanced-filter__form-label">名称</label>
+            <Input
+              value={saveQueryName}
+              onChange={(e) => setSaveQueryName(e.target.value)}
+              placeholder="请输入查询名称"
+              maxLength={50}
+              showCount
+              onPressEnter={confirmSaveQuery}
+            />
+          </div>
+          <div className="yk-advanced-filter__form-item">
+            <label className="yk-advanced-filter__form-label">描述</label>
+            <Input.TextArea
+              value={saveQueryDesc}
+              onChange={(e) => setSaveQueryDesc(e.target.value)}
+              rows={2}
+              placeholder="可选，描述此查询的用途（hover 标签时显示）"
+              maxLength={200}
+              showCount
+            />
+          </div>
+        </Modal>
+      </div>
+    </ADVANCED_FILTER_CONTEXT.Provider>
   );
 });
