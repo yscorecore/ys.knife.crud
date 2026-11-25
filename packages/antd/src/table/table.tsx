@@ -87,6 +87,10 @@ export interface YsTableProps {
   onUpdateColumnResizable?: (resizable: boolean) => void;
   /** 表头锁定开关切换时触发（父级传入 stickyHeader 时为受控） */
   onUpdateStickyHeader?: (sticky: boolean) => void;
+  /** 选中行集合变化时触发（跨页累计选中的行）。
+   *  供父级在选中变化时刷新依赖 table.selectedRows 的 UI（如内置命令栏选中条），
+   *  因为 React 的 ref 句柄不是响应式的，父级不会因表格内部选中变化而自动重渲染。 */
+  onSelectionChange?: (selectedRows: unknown[]) => void;
   /** 空数据提示：表格 / 卡片 / 列表三种视图共享 */
   empty?: ReactNode;
   footer?: ReactNode;
@@ -152,6 +156,13 @@ export const YsTable = forwardRef<TableApi, YsTableProps>(function YsTable(props
     selectAllOnPage,
     invertSelectionOnPage,
   } = useSelection({ rows, rowKey });
+
+  /* 选中集合变化时通知父级：React 的 ref 句柄不是响应式的，
+     父级（如 YsTablePage）里依赖 table.selectedRows 的 UI（命令栏内置选中条）
+     不会因表格内部选中变化自动重渲染，需借此回调手动触发刷新。 */
+  useEffect(() => {
+    propsRef.current.onSelectionChange?.(selectedRows);
+  }, [selectedRows]);
 
   /* ---------------- 行操作（视图切换/卡片右键与操作列共用） ---------------- */
   const { actions, actionsLoading, loadActions } = useRowActions({ rowActionsFunc: props.rowActionsFunc });

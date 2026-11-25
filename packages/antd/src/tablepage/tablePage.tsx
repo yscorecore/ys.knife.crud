@@ -195,6 +195,14 @@ export const YsTablePage = forwardRef<YsTablePageApi, YsTablePageProps>(
       [],
     );
 
+    /** 选中变化版本号：强制本组件重渲染。
+     *  React 的 ref 句柄不是响应式的——命令栏内置选中条读取 table.selectedRows，
+     *  若本组件不因选中变化重渲染，条会读到过期计数（不出现/数字不对）。 */
+    const [, setSelectionVersion] = useState(0);
+    const handleSelectionChange = useCallback((): void => {
+      setSelectionVersion((v) => v + 1);
+    }, []);
+
     /** 增强 dataFun：把当前 filter 绑定进消费者的 TablePageDataFun，适配为 PageFunc */
     const adaptedDataFun = useCallback<PageFunc<unknown>>(
       (req, signal) => dataFun(req, currentFilter.current, signal),
@@ -359,6 +367,7 @@ export const YsTablePage = forwardRef<YsTablePageApi, YsTablePageProps>(
             onUpdateShowCheckbox={props.onUpdateShowCheckbox}
             onUpdateColumnResizable={props.onUpdateColumnResizable}
             onUpdateStickyHeader={props.onUpdateStickyHeader}
+            onSelectionChange={handleSelectionChange}
             card={normalizeRowSlot(props.card)}
             list={normalizeRowSlot(props.list)}
             empty={normalizeSimpleSlot(props.empty)}
