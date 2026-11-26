@@ -29,6 +29,8 @@ export interface UseExportExcelOptions {
   selectedRows: unknown[];
   /** 数据总条数 */
   total: number;
+  /** 总条数是否已知（dataFun 返回了 totalCount）；已知时「导出所有」选项带「共 N 条」 */
+  totalKnown: boolean;
   /** 导出所有时分页拉取的步长 */
   exportPageSize: number;
   /** 是否还有下一页（决定「导出所有」选项是否出现） */
@@ -80,10 +82,14 @@ export function useExportExcel(options: UseExportExcelOptions): UseExportExcelRe
       disabled: false,
     });
     if (options.hasMorePage) {
-      opts.push({ value: "all", label: "导出所有数据", disabled: false });
+      opts.push({
+        value: "all",
+        label: options.totalKnown ? `导出所有数据（共 ${options.total} 条）` : "导出所有数据",
+        disabled: false,
+      });
     }
     return opts;
-  }, [options.props.exportSelected, options.selectedRows.length, options.currentRows.length, options.hasMorePage, options.pageScopeLabel]);
+  }, [options.props.exportSelected, options.selectedRows.length, options.currentRows.length, options.hasMorePage, options.pageScopeLabel, options.totalKnown, options.total]);
 
   const [exportDialogVisible, setExportDialogVisible] = useState(false);
   const [exporting, setExporting] = useState(false);

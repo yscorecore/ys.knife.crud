@@ -24,6 +24,8 @@ interface UseCollectDataOptions {
   selectedRows: Ref<unknown[]>;
   /** 数据总条数（驱动进度条初始分母；响应带回 totalCount 时会被修正） */
   total: Ref<number>;
+  /** 总条数是否已知（dataFun 返回了 totalCount）；已知时「所有数据」选项带「共 N 条」 */
+  totalKnown: Ref<boolean>;
   /** 收集所有时分页拉取的步长（独立于界面分页大小） */
   collectPageSize: Ref<number>;
   /** 是否还有下一页（决定「所有数据」选项是否出现） */
@@ -45,6 +47,7 @@ export function useCollectData({
   currentRows,
   selectedRows,
   total,
+  totalKnown,
   collectPageSize,
   hasMorePage,
   pageScopeLabel,
@@ -70,7 +73,11 @@ export function useCollectData({
       disabled: false,
     });
     if (hasMorePage.value) {
-      opts.push({ value: "all", label: "所有数据", disabled: false });
+      opts.push({
+        value: "all",
+        label: totalKnown.value ? `所有数据（共 ${total.value} 条）` : "所有数据",
+        disabled: false,
+      });
     }
     return opts;
   });

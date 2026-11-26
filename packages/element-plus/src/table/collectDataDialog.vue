@@ -32,6 +32,8 @@ const props = defineProps<{
   selectedRows: unknown[];
   /** 数据总条数（驱动进度条初始分母；响应中带回 totalCount 时会被修正） */
   total: number;
+  /** 总条数是否已知；已知时「所有数据」选项显示总条数 */
+  totalKnown: boolean;
   /** 是否还有下一页（决定「所有数据」选项是否出现） */
   hasMorePage: boolean;
   /** 父级是否启用勾选列——决定「选中」选项是否出现 */
@@ -58,6 +60,7 @@ const {
   currentRows: toRef(props, "currentRows"),
   selectedRows: toRef(props, "selectedRows"),
   total: toRef(props, "total"),
+  totalKnown: toRef(props, "totalKnown"),
   collectPageSize: toRef(props, "collectPageSize"),
   hasMorePage: toRef(props, "hasMorePage"),
   pageScopeLabel: toRef(props, "pageScopeLabel"),

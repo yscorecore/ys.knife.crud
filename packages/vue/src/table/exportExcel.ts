@@ -29,6 +29,8 @@ interface UseExportExcelOptions {
   selectedRows: Ref<unknown[]>;
   /** 数据总条数 */
   total: Ref<number>;
+  /** 总条数是否已知（dataFun 返回了 totalCount）；已知时「导出所有」选项带「共 N 条」 */
+  totalKnown: Ref<boolean>;
   /** 导出所有时分页拉取的步长（独立于界面分页大小，避免用大页尺寸拖慢导出） */
   exportPageSize: Ref<number>;
   /** 是否还有下一页（决定「导出所有」选项是否出现） */
@@ -56,6 +58,7 @@ export function useExportExcel({
   currentRows,
   selectedRows,
   total,
+  totalKnown,
   exportPageSize,
   hasMorePage,
   pageScopeLabel,
@@ -72,7 +75,11 @@ export function useExportExcel({
     }
     opts.push({ value: "page", label: `${pageScopeLabel?.value ?? "导出当前页数据"}（${currentRows.value.length} 条）`, disabled: false });
     if (hasMorePage.value) {
-      opts.push({ value: "all", label: "导出所有数据", disabled: false });
+      opts.push({
+        value: "all",
+        label: totalKnown.value ? `导出所有数据（共 ${total.value} 条）` : "导出所有数据",
+        disabled: false,
+      });
     }
     return opts;
   });

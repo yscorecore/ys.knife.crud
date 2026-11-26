@@ -24,6 +24,8 @@ export interface UseCollectDataOptions {
   selectedRows: unknown[];
   /** 数据总条数（进度条初始分母；响应带回 totalCount 时修正） */
   total: number;
+  /** 总条数是否已知（dataFun 返回了 totalCount）；已知时「所有数据」选项带「共 N 条」 */
+  totalKnown: boolean;
   /** 收集所有时分页拉取的步长 */
   collectPageSize: number;
   /** 是否还有下一页（决定「所有数据」选项是否出现） */
@@ -79,10 +81,14 @@ export function useCollectData(options: UseCollectDataOptions): UseCollectDataRe
       disabled: false,
     });
     if (options.hasMorePage) {
-      opts.push({ value: "all", label: "所有数据", disabled: false });
+      opts.push({
+        value: "all",
+        label: options.totalKnown ? `所有数据（共 ${options.total} 条）` : "所有数据",
+        disabled: false,
+      });
     }
     return opts;
-  }, [options.selectable, options.selectedRows.length, options.currentRows.length, options.hasMorePage, options.pageScopeLabel]);
+  }, [options.selectable, options.selectedRows.length, options.currentRows.length, options.hasMorePage, options.pageScopeLabel, options.totalKnown, options.total]);
 
   const [collectDialogVisible, setCollectDialogVisible] = useState(false);
   const [collecting, setCollecting] = useState(false);

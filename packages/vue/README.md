@@ -128,6 +128,7 @@ const {
   currentRows: toRef(props, "currentRows"),
   selectedRows: toRef(props, "selectedRows"),
   total: toRef(props, "total"),
+  totalKnown: toRef(props, "totalKnown"), // true when dataFun returns totalCount → "all" option shows 共 N 条
   exportPageSize: toRef(props, "exportPageSize"),
   hasMorePage: toRef(props, "hasMorePage"),
 });

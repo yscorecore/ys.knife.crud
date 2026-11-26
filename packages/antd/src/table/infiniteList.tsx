@@ -133,6 +133,8 @@ export const YsInfiniteList = forwardRef<YsInfiniteListApi, YsInfiniteListProps>
     const [error, setError] = useState<unknown>(null);
     /** 最近一次响应携带的总条数（驱动导出进度条初始分母） */
     const [totalCount, setTotalCount] = useState(0);
+    /** 服务端是否返回过 totalCount（未知时「导出所有」选项不显示总条数） */
+    const [totalKnown, setTotalKnown] = useState(false);
     /** 元数据（metaFun 可选；加载失败视为无 meta） */
     const [meta, setMeta] = useState<Meta | null>(null);
 
@@ -211,7 +213,10 @@ export const YsInfiniteList = forwardRef<YsInfiniteListApi, YsInfiniteListProps>
         setHasMore(more);
 
         // 响应带回总条数时更新（驱动导出进度条初始分母）
-        if (result.totalCount != null) setTotalCount(result.totalCount);
+        if (result.totalCount != null) {
+          setTotalCount(result.totalCount);
+          setTotalKnown(true);
+        }
         callbacksRef.current.onDataLoaded?.(result, isAppend);
       } catch (e) {
         setError(e);
@@ -352,6 +357,7 @@ export const YsInfiniteList = forwardRef<YsInfiniteListApi, YsInfiniteListProps>
       currentRows: items,
       selectedRows: selection.selectedRows,
       total: totalCount,
+      totalKnown,
       exportPageSize,
       hasMorePage: hasMore,
       pageScopeLabel: "导出当前已加载",

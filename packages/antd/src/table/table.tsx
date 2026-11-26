@@ -262,6 +262,7 @@ export const YsTable = forwardRef<TableApi, YsTableProps>(function YsTable(props
     currentRows: rows,
     selectedRows,
     total,
+    totalKnown,
     exportPageSize,
     hasMorePage: showPagination,
   });
@@ -286,6 +287,7 @@ export const YsTable = forwardRef<TableApi, YsTableProps>(function YsTable(props
     currentRows: rows,
     selectedRows,
     total,
+    totalKnown,
     collectPageSize,
     hasMorePage: showPagination,
   });

@@ -656,6 +656,7 @@ const tableApi: TableApi = {
          total 传界面当前总数作为进度条初始分母；导出过程中响应带回 totalCount 时会修正 -->
     <ExportExcelDialog ref="exportDialogRef" :current-rows="rows" :selected-rows="selectedRows"
       :data-fun="props.dataFun" :export-page-size="props.exportPageSize" :total="total"
+      :total-known="totalKnown"
       :exportor-func="props.exportorFunc"
       :table-name="meta?.displayName ?? '数据'" :columns="columns" :has-more-page="showPagination"
       :export-selected="currentShowCheckbox" />
@@ -666,7 +667,7 @@ const tableApi: TableApi = {
       :data-fun="props.dataFun" :collect-page-size="props.collectPageSize"
       :max-collect-count="props.maxCollectCount" :collector-func="props.collectorFunc"
       :collector-title="props.collectorTitle"
-      :total="total" :has-more-page="showPagination" :selectable="currentShowCheckbox" />
+      :total="total" :total-known="totalKnown" :has-more-page="showPagination" :selectable="currentShowCheckbox" />
 
     <!-- 列设置对话框（内部自管 useCustomConfig；始终挂载，columns 也来自它——
          customConfig 的 width 直接写在 col.width 上，表格读 col.width 即可；

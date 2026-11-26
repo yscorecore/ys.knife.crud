@@ -123,6 +123,8 @@ watch(selectedRows, (rows) => emit("selection-change", [...rows]));
 
 /** 最近一次响应携带的总条数（驱动导出进度条初始分母） */
 const totalCount = ref(0);
+/** 服务端是否返回过 totalCount（未知时「导出所有」选项不显示总条数） */
+const totalKnown = ref(false);
 
 /** 元数据（metaFun 可选；加载失败视为无 meta，导出退化到行字段并集） */
 const meta = ref<Meta | null>(null);
@@ -201,7 +203,10 @@ async function loadPage(isAppend: boolean): Promise<void> {
     }
     hasMore.value = result.hasNext ?? false;
     // 响应带回总条数时更新（驱动导出进度条初始分母）
-    if (result.totalCount != null) totalCount.value = result.totalCount;
+    if (result.totalCount != null) {
+      totalCount.value = result.totalCount;
+      totalKnown.value = true;
+    }
     emit("data-loaded", result, isAppend);
   } catch (e) {
     error.value = e;
@@ -389,6 +394,7 @@ defineExpose({
       :data-fun="props.dataFun"
       :export-page-size="props.exportPageSize"
       :total="totalCount"
+      :total-known="totalKnown"
       :exportor-func="props.exportorFunc"
       :table-name="tableName"
       :columns="exportColumns"
