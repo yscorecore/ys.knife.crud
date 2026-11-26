@@ -11,6 +11,7 @@ export * from "./table/rowActions";
 export * from "./table/selection";
 export * from "./table/customConfig";
 export * from "./table/exportExcel";
+export * from "./table/collectData";
 
 // ---------------- Excel 导入（importExcel） ----------------
 export * from "./importExcel/importExcel";

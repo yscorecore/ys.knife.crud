@@ -1,0 +1,23 @@
+.yk-collect-options {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.yk-collect-options .yk-collect-option {
+  margin-left: 0;
+}
+
+.yk-collect-limit-hint {
+  margin: 12px 0 0;
+  color: #999;
+  font-size: 0.85em;
+}
+
+.yk-collect-progress-text {
+  margin: 10px 0 0;
+  color: #666;
+  font-size: 0.92em;
+  text-align: center;
+}

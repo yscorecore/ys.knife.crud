@@ -12,6 +12,7 @@ import CustomPage from "./pages/table/CustomPage";
 import ComboPage from "./pages/table/ComboPage";
 import ExportPage from "./pages/table/ExportPage";
 import CustomExportPage from "./pages/table/CustomExportPage";
+import CollectDataPage from "./pages/table/CollectDataPage";
 import DataLoadedPage from "./pages/table/DataLoadedPage";
 import ColumnWidthPage from "./pages/table/ColumnWidthPage";
 import ColumnRenderPage from "./pages/table/ColumnRenderPage";
@@ -95,6 +96,11 @@ export const demoPages = [
     id: "table-custom-export",
     label: "自定义列 + 导出 Excel（外部列设置 + 外部导出）",
     component: CustomExportPage,
+  },
+  {
+    id: "table-collect-data",
+    label: "取数能力：打印出库（collectorTitle 自定义 + 分页收集）",
+    component: CollectDataPage,
   },
   {
     id: "table-data-loaded",

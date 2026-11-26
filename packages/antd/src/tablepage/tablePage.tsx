@@ -9,6 +9,7 @@ import {
 } from "react";
 import type {
   Column,
+  CollectorFunc,
   EnumOptionsSource,
   ExportApiFunc,
   FilterInfo,
@@ -58,6 +59,11 @@ export interface YsTablePageProps {
   saveCustomConfigFun?: NonNullable<CoreTableProps["saveCustomConfigFun"]>;
   exportPageSize?: number;
   exportorFunc?: ExportApiFunc;
+  collectPageSize?: number;
+  maxCollectCount?: number;
+  collectorFunc?: CollectorFunc;
+  /** 收集数据对话框标题，默认「收集数据」 */
+  collectorTitle?: string;
   rowKey?: string;
   viewMode?: ViewMode;
   actions?: TableAction[];
@@ -157,6 +163,10 @@ export const YsTablePage = forwardRef<YsTablePageApi, YsTablePageProps>(
       saveCustomConfigFun,
       exportPageSize = 1000,
       exportorFunc,
+      collectPageSize = 1000,
+      maxCollectCount = 10000,
+      collectorFunc,
+      collectorTitle,
       rowKey = "id",
       viewMode = "table",
       actions = EMPTY_ACTIONS,
@@ -298,6 +308,9 @@ export const YsTablePage = forwardRef<YsTablePageApi, YsTablePageProps>(
         openExportDialog: () => {
           currentTable()?.openExportDialog();
         },
+        openCollectDialog: () => {
+          currentTable()?.openCollectDialog();
+        },
       }),
       [currentTable],
     );
@@ -360,6 +373,10 @@ export const YsTablePage = forwardRef<YsTablePageApi, YsTablePageProps>(
             saveCustomConfigFun={saveCustomConfigFun}
             exportPageSize={exportPageSize}
             exportorFunc={exportorFunc}
+            collectPageSize={collectPageSize}
+            maxCollectCount={maxCollectCount}
+            collectorFunc={collectorFunc}
+            collectorTitle={collectorTitle}
             rowKey={rowKey}
             viewMode={viewMode}
             onDataLoaded={props.onDataLoaded}

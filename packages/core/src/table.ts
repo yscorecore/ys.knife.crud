@@ -64,6 +64,46 @@ export interface ExportExcelProps {
     readonly exportPageSize?: number;
 
 }
+
+/**
+ * 收集完成的附加信息（CollectorFunc 的第二个参数）：
+ * 除收集到的行之外，告知实际范围与是否因上限被截断。
+ */
+export interface CollectInfo {
+    /** 实际收集的数据范围 */
+    readonly scope: ExportScope;
+    /** 是否因达到 maxCollectCount 上限被截断（true 时 rows 仅为前 maxCollectCount 条） */
+    readonly truncated: boolean;
+    /** 本次生效的条数上限（= maxCollectCount） */
+    readonly maxCount: number;
+}
+
+/**
+ * 收集数据回调：第一个参数是原始行对象数组（完整字段，不按可见列投影），
+ * 第二个参数带上范围与截断信息。返回 Promise 时组件会等待其完成。
+ */
+export type CollectorFunc = (
+    rows: Record<string, unknown>[],
+    info: CollectInfo,
+) => void | Promise<void>;
+
+/**
+ * 收集数据相关 props：外部传入 collectorFunc 后，
+ * 可经 TableApi.openCollectDialog() 打开「收集数据」对话框。
+ */
+export interface CollectProps {
+    /** 可选。收集数据回调；未传时该能力不可用（openCollectDialog 为空操作） */
+    readonly collectorFunc?: CollectorFunc;
+    /**
+     * 收集数据对话框标题，默认「收集数据」。
+     * 该能力是通用的「取数」通道，可按业务语义自定义，如「打印出库」「批量下载」。
+     */
+    readonly collectorTitle?: string;
+    /** 收集「所有数据」时每次分页拉取的条数，默认 1000（独立于界面分页大小） */
+    readonly collectPageSize?: number;
+    /** 单次收集的条数上限，达到即截断并回调，默认 10000 */
+    readonly maxCollectCount?: number;
+}
 export interface DefaultProps {
     readonly metaFun: MetaFunc
     readonly dataFun: PageFunc<unknown>,
@@ -73,7 +113,7 @@ export interface DefaultProps {
 
 
 /** TableProps 是组件的「输入契约」：父组件通过 props 传入 */
-export interface TableProps extends RowActionsProps, SelectionProps, ColumnResizeProps, StickyHeaderProps, ViewProps, CustomConfigProps, ExportExcelProps, DefaultProps {
+export interface TableProps extends RowActionsProps, SelectionProps, ColumnResizeProps, StickyHeaderProps, ViewProps, CustomConfigProps, ExportExcelProps, CollectProps, DefaultProps {
 
 }
 
@@ -155,6 +195,11 @@ export interface TableApi {
      * 打开内置导出 Excel 对话框。Table 不渲染入口按钮——由外部自实现按钮经此入口打开对话框。
      */
     openExportDialog(): void
+    /**
+     * 打开内置「收集数据」对话框（选择范围 → 分页收集 → 回调 collectorFunc）。
+     * Table 不渲染入口按钮——由外部自实现按钮经此入口打开对话框。
+     */
+    openCollectDialog(): void
 }
 
 

@@ -26,6 +26,7 @@ import type {
 import {
   isEnabled,
   useCustomConfig,
+  useCollectData,
   useDefault,
   useExportExcel,
   useRowActions,
@@ -36,6 +37,7 @@ import { YsCardView } from "./cardView";
 import { YsColumnConfigDialog } from "./columnConfigDialog";
 import { YsContextMenu, type YsContextMenuState } from "./contextMenu";
 import { YsExportExcelDialog } from "./exportExcelDialog";
+import { YsCollectDataDialog } from "./collectDataDialog";
 import { YsListView } from "./listView";
 import { rowActionsColumn } from "./rowActionsColumn";
 import "./table.css";
@@ -45,6 +47,8 @@ type RowRecord = Record<string, unknown>;
 const DEFAULT_PAGE_SIZE = 20;
 const DEFAULT_PAGE_SIZES = [10, 20, 50, 100];
 const DEFAULT_EXPORT_PAGE_SIZE = 1000;
+const DEFAULT_COLLECT_PAGE_SIZE = 1000;
+const DEFAULT_MAX_COLLECT_COUNT = 10000;
 
 /** 选中提示条插槽上下文（供外部自实现选中提示条） */
 export interface YsSelectionBarContext {
@@ -75,6 +79,11 @@ export interface YsTableProps {
   saveCustomConfigFun?: CoreTableProps["saveCustomConfigFun"];
   exportPageSize?: number;
   exportorFunc?: CoreTableProps["exportorFunc"];
+  collectPageSize?: number;
+  maxCollectCount?: number;
+  collectorFunc?: CoreTableProps["collectorFunc"];
+  /** 收集数据对话框标题，默认「收集数据」 */
+  collectorTitle?: string;
   rowKey?: string;
   viewMode?: ViewMode;
   /** 每次 dataFun 成功返回后触发，携带本次加载的分页结果 */
@@ -124,6 +133,8 @@ export const YsTable = forwardRef<TableApi, YsTableProps>(function YsTable(props
   const pageSizes = props.pageSizes ?? DEFAULT_PAGE_SIZES;
   const rowKey = props.rowKey ?? "id";
   const exportPageSize = props.exportPageSize ?? DEFAULT_EXPORT_PAGE_SIZE;
+  const collectPageSize = props.collectPageSize ?? DEFAULT_COLLECT_PAGE_SIZE;
+  const maxCollectCount = props.maxCollectCount ?? DEFAULT_MAX_COLLECT_COUNT;
 
   /** 最新 props 快照：供内部稳定回调读取父级最新传参 */
   const propsRef = useRef(props);
@@ -252,6 +263,30 @@ export const YsTable = forwardRef<TableApi, YsTableProps>(function YsTable(props
     selectedRows,
     total,
     exportPageSize,
+    hasMorePage: showPagination,
+  });
+
+  /* ---------------- 收集数据（useCollectData） ---------------- */
+  const {
+    collectOptions,
+    collectDialogVisible,
+    collecting,
+    collectFetched,
+    collectTotal,
+    collectTotalKnown,
+    collectEtaSeconds,
+    collectPercent,
+    onCollectClick: openCollectDialog,
+    closeCollectDialog,
+    doCollect,
+    cancelCollect,
+  } = useCollectData({
+    props: { dataFun: props.dataFun, collectorFunc: props.collectorFunc, maxCollectCount },
+    selectable: currentShowCheckbox,
+    currentRows: rows,
+    selectedRows,
+    total,
+    collectPageSize,
     hasMorePage: showPagination,
   });
 
@@ -607,6 +642,7 @@ export const YsTable = forwardRef<TableApi, YsTableProps>(function YsTable(props
     invertSelectionOnPage,
     openConfigDialog,
     openExportDialog,
+    openCollectDialog,
   };
 
   /**
@@ -794,6 +830,22 @@ export const YsTable = forwardRef<TableApi, YsTableProps>(function YsTable(props
         onKeepPartial={() => void keepPartialExport()}
         onDiscardPartial={() => void discardPartialExport()}
         onClose={closeExportDialog}
+      />
+
+      <YsCollectDataDialog
+        open={collectDialogVisible}
+        title={props.collectorTitle}
+        options={collectOptions}
+        collecting={collecting}
+        fetched={collectFetched}
+        total={collectTotal}
+        totalKnown={collectTotalKnown}
+        percent={collectPercent}
+        etaSeconds={collectEtaSeconds}
+        maxCount={Math.max(1, Math.floor(maxCollectCount))}
+        onCollect={(scope) => void doCollect(scope)}
+        onCancelCollect={cancelCollect}
+        onClose={closeCollectDialog}
       />
     </div>
   );

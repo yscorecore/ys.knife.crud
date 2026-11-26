@@ -9,6 +9,7 @@ import type {
 } from "@ys-knife-crud/core";
 import { useDefault, useRowActions, useSelection, visibleActions, isEnabled } from "@ys-knife-crud/vue";
 import ExportExcelDialog from "./exportExcelDialog.vue";
+import CollectDataDialog from "./collectDataDialog.vue";
 import ColumnConfigDialog from "./columnConfigDialog.vue";
 import RowActionsColumn from "./rowActionsColumn.vue";
 import CardView from "./cardView.vue";
@@ -68,6 +69,14 @@ const props = defineProps({
    *  缺省使用内置 ExcelJS 实现（createExcelJsExportApiFunc）；
    *  将来可替换为其它实现（CSV、服务端导出等），组件无需改动 */
   exportorFunc: { type: Function as PropType<NonNullable<CoreTableProps["exportorFunc"]>>, required: false },
+  /** 收集数据回调；未传时「收集数据」能力不可用（openCollectDialog 为空操作） */
+  collectorFunc: { type: Function as PropType<NonNullable<CoreTableProps["collectorFunc"]>>, required: false },
+  /** 收集数据对话框标题，默认「收集数据」；可按业务语义自定义，如「打印出库」 */
+  collectorTitle: { type: String, required: false },
+  /** 收集「所有数据」时每次分页拉取的条数，默认 1000（独立于界面分页大小） */
+  collectPageSize: { type: Number, default: 1000 },
+  /** 单次收集的条数上限，达到即截断并回调，默认 10000 */
+  maxCollectCount: { type: Number, default: 10000 },
   /** 行 key，默认 "id" */
   rowKey: { type: String, default: "id" },
   /**
@@ -180,6 +189,9 @@ const customConfigLoading = computed(() => configDialogRef.value?.customConfigLo
 
 /** 导出对话框实例引用（按钮经 ref 调 openExportDialog() 触发导出入口） */
 const exportDialogRef = ref<{ openExportDialog: () => void } | null>(null);
+
+/** 收集数据对话框实例引用（经 ref 调 openCollectDialog() 触发收集入口） */
+const collectDialogRef = ref<{ openCollectDialog: () => void } | null>(null);
 
 /* ---------------- 数据加载与分页（依赖 innerPageSize，故留本组件） ---------------- */
 
@@ -418,6 +430,14 @@ function openExportDialog(): void {
   exportDialogRef.value?.openExportDialog();
 }
 
+/**
+ * 打开内置「收集数据」对话框——委托 CollectDataDialog 的 openCollectDialog。
+ * Table 不渲染入口按钮，由外部自实现按钮经此入口打开。
+ */
+function openCollectDialog(): void {
+  collectDialogRef.value?.openCollectDialog();
+}
+
 /** 卡片 checkbox 勾选：el-checkbox change 值（string|number|boolean）归一为 boolean 后写入选中集合 */
 function onCardCheck(row: Record<string, unknown>, checked: string | number | boolean): void {
   toggleRowSelection(row, Boolean(checked));
@@ -493,6 +513,7 @@ const exposed = {
   invertSelectionOnPage,
   openConfigDialog,
   openExportDialog,
+  openCollectDialog,
 } satisfies ExposedShape;
 
 defineExpose(exposed);
@@ -525,6 +546,7 @@ const tableApi: TableApi = {
   invertSelectionOnPage,
   openConfigDialog,
   openExportDialog,
+  openCollectDialog,
 }
 </script>
 
@@ -637,6 +659,14 @@ const tableApi: TableApi = {
       :exportor-func="props.exportorFunc"
       :table-name="meta?.displayName ?? '数据'" :columns="columns" :has-more-page="showPagination"
       :export-selected="currentShowCheckbox" />
+
+    <!-- 收集数据对话框：始终挂载，Table 不渲染入口按钮，外部经 openCollectDialog() 打开。
+         分页逐页拉取完成后由 useCollectData 调 collectorFunc 交出原始行对象数组 -->
+    <CollectDataDialog ref="collectDialogRef" :current-rows="rows" :selected-rows="selectedRows"
+      :data-fun="props.dataFun" :collect-page-size="props.collectPageSize"
+      :max-collect-count="props.maxCollectCount" :collector-func="props.collectorFunc"
+      :collector-title="props.collectorTitle"
+      :total="total" :has-more-page="showPagination" :selectable="currentShowCheckbox" />
 
     <!-- 列设置对话框（内部自管 useCustomConfig；始终挂载，columns 也来自它——
          customConfig 的 width 直接写在 col.width 上，表格读 col.width 即可；

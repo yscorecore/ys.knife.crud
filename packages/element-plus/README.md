@@ -132,6 +132,10 @@ All props of the three wrapped components are **flattened** onto `YsTablePage` (
 | `saveCustomConfigFun` | `saveCustomConfigFunc` | — | Persist column config / default page size. |
 | `exportPageSize` | `number` | `1000` | Page size used while streaming "export all". |
 | `exportorFunc` | `ExportApiFunc` | — | Export implementation factory (e.g. `createExcelJsExportApiFunc()`). Falls back to a console stub. |
+| `collectorFunc` | `CollectorFunc` | — | Collect callback: receives `(rows, { scope, truncated, maxCount })` once paging finishes. Enables the "收集数据" dialog via `openCollectDialog()`; omitted → capability disabled. |
+| `collectorTitle` | `string` | `"收集数据"` | Dialog title. The capability is a generic data-fetch channel — customize per business, e.g. `"打印出库"`. |
+| `collectPageSize` | `number` | `1000` | Page size used while collecting "all" data (independent of UI pagination). |
+| `maxCollectCount` | `number` | `10000` | Hard cap on collected rows; reaching it stops collection and sets `truncated: true`. |
 | `rowKey` | `string` | `"id"` | Row identity field (drives cross-page selection). |
 | `viewMode` | `"table" \| "card" \| "list"` | `"table"` | Active view. `v-model:view-mode`. |
 
@@ -201,6 +205,7 @@ const pageRef = ref<{
 
 pageRef.value?.table?.refresh();        // refresh current page (keeps filter/page)
 pageRef.value?.table?.openConfigDialog(); // open column-settings dialog
+pageRef.value?.table?.openCollectDialog(); // open "collect data" dialog (needs collectorFunc)
 pageRef.value?.filterPanel?.mode.value;   // read current filter mode
 ```
 

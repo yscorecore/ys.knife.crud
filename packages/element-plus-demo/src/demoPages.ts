@@ -12,6 +12,7 @@ import CustomTablePage from "./pages/table/CustomTablePage.vue";
 import ComboTablePage from "./pages/table/ComboTablePage.vue";
 import ExportTablePage from "./pages/table/ExportTablePage.vue";
 import CustomExportTablePage from "./pages/table/CustomExportTablePage.vue";
+import CollectDataTablePage from "./pages/table/CollectDataTablePage.vue";
 import DataLoadedTablePage from "./pages/table/DataLoadedTablePage.vue";
 import ColumnWidthTablePage from "./pages/table/ColumnWidthTablePage.vue";
 import ColumnRenderTablePage from "./pages/table/ColumnRenderTablePage.vue";
@@ -89,6 +90,11 @@ export const demoPages = [
     id: "table-custom-export",
     label: "自定义列 + 导出 Excel（外部列设置 + 外部导出）",
     component: CustomExportTablePage,
+  },
+  {
+    id: "table-collect-data",
+    label: "取数能力：打印出库（collectorTitle 自定义 + 分页收集）",
+    component: CollectDataTablePage,
   },
   {
     id: "table-data-loaded",

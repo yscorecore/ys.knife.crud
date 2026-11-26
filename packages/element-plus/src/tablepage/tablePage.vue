@@ -35,6 +35,11 @@ const props = defineProps({
   saveCustomConfigFun: { type: Function as PropType<NonNullable<CoreTableProps["saveCustomConfigFun"]>>, required: false },
   exportPageSize: { type: Number, default: 1000 },
   exportorFunc: { type: Function as PropType<NonNullable<CoreTableProps["exportorFunc"]>>, required: false },
+  collectorFunc: { type: Function as PropType<NonNullable<CoreTableProps["collectorFunc"]>>, required: false },
+  /** 收集数据对话框标题，默认「收集数据」 */
+  collectorTitle: { type: String, required: false },
+  collectPageSize: { type: Number, default: 1000 },
+  maxCollectCount: { type: Number, default: 10000 },
   rowKey: { type: String, default: "id" },
   viewMode: { type: String as PropType<ViewMode>, default: "table" },
   actions: { type: Array as PropType<TableAction[]>, default: () => [] },
@@ -93,6 +98,10 @@ const tableProps = computed(() => ({
   saveCustomConfigFun: props.saveCustomConfigFun,
   exportPageSize: props.exportPageSize,
   exportorFunc: props.exportorFunc,
+  collectorFunc: props.collectorFunc,
+  collectorTitle: props.collectorTitle,
+  collectPageSize: props.collectPageSize,
+  maxCollectCount: props.maxCollectCount,
   rowKey: props.rowKey,
   viewMode: props.viewMode,
 }));
