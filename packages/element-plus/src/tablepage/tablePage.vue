@@ -53,7 +53,7 @@ const props = defineProps({
   showQuickQuery: { type: Boolean, default: false },
   quickQueries: { type: Array as PropType<SavedQuery[]>, default: undefined },
   loadQuickQueryFun: { type: Function as PropType<() => Promise<SavedQuery[]>>, required: false },
-  saveQuickQueryFun: { type: Function as PropType<(query: SavedQuery) => Promise<void | SavedQuery>>, required: false },
+  saveQuickQueryFun: { type: Function as PropType<(queries: SavedQuery[]) => Promise<void | SavedQuery[]>>, required: false },
   singleLine: { type: Boolean, default: false },
 });
 

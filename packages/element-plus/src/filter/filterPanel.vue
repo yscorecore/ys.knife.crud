@@ -31,7 +31,8 @@ defineOptions({ name: "YsFilterPanel" });
  *   点击标签时按 group 现算 FilterInfo 并 emit('search', ...)，无需切到高级模式；
  *   quickQueries（v-model）与高级面板的 saved-queries 共享，在两种模式间持久
  * - loadQuickQueryFun / saveQuickQueryFun 提供时，组件自动异步加载/持久化快速查询
- *   （参考 table.vue 的 metaFun / dataFun 模式）；后端只需存 group + name + description，
+ *   （全量列表读写：每次新增或删除预设后整体覆盖保存，参考 table.vue 的 metaFun / dataFun 模式）；
+ *   后端只需存 group + name + description，
  *   FilterInfo 是带原型方法的类实例、不参与持久化（JSON 往返会丢失 toString/isEmpty），
  *   每次点击标签时按 advancedColumns 重算
  *
@@ -75,11 +76,12 @@ const props = defineProps({
     required: false,
   },
   /**
-   * 异步保存快速查询（如持久化到后端）。
-   * 高级模式点「保存」新增预设时自动调用；返回值若为 SavedQuery 则替换本地（如后端分配了 id）。
+   * 异步保存快速查询（如持久化到后端）。与 loadQuickQueryFun 对称：入参是完整列表，
+   * 每次新增或删除预设后全量覆盖保存（无需增删 diff）。
+   * 返回值若为 SavedQuery[] 则替换本地列表（如后端回写了真实 id）。
    */
   saveQuickQueryFun: {
-    type: Function as PropType<(query: SavedQuery) => Promise<void | SavedQuery>>,
+    type: Function as PropType<(queries: SavedQuery[]) => Promise<void | SavedQuery[]>>,
     required: false,
   },
   /**
@@ -159,36 +161,20 @@ function onAdvancedReset(): void {
   emit("reset");
 }
 
-/* 高级面板 saved-queries 更新 → 检测新增项 → 调 saveQuickQueryFun 持久化 → 写入 v-model */
+/* 高级面板 saved-queries 更新（新增或删除）→ 全量调 saveQuickQueryFun 持久化 → 写入 v-model */
 async function onSavedQueriesUpdate(queries: SavedQuery[]): Promise<void> {
-  // 检测新增的查询（id 不在当前列表中）
-  const currentIds = new Set(quickQueriesState.value.map((q) => q.id));
-  const newQueries = queries.filter((q) => !currentIds.has(q.id));
-
-  if (props.saveQuickQueryFun && newQueries.length > 0) {
-    // 逐个调用 saveQuickQueryFun 持久化；若返回 SavedQuery 则替换（如后端分配了 id）
-    const persisted: SavedQuery[] = [];
-    for (const nq of newQueries) {
-      try {
-        const result = await props.saveQuickQueryFun(nq);
-        persisted.push(result ?? nq);
-      } catch {
-        ElMessage.error(`保存快速查询「${nq.name}」失败`);
-        persisted.push(nq); // 失败仍保留本地
-      }
+  let next = queries;
+  if (props.saveQuickQueryFun) {
+    try {
+      const saved = await props.saveQuickQueryFun(queries);
+      // 返回值若是列表则替换（如后端回写真实 id）；失败仍保留本地列表
+      if (Array.isArray(saved)) next = saved;
+    } catch {
+      ElMessage.error("保存快速查询失败");
     }
-    // 用持久化后的查询替换新增项
-    let result = queries;
-    if (persisted.some((p, i) => p !== newQueries[i])) {
-      const map = new Map(newQueries.map((nq, i) => [nq.id, persisted[i] ?? nq]));
-      result = queries.map((q) => map.get(q.id) ?? q);
-    }
-    internalQuickQueries.value = result;
-    emit("update:quickQueries", result);
-  } else {
-    internalQuickQueries.value = queries;
-    emit("update:quickQueries", queries);
   }
+  internalQuickQueries.value = next;
+  emit("update:quickQueries", next);
 }
 
 /* ---- FilterInfo 现算：SavedQuery 只存条件树 group，FilterInfo 不参与持久化

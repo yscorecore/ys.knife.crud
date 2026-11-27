@@ -159,7 +159,7 @@ All props of the three wrapped components are **flattened** onto `YsTablePage` (
 | `showQuickQuery` | `boolean` | `false` | Show saved-query tags in simple mode. |
 | `quickQueries` | `SavedQuery[]` | `undefined` | Saved-query list. `v-model:quick-queries`. |
 | `loadQuickQueryFun` | `() => Promise<SavedQuery[]>` | — | Async loader for saved queries (auto-called on mount). |
-| `saveQuickQueryFun` | `(q: SavedQuery) => Promise<void \| SavedQuery>` | — | Async persister for new saved queries. |
+| `saveQuickQueryFun` | `(queries: SavedQuery[]) => Promise<void \| SavedQuery[]>` | — | Async full-list persister, called after every add/delete. |
 | `singleLine` | `boolean` | `false` | Collapse overflow filter items into one line with an expand toggle. |
 
 ### Events

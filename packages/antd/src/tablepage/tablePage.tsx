@@ -78,7 +78,7 @@ export interface YsTablePageProps {
   showQuickQuery?: boolean;
   quickQueries?: SavedQuery[];
   loadQuickQueryFun?: () => Promise<SavedQuery[]>;
-  saveQuickQueryFun?: (query: SavedQuery) => Promise<void | SavedQuery>;
+  saveQuickQueryFun?: (queries: SavedQuery[]) => Promise<void | SavedQuery[]>;
   singleLine?: boolean;
 
   /** 查询回调（替代 search 事件） */

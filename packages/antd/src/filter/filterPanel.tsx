@@ -176,10 +176,10 @@ export interface FilterPanelProps {
   showQuickQuery?: boolean;
   /** 快速查询列表（替代 v-model:quick-queries） */
   quickQueries?: SavedQuery[];
-  /** 异步加载快速查询列表 */
+  /** 异步加载快速查询列表（读） */
   loadQuickQueryFun?: () => Promise<SavedQuery[]>;
-  /** 异步保存快速查询 */
-  saveQuickQueryFun?: (query: SavedQuery) => Promise<void | SavedQuery>;
+  /** 异步保存快速查询（写）：每次新增或删除后全量覆盖保存 */
+  saveQuickQueryFun?: (queries: SavedQuery[]) => Promise<void | SavedQuery[]>;
   /** 单行模式 */
   singleLine?: boolean;
   /** 默认插槽（filter items） */
@@ -267,31 +267,22 @@ export const YsFilterPanel = forwardRef<FilterPanelHandle, FilterPanelProps>(
       props.onUpdateQuickQueries?.(queries);
     };
 
-    /** 高级面板 saved-queries 更新 → 检测新增项 → 持久化 → 写入列表 */
+    /**
+     * 高级面板 saved-queries 更新（新增或删除）→ 全量调用 saveQuickQueryFun 持久化 → 写入列表。
+     * 读（loadQuickQueryFun）/ 写（saveQuickQueryFun）都以完整列表为单位，无需再做增删 diff。
+     */
     const onSavedQueriesUpdate = async (queries: SavedQuery[]): Promise<void> => {
-      const currentIds = new Set(quickQueriesState.map((q) => q.id));
-      const newQueries = queries.filter((q) => !currentIds.has(q.id));
-
-      if (props.saveQuickQueryFun && newQueries.length > 0) {
-        const persisted: SavedQuery[] = [];
-        for (const nq of newQueries) {
-          try {
-            const result = await props.saveQuickQueryFun(nq);
-            persisted.push(result ?? nq);
-          } catch {
-            message.error(`保存快速查询「${nq.name}」失败`);
-            persisted.push(nq);
-          }
+      let next = queries;
+      if (props.saveQuickQueryFun) {
+        try {
+          const saved = await props.saveQuickQueryFun(queries);
+          // 返回值若是列表则替换（如后端回写真实 id）；失败仍保留本地列表
+          if (Array.isArray(saved)) next = saved;
+        } catch {
+          message.error("保存快速查询失败");
         }
-        let result = queries;
-        if (persisted.some((p, i) => p !== newQueries[i])) {
-          const map = new Map(newQueries.map((nq, i) => [nq.id, persisted[i] ?? nq]));
-          result = queries.map((q) => map.get(q.id) ?? q);
-        }
-        commitQuickQueries(result);
-      } else {
-        commitQuickQueries(queries);
       }
+      commitQuickQueries(next);
     };
 
     // 挂载时自动加载已存查询；回填只接收条件对象（group），FilterInfo 点击标签时现算。
@@ -302,8 +293,7 @@ export const YsFilterPanel = forwardRef<FilterPanelHandle, FilterPanelProps>(
         .loadQuickQueryFun()
         .then((loaded) => {
           if (cancelled) return;
-          setInternalQuickQueries(loaded);
-          props.onUpdateQuickQueries?.(loaded);
+          commitQuickQueries(loaded);
         })
         .catch(() => {
           if (!cancelled) message.error("加载快速查询失败");
