@@ -179,6 +179,25 @@ const configDialogRef = ref<{
 /** 最终显示列（已含 meta/customConfig 两层过滤与排序，customConfig 的 width 也写在 col.width 上），对话框挂载前为空 */
 const columns = computed(() => configDialogRef.value?.columns ?? []);
 
+/** 未配置列宽时的估算宽度（与 el-table-column 默认最小宽度一致） */
+const DEFAULT_COLUMN_WIDTH = 120;
+
+/**
+ * 表格最小宽度 = 数据列（未配置宽度按 120）+ 勾选列 48 + 操作列（按按钮数估算）。
+ * 列多到放不下时由 .yk-table__view-area 横向滚动：el-table 的 body-wrapper 是
+ * overflow:hidden，自身不会给出可用的横向滚动条，右侧列会被直接裁掉；
+ * 因此把表格整体撑到最小宽度，交给外层滚动容器统一出横向滚动条。
+ */
+const tableMinWidth = computed(() => {
+  const dataWidth = columns.value.reduce(
+    (sum, col) => sum + (Number(col.width) || DEFAULT_COLUMN_WIDTH),
+    0,
+  );
+  const actionCount = actions.value.length;
+  const actionsWidth = actionCount > 0 ? actionCount * 34 + (actionCount - 1) * 12 + 30 : 0;
+  return dataWidth + actionsWidth + (currentShowCheckbox.value ? 48 : 0);
+});
+
 /**
  * 当前生效的每页条数：优先取 ColumnConfigDialog 暴露的 defaultPageSize
  * （用户保存的默认值——由 loadCustomConfigs 加载、updateDefaultPageSize 写入），
@@ -575,30 +594,33 @@ const tableApi: TableApi = {
            把跨页累计选中恢复到勾选列（选中状态以 rowKey Map 为准，不再用 reserve-selection） -->
       <div v-if="currentViewMode === 'table'" class="yk-table__table-wrap"
         :class="{ 'yk-table__table-wrap--sticky-header': currentStickyHeader }">
-        <el-table ref="tableEl" :data="rows"
-          :row-key="rowKey" border @selection-change="onSelectionChange" @header-dragend="onColumnResize">
-          <!-- 空数据提示：使用者经 #empty 插槽自定义（表格/卡片/列表三种视图共享，见下方两个视图分支）；
-               仅在使用者提供了插槽时才声明，否则保留 el-table 默认的「暂无数据」空态 -->
-          <template v-if="$slots.empty" #empty>
-            <slot name="empty" />
-          </template>
-          <!-- 勾选列：跨页保留由 useSelection 的 rowKey Map 受控维护，表头 checkbox 全选/取消全选当前页。
-               不绑 resizable——EP 对 type=selection 固定宽列默认不可拖，显式绑 true 反而会放开 -->
-          <el-table-column v-if="currentShowCheckbox" type="selection" width="48" />
-          <!-- 数据列：col.render 优先（返回字符串/VNode 均可，经函数式组件呈现），
-               缺省时退到 col.formatter / 全局默认 formatter 的文本值，
-               都没有则走默认的 propertyPath 取值显示。
-               resizable 跟随列宽拖动开关（el-table-column 默认 true，需显式透传才能关） -->
-          <el-table-column v-for="col in columns" :key="col.propertyPath" :prop="col.propertyPath" :label="col.displayName"
-            :width="col.width" :resizable="currentColumnResizable" show-overflow-tooltip>
-            <template v-if="getCellRender(col) || col.formatter || getDefaultFormatter(col)" #default="{ row }">
-              <component :is="() => cellContent(col, row)" />
+        <!-- 最小宽度承载层：列多时撑开表格，由 view-area 横向滚动（el-table 自身不出横向滚动条） -->
+        <div class="yk-table__table-inner" :style="{ minWidth: `${tableMinWidth}px` }">
+          <el-table ref="tableEl" :data="rows"
+            :row-key="rowKey" border @selection-change="onSelectionChange" @header-dragend="onColumnResize">
+            <!-- 空数据提示：使用者经 #empty 插槽自定义（表格/卡片/列表三种视图共享，见下方两个视图分支）；
+                 仅在使用者提供了插槽时才声明，否则保留 el-table 默认的「暂无数据」空态 -->
+            <template v-if="$slots.empty" #empty>
+              <slot name="empty" />
             </template>
-          </el-table-column>
-          <!-- 行操作列：actions 状态归 Table 所有（视图切换往返不丢失；卡片右键菜单共用） -->
-          <RowActionsColumn v-if="props.rowActionsFunc" :actions="actions" :table="tableApi"
-            :resizable="currentColumnResizable" />
-        </el-table>
+            <!-- 勾选列：跨页保留由 useSelection 的 rowKey Map 受控维护，表头 checkbox 全选/取消全选当前页。
+                 不绑 resizable——EP 对 type=selection 固定宽列默认不可拖，显式绑 true 反而会放开 -->
+            <el-table-column v-if="currentShowCheckbox" type="selection" width="48" />
+            <!-- 数据列：col.render 优先（返回字符串/VNode 均可，经函数式组件呈现），
+                 缺省时退到 col.formatter / 全局默认 formatter 的文本值，
+                 都没有则走默认的 propertyPath 取值显示。
+                 resizable 跟随列宽拖动开关（el-table-column 默认 true，需显式透传才能关） -->
+            <el-table-column v-for="col in columns" :key="col.propertyPath" :prop="col.propertyPath"
+              :label="col.displayName" :width="col.width" :resizable="currentColumnResizable" show-overflow-tooltip>
+              <template v-if="getCellRender(col) || col.formatter || getDefaultFormatter(col)" #default="{ row }">
+                <component :is="() => cellContent(col, row)" />
+              </template>
+            </el-table-column>
+            <!-- 行操作列：actions 状态归 Table 所有（视图切换往返不丢失；卡片右键菜单共用） -->
+            <RowActionsColumn v-if="props.rowActionsFunc" :actions="actions" :table="tableApi"
+              :resizable="currentColumnResizable" />
+          </el-table>
+        </div>
       </div>
 
       <!-- 卡片视图：渲染委托 CardView；#card / #empty 插槽透传，未提供时由子组件兜底。

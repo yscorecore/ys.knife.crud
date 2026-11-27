@@ -705,6 +705,27 @@ export const YsTable = forwardRef<TableApi, YsTableProps>(function YsTable(props
   const actionsColumn = rowActionsColumn({ actions, table: tableApi });
   if (actionsColumn) antdColumns.push(actionsColumn);
 
+  /** 未配置列宽时的估算宽度 */
+  const DEFAULT_COLUMN_WIDTH = 120;
+  const actionsWidth =
+    actions.length > 0 ? actions.length * 34 + (actions.length - 1) * 12 + 30 : 0;
+  /**
+   * 表格最小宽度 = 数据列（未配置宽度按 120）+ 勾选列 48 + 操作列（按按钮数估算）。
+   * 列多到放不下时由 .yk-table__view-area 横向滚动：antd 在未设 scroll.x 时会把
+   * 所有列压进容器宽度，不会产生横向滚动条；因此把表格整体撑到最小宽度，
+   * 交给外层滚动容器统一出横向滚动条。
+   */
+  const tableMinWidth =
+    columns.reduce((sum, col) => {
+      const width =
+        dragWidth?.propertyPath === col.propertyPath
+          ? dragWidth.width
+          : parseColumnWidth(col.width);
+      return sum + (width || DEFAULT_COLUMN_WIDTH);
+    }, 0) +
+    actionsWidth +
+    (currentShowCheckbox ? 48 : 0);
+
   const rowSelection = currentShowCheckbox
     ? {
         selectedRowKeys: selectedRowKeys as Key[],
@@ -740,15 +761,18 @@ export const YsTable = forwardRef<TableApi, YsTableProps>(function YsTable(props
           <div
             className={`yk-table__table-wrap${currentStickyHeader ? " yk-table__table-wrap--sticky-header" : ""}`}
           >
-            <Table<RowRecord>
-              columns={antdColumns}
-              dataSource={rows}
-              rowKey={rowKey}
-              bordered
-              pagination={false}
-              rowSelection={rowSelection}
-              locale={{ emptyText: props.empty ?? <Empty description="暂无数据" /> }}
-            />
+            {/* 最小宽度承载层：列多时撑开表格，由 view-area 横向滚动 */}
+            <div className="yk-table__table-inner" style={{ minWidth: tableMinWidth }}>
+              <Table<RowRecord>
+                columns={antdColumns}
+                dataSource={rows}
+                rowKey={rowKey}
+                bordered
+                pagination={false}
+                rowSelection={rowSelection}
+                locale={{ emptyText: props.empty ?? <Empty description="暂无数据" /> }}
+              />
+            </div>
           </div>
         ) : currentViewMode === "card" ? (
           <YsCardView

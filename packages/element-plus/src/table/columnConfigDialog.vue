@@ -87,18 +87,20 @@ defineExpose({
     title="列设置"
     width="480px"
   >
-    <div v-for="(d, i) in draftColumns" :key="d.propertyPath" class="col-config-row">
-      <el-checkbox v-model="d.visible" class="col-config-name">{{ d.displayName }}</el-checkbox>
-      <el-input v-model="d.width" class="col-config-width" placeholder="宽度(如 120)" size="small" />
-      <el-button link type="primary" :disabled="i === 0" @click="moveDraft(i, -1)">上移</el-button>
-      <el-button
-        link
-        type="primary"
-        :disabled="i === draftColumns.length - 1"
-        @click="moveDraft(i, 1)"
-      >
-        下移
-      </el-button>
+    <div class="col-config-list">
+      <div v-for="(d, i) in draftColumns" :key="d.propertyPath" class="col-config-row">
+        <el-checkbox v-model="d.visible" class="col-config-name">{{ d.displayName }}</el-checkbox>
+        <el-input v-model="d.width" class="col-config-width" placeholder="宽度(如 120)" size="small" />
+        <el-button link type="primary" :disabled="i === 0" @click="moveDraft(i, -1)">上移</el-button>
+        <el-button
+          link
+          type="primary"
+          :disabled="i === draftColumns.length - 1"
+          @click="moveDraft(i, 1)"
+        >
+          下移
+        </el-button>
+      </div>
     </div>
     <template #footer>
       <el-button @click="resetDraft">重置</el-button>
@@ -109,6 +111,12 @@ defineExpose({
 </template>
 
 <style scoped>
+/* 列很多时列表内部滚动：对话框总高度封顶，滚动条不出现在弹窗外层 */
+.col-config-list {
+  max-height: 60vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 .col-config-row {
   display: flex;
   align-items: center;
