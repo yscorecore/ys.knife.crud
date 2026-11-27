@@ -7,8 +7,11 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import { Button, Modal, Tag, Tooltip, message } from "antd";
-import { con } from "ys.knife.query.js";
 import {
+  // con / filter / FilterInfo 等必须与 core 取自同一份 ys.knife.query.js：
+  // antd 产物曾把该库打成副本，混用两份实例会让 Constant 的 instanceof 判定失败，
+  // 被包成 Expression 后 toString 抛 Cannot convert object to primitive value。
+  con,
   FilterInfo,
   Operator,
   emptyFilter,

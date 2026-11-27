@@ -30,6 +30,9 @@ export default defineConfig({
         "dayjs",
         "@ys-knife-crud/core",
         "@ys-knife-crud/react",
+        // 查询表达式库必须外部化：一旦被打进产物，就会与 core 内部那份形成两个
+        // Constant/FilterInfo 类实例，instanceof 判定失败后 toString 直接抛异常。
+        "ys.knife.query.js",
       ],
     },
     sourcemap: true,

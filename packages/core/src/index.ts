@@ -26,6 +26,9 @@ export {
   // 单条件 FilterInfo 工厂函数（vue 包的 useFilterItem 用这些构造每个 item 的 FilterInfo）
   filter,
   emptyFilter,
+  // Constant 包装：显式具名导出，避免 `export *` 经 CJS interop 时在部分打包器
+  // （如 Vite dev 的依赖预构建）里拿不到该具名导出
+  con,
 } from "ys.knife.query.js";
 
 export type { PageReq, PagedList,PageFunc } from "ys.knife.query.js";
