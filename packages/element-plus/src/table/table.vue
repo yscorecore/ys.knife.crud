@@ -8,6 +8,7 @@ import type {
   TableProps as CoreTableProps,
   ViewMode,
 } from "@ys-knife-crud/core";
+import { formatCellValue, getCellRender, getDefaultFormatter } from "@ys-knife-crud/core";
 import { useDefault, useRowActions, useSelection, visibleActions, isEnabled } from "@ys-knife-crud/vue";
 import ExportExcelDialog from "./exportExcelDialog.vue";
 import CollectDataDialog from "./collectDataDialog.vue";
@@ -439,11 +440,13 @@ function openCollectDialog(options?: CollectOpenOptions): void {
   collectDialogRef.value?.openCollectDialog(options);
 }
 
-/** 单元格内容：render 优先，缺省用 formatter；二者都无时不进此函数（默认 propertyPath 取值） */
+/** 单元格内容：render 优先（列 render 或默认 render 工厂），缺省用格式化值。
+ *  列无 render/formatter 且未注册默认 formatter/render 时不进此函数（默认 propertyPath 取值） */
 function cellContent(col: Column, row: Record<string, unknown>): unknown {
   const value = row[col.propertyPath];
-  const formatted = col.formatter ? col.formatter(row, value) : value;
-  if (col.render) return col.render(row, value, formatted);
+  const formatted = formatCellValue(col, row);
+  const render = getCellRender(col);
+  if (render) return render(row, value, formatted, col);
   return formatted;
 }
 
@@ -583,11 +586,12 @@ const tableApi: TableApi = {
                不绑 resizable——EP 对 type=selection 固定宽列默认不可拖，显式绑 true 反而会放开 -->
           <el-table-column v-if="currentShowCheckbox" type="selection" width="48" />
           <!-- 数据列：col.render 优先（返回字符串/VNode 均可，经函数式组件呈现），
-               缺省时退到 col.formatter 的文本值，二者都无走默认的 propertyPath 取值显示。
+               缺省时退到 col.formatter / 全局默认 formatter 的文本值，
+               都没有则走默认的 propertyPath 取值显示。
                resizable 跟随列宽拖动开关（el-table-column 默认 true，需显式透传才能关） -->
           <el-table-column v-for="col in columns" :key="col.propertyPath" :prop="col.propertyPath" :label="col.displayName"
             :width="col.width" :resizable="currentColumnResizable" show-overflow-tooltip>
-            <template v-if="col.render || col.formatter" #default="{ row }">
+            <template v-if="getCellRender(col) || col.formatter || getDefaultFormatter(col)" #default="{ row }">
               <component :is="() => cellContent(col, row)" />
             </template>
           </el-table-column>

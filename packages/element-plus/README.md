@@ -209,6 +209,13 @@ pageRef.value?.table?.openCollectDialog(); // open "collect data" dialog (needs 
 // 传 { format: false } 可让 collectorFunc 拿到未格式化的原始值；
 // 默认（true）时，声明了 Column.formatter 的列会以格式化值进入回调结果，
 // 该 formatter 同时也作用于表格显示（render 优先）与导出 Excel。
+// 还可用 setDefaultFormatter((column) => (row, value, column) => ...) 注册默认 formatter 工厂：
+// 工厂根据当前 Column 返回 CellFormatter 或 null；返回 null 的列保持原值。
+// 优先级「列 formatter > 全局默认 > 原值」，显示 / 导出 / 收集三处共用。
+// 模块级全局、非响应式，只在应用初始化时调用一次；传 null 清除工厂。
+// 同理可注册默认 render 工厂（仅影响表格显示）：
+// setDefaultRender((column) => (row, value, formattedValue, column) => ...)
+// 列 render 优先，工厂返回 null 的列直接显示格式化值；同样只在初始化时调用一次。
 pageRef.value?.filterPanel?.mode.value;   // read current filter mode
 ```
 

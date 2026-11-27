@@ -23,6 +23,7 @@ import type {
   TableProps as CoreTableProps,
   ViewMode,
 } from "@ys-knife-crud/core";
+import { formatCellValue, getCellRender, getDefaultFormatter } from "@ys-knife-crud/core";
 import {
   isEnabled,
   useCustomConfig,
@@ -678,12 +679,13 @@ export const YsTable = forwardRef<TableApi, YsTableProps>(function YsTable(props
       title: col.displayName ?? col.propertyPath,
       width,
       ellipsis: true,
-      render: col.render
-        ? (value: unknown, record: RowRecord) =>
-            renderCell(col.render!(record, value, col.formatter ? col.formatter(record, value) : value))
-        : col.formatter
-          ? (value: unknown, record: RowRecord) => renderCell(col.formatter!(record, value))
-          : (value: unknown) => renderCell(value),
+      render: getCellRender(col) || col.formatter || getDefaultFormatter(col)
+        ? (value: unknown, record: RowRecord) => {
+            const formatted = formatCellValue(col, record);
+            const render = getCellRender(col);
+            return renderCell(render ? render(record, value, formatted, col) : formatted);
+          }
+        : (value: unknown) => renderCell(value),
       onHeaderCell: () => ({
         className: `yk-table__col-header${currentColumnResizable ? " yk-table__col-header--resizable" : ""}`,
         ...(currentColumnResizable

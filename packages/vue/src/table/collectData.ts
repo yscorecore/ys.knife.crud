@@ -1,4 +1,5 @@
 import { computed, onScopeDispose, ref, type Ref } from "vue";
+import { formatCellValue, getDefaultFormatter } from "@ys-knife-crud/core";
 import type {
   CollectOpenOptions,
   CollectorFunc,
@@ -91,14 +92,15 @@ export function useCollectData({
   /** 本次收集是否按 Column.formatter 格式化结果（openCollectDialog({format}) 控制，默认 true） */
   const formatValues = ref(true);
 
-  /** 格式化收集结果：保留原行全部字段，仅覆盖声明了 formatter 的列；format=false 时原样返回 */
+  /** 格式化收集结果：保留原行全部字段，仅覆盖声明了 formatter 的列；
+   *  注册了全局默认 formatter 时，未声明列 formatter 的列也一并转换；format=false 时原样返回 */
   function formatRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
     if (!formatValues.value) return rows;
-    const cols = columns.value.filter((c) => c.formatter);
+    const cols = columns.value.filter((c) => c.formatter || getDefaultFormatter(c));
     if (cols.length === 0) return rows;
     return rows.map((row) => {
       const out = { ...row };
-      for (const c of cols) out[c.propertyPath] = c.formatter!(row, row[c.propertyPath] ?? null);
+      for (const c of cols) out[c.propertyPath] = formatCellValue(c, row);
       return out;
     });
   }

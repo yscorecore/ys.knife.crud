@@ -23,6 +23,7 @@ const localMetaFun = constMetaFunc({
   columns: [
     { propertyPath: "id", displayName: "ID" },
     { propertyPath: "name", displayName: "姓名" },
+    { propertyPath: "email", displayName: "邮箱" },
     {
       propertyPath: "status",
       displayName: "状态",
@@ -59,7 +60,7 @@ const onCollect: CollectorFunc = (rows, info) => {
 <template>
   <DemoPageLayout
     title="取数能力：打印出库（collectorTitle 自定义标题 + formatter 值转换）"
-    hint="收集数据是通用「取数」通道：标题经 collectorTitle 自定义，选项与提示文案中性化。「状态」列由后台数字经 Column.formatter 转成中文——表格显示、导出 Excel、收集数据（默认 format=true）三处共用；点「打印原始数据」则经 openCollectDialog({ format: false }) 拿到未格式化的原始值。「所有数据」按 collectPageSize=100 逐页拉取 300 行，maxCollectCount=250 截断为 250 条。"
+    hint="收集数据是通用「取数」通道：标题经 collectorTitle 自定义，选项与提示文案中性化。「状态」列由后台数字经 Column.formatter 转成中文——表格显示、导出 Excel、收集数据（默认 format=true）三处共用；render 第三参 formattedValue 拿到格式化结果再加圆点。点「打印原始数据」则经 openCollectDialog({ format: false }) 拿未格式化原值。还可在应用启动时经 setDefaultFormatter((column) => ...) 按列提供默认实现；工厂返回 null 的列保持原值，仅在初始化时注册一次。「所有数据」按 collectPageSize=100 逐页拉取 300 行，maxCollectCount=250 截断为 250 条。"
     @back="$emit('back')"
   >
     <template #toolbar>
