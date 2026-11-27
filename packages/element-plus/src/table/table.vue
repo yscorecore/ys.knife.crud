@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, toRef, useSlots, watch, type PropType, type Ref } from "vue";
 import type {
   Action,
+  CollectOpenOptions,
   Column,
   TableApi,
   TableProps as CoreTableProps,
@@ -191,7 +192,7 @@ const customConfigLoading = computed(() => configDialogRef.value?.customConfigLo
 const exportDialogRef = ref<{ openExportDialog: () => void } | null>(null);
 
 /** 收集数据对话框实例引用（经 ref 调 openCollectDialog() 触发收集入口） */
-const collectDialogRef = ref<{ openCollectDialog: () => void } | null>(null);
+const collectDialogRef = ref<{ openCollectDialog: (options?: CollectOpenOptions) => void } | null>(null);
 
 /* ---------------- 数据加载与分页（依赖 innerPageSize，故留本组件） ---------------- */
 
@@ -434,8 +435,16 @@ function openExportDialog(): void {
  * 打开内置「收集数据」对话框——委托 CollectDataDialog 的 openCollectDialog。
  * Table 不渲染入口按钮，由外部自实现按钮经此入口打开。
  */
-function openCollectDialog(): void {
-  collectDialogRef.value?.openCollectDialog();
+function openCollectDialog(options?: CollectOpenOptions): void {
+  collectDialogRef.value?.openCollectDialog(options);
+}
+
+/** 单元格内容：render 优先，缺省用 formatter；二者都无时不进此函数（默认 propertyPath 取值） */
+function cellContent(col: Column, row: Record<string, unknown>): unknown {
+  const value = row[col.propertyPath];
+  const formatted = col.formatter ? col.formatter(row, value) : value;
+  if (col.render) return col.render(row, value, formatted);
+  return formatted;
 }
 
 /** 卡片 checkbox 勾选：el-checkbox change 值（string|number|boolean）归一为 boolean 后写入选中集合 */
@@ -573,13 +582,13 @@ const tableApi: TableApi = {
           <!-- 勾选列：跨页保留由 useSelection 的 rowKey Map 受控维护，表头 checkbox 全选/取消全选当前页。
                不绑 resizable——EP 对 type=selection 固定宽列默认不可拖，显式绑 true 反而会放开 -->
           <el-table-column v-if="currentShowCheckbox" type="selection" width="48" />
-          <!-- 数据列：col.render 存在时优先用自定义渲染（返回字符串/VNode 均可，
-               经函数式组件呈现），否则走默认的 propertyPath 取值显示。
+          <!-- 数据列：col.render 优先（返回字符串/VNode 均可，经函数式组件呈现），
+               缺省时退到 col.formatter 的文本值，二者都无走默认的 propertyPath 取值显示。
                resizable 跟随列宽拖动开关（el-table-column 默认 true，需显式透传才能关） -->
           <el-table-column v-for="col in columns" :key="col.propertyPath" :prop="col.propertyPath" :label="col.displayName"
             :width="col.width" :resizable="currentColumnResizable" show-overflow-tooltip>
-            <template v-if="col.render" #default="{ row }">
-              <component :is="() => col.render!(row, (row as Record<string, unknown>)[col.propertyPath])" />
+            <template v-if="col.render || col.formatter" #default="{ row }">
+              <component :is="() => cellContent(col, row)" />
             </template>
           </el-table-column>
           <!-- 行操作列：actions 状态归 Table 所有（视图切换往返不丢失；卡片右键菜单共用） -->
@@ -666,7 +675,7 @@ const tableApi: TableApi = {
     <CollectDataDialog ref="collectDialogRef" :current-rows="rows" :selected-rows="selectedRows"
       :data-fun="props.dataFun" :collect-page-size="props.collectPageSize"
       :max-collect-count="props.maxCollectCount" :collector-func="props.collectorFunc"
-      :collector-title="props.collectorTitle"
+      :collector-title="props.collectorTitle" :columns="columns"
       :total="total" :total-known="totalKnown" :has-more-page="showPagination" :selectable="currentShowCheckbox" />
 
     <!-- 列设置对话框（内部自管 useCustomConfig；始终挂载，columns 也来自它——

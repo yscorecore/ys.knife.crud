@@ -199,7 +199,19 @@ export interface TableApi {
      * 打开内置「收集数据」对话框（选择范围 → 分页收集 → 回调 collectorFunc）。
      * Table 不渲染入口按钮——由外部自实现按钮经此入口打开对话框。
      */
-    openCollectDialog(): void
+    /**
+     * 打开内置「收集数据」对话框（选择范围 → 分页收集 → 回调 collectorFunc）。
+     * Table 不渲染入口按钮——由外部自实现按钮经此入口打开对话框。
+     * options.format：是否按 Column.formatter 格式化收集结果，默认 true；
+     * 传 false 时回调拿到的是未格式化的原始行数据。
+     */
+    openCollectDialog(options?: CollectOpenOptions): void
+}
+
+/** openCollectDialog 的调用参数 */
+export interface CollectOpenOptions {
+    /** 是否按 Column.formatter 格式化收集结果，默认 true */
+    format?: boolean;
 }
 
 

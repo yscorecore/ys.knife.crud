@@ -206,6 +206,9 @@ const pageRef = ref<{
 pageRef.value?.table?.refresh();        // refresh current page (keeps filter/page)
 pageRef.value?.table?.openConfigDialog(); // open column-settings dialog
 pageRef.value?.table?.openCollectDialog(); // open "collect data" dialog (needs collectorFunc)
+// 传 { format: false } 可让 collectorFunc 拿到未格式化的原始值；
+// 默认（true）时，声明了 Column.formatter 的列会以格式化值进入回调结果，
+// 该 formatter 同时也作用于表格显示（render 优先）与导出 Excel。
 pageRef.value?.filterPanel?.mode.value;   // read current filter mode
 ```
 

@@ -3,6 +3,7 @@ import { computed, toRef } from "vue";
 import { useCollectData } from "@ys-knife-crud/vue";
 import type {
   CollectorFunc,
+  Column,
   PageFunc,
 } from "@ys-knife-crud/core";
 
@@ -38,6 +39,8 @@ const props = defineProps<{
   hasMorePage: boolean;
   /** 父级是否启用勾选列——决定「选中」选项是否出现 */
   selectable: boolean;
+  /** 界面列定义：openCollectDialog({format:true}) 时据此对声明了 formatter 的列做值转换 */
+  columns: Column[];
   /** 「page」范围的文案前缀；缺省「收集当前页数据」 */
   pageScopeLabel?: string;
 }>();
@@ -63,6 +66,7 @@ const {
   totalKnown: toRef(props, "totalKnown"),
   collectPageSize: toRef(props, "collectPageSize"),
   hasMorePage: toRef(props, "hasMorePage"),
+  columns: toRef(props, "columns"),
   pageScopeLabel: toRef(props, "pageScopeLabel"),
 });
 

@@ -1,6 +1,7 @@
 import { computed, onScopeDispose, ref, type Ref } from "vue";
 import {
   createConsoleExportApiFunc,
+  formatCellValue,
   type Column,
   type ExportApi,
   type ExportApiFunc,
@@ -156,9 +157,9 @@ export function useExportExcel({
     return createConsoleExportApiFunc()();
   }
 
-  /** 一行数据的导出值：严格按界面列顺序取 propertyPath */
+  /** 一行数据的导出值：严格按界面列顺序；列声明了 formatter 时优先用格式化值 */
   function exportRowValues(row: Record<string, unknown>): unknown[] {
-    return columns.value.map((c) => row[c.propertyPath] ?? null);
+    return columns.value.map((c) => formatCellValue(c, row));
   }
 
   /** 按范围导出：选中/当前页直接写；所有数据走逐页拉取边拉边写 */

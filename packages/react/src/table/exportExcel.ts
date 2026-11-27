@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   createConsoleExportApiFunc,
+  formatCellValue,
   type Column,
   type ExportApi,
   type ExportApiFunc,
@@ -143,9 +144,10 @@ export function useExportExcel(options: UseExportExcelOptions): UseExportExcelRe
     return createConsoleExportApiFunc()();
   }, []);
 
+  /** 一行数据的导出值：列声明了 formatter 时优先用格式化值，否则按 propertyPath 取原始值 */
   const exportRowValues = useCallback(
     (row: Record<string, unknown>): unknown[] =>
-      optionsRef.current.columns.map((c) => row[c.propertyPath] ?? null),
+      optionsRef.current.columns.map((c) => formatCellValue(c, row)),
     [],
   );
 

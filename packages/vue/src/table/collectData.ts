@@ -1,6 +1,8 @@
 import { computed, onScopeDispose, ref, type Ref } from "vue";
 import type {
+  CollectOpenOptions,
   CollectorFunc,
+  Column,
   ExportOption,
   ExportScope,
   PageFunc,
@@ -30,6 +32,8 @@ interface UseCollectDataOptions {
   collectPageSize: Ref<number>;
   /** 是否还有下一页（决定「所有数据」选项是否出现） */
   hasMorePage: Ref<boolean>;
+  /** 界面列定义：format=true 时据此对声明了 formatter 的列做值转换 */
+  columns: Ref<Column[]>;
   /** 「page」范围的文案前缀；缺省「当前页的数据」 */
   pageScopeLabel?: Ref<string | undefined>;
 }
@@ -50,6 +54,7 @@ export function useCollectData({
   totalKnown,
   collectPageSize,
   hasMorePage,
+  columns,
   pageScopeLabel,
 }: UseCollectDataOptions) {
   /** 生效的收集上限（至少 1，防御非法入参） */
@@ -83,6 +88,20 @@ export function useCollectData({
   });
 
   const collectDialogVisible = ref(false);
+  /** 本次收集是否按 Column.formatter 格式化结果（openCollectDialog({format}) 控制，默认 true） */
+  const formatValues = ref(true);
+
+  /** 格式化收集结果：保留原行全部字段，仅覆盖声明了 formatter 的列；format=false 时原样返回 */
+  function formatRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
+    if (!formatValues.value) return rows;
+    const cols = columns.value.filter((c) => c.formatter);
+    if (cols.length === 0) return rows;
+    return rows.map((row) => {
+      const out = { ...row };
+      for (const c of cols) out[c.propertyPath] = c.formatter!(row, row[c.propertyPath] ?? null);
+      return out;
+    });
+  }
   /** 「收集所有」进度状态 */
   const collecting = ref(false);
   const collectFetched = ref(0);
@@ -124,9 +143,11 @@ export function useCollectData({
     return collectFetched.value > 0 ? 99 : 0;
   });
 
-  /** 点击收集入口：未传 collectorFunc 时空操作；只剩一个可用选项时跳过对话框 */
-  function onCollectClick(): void {
+  /** 点击收集入口：未传 collectorFunc 时空操作；只剩一个可用选项时跳过对话框。
+   *  options.format 控制是否按 formatter 格式化结果，默认 true */
+  function onCollectClick(options?: CollectOpenOptions): void {
     if (!props.collectorFunc) return;
+    formatValues.value = options?.format !== false;
     const enabled = collectOptions.value.filter((o) => !o.disabled);
     if (enabled.length === 1) {
       void doCollect(enabled[0]!.value);
@@ -148,7 +169,7 @@ export function useCollectData({
     const max = maxCount();
     const truncated = source.length > max;
     const rows = (truncated ? source.slice(0, max) : source).slice();
-    await collector(rows, { scope, truncated, maxCount: max });
+    await collector(formatRows(rows), { scope, truncated, maxCount: max });
   }
 
   /** 收集所有：循环调 dataFun 累积到数组，带进度与取消、受 maxCollectCount 上限保护；
@@ -201,7 +222,7 @@ export function useCollectData({
     }
     // 用户取消：不回调
     if (collectCancelled) return;
-    await collector(collected, { scope: "all", truncated, maxCount: max });
+    await collector(formatRows(collected), { scope: "all", truncated, maxCount: max });
   }
 
   /** 取消「收集所有」：中断后续请求，不回调 */

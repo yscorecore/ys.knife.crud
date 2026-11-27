@@ -290,6 +290,7 @@ export const YsTable = forwardRef<TableApi, YsTableProps>(function YsTable(props
     totalKnown,
     collectPageSize,
     hasMorePage: showPagination,
+    columns,
   });
 
   const setViewMode = useCallback((mode: ViewMode): void => {
@@ -678,8 +679,11 @@ export const YsTable = forwardRef<TableApi, YsTableProps>(function YsTable(props
       width,
       ellipsis: true,
       render: col.render
-        ? (value: unknown, record: RowRecord) => renderCell(col.render!(record, value))
-        : (value: unknown) => renderCell(value),
+        ? (value: unknown, record: RowRecord) =>
+            renderCell(col.render!(record, value, col.formatter ? col.formatter(record, value) : value))
+        : col.formatter
+          ? (value: unknown, record: RowRecord) => renderCell(col.formatter!(record, value))
+          : (value: unknown) => renderCell(value),
       onHeaderCell: () => ({
         className: `yk-table__col-header${currentColumnResizable ? " yk-table__col-header--resizable" : ""}`,
         ...(currentColumnResizable

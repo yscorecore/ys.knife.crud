@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
+  CollectOpenOptions,
   CollectorFunc,
+  Column,
   ExportOption,
   ExportScope,
   PageFunc,
@@ -30,6 +32,8 @@ export interface UseCollectDataOptions {
   collectPageSize: number;
   /** 是否还有下一页（决定「所有数据」选项是否出现） */
   hasMorePage: boolean;
+  /** 界面列定义：format=true 时据此对声明了 formatter 的列做值转换 */
+  columns: Column[];
   /** 「page」范围的文案前缀；缺省「当前页的数据」 */
   pageScopeLabel?: string;
 }
@@ -43,7 +47,7 @@ export interface UseCollectDataResult {
   collectTotalKnown: boolean;
   collectEtaSeconds: number | null;
   collectPercent: number;
-  onCollectClick: () => void;
+  onCollectClick: (options?: CollectOpenOptions) => void;
   closeCollectDialog: () => void;
   doCollect: (scope: ExportScope) => Promise<void>;
   cancelCollect: () => void;
@@ -101,6 +105,20 @@ export function useCollectData(options: UseCollectDataOptions): UseCollectDataRe
   const collectAbort = useRef<AbortController | null>(null);
   const collectStartedAt = useRef(0);
   const etaTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  /** 本次收集是否按 Column.formatter 格式化结果（openCollectDialog({format}) 控制，默认 true） */
+  const formatValues = useRef(true);
+
+  /** 格式化收集结果：保留原行全部字段，仅覆盖声明了 formatter 的列；format=false 时原样返回 */
+  const formatRows = useCallback((rows: Record<string, unknown>[]): Record<string, unknown>[] => {
+    if (!formatValues.current) return rows;
+    const cols = optionsRef.current.columns.filter((c) => c.formatter);
+    if (cols.length === 0) return rows;
+    return rows.map((row) => {
+      const out = { ...row };
+      for (const c of cols) out[c.propertyPath] = c.formatter!(row, row[c.propertyPath] ?? null);
+      return out;
+    });
+  }, []);
 
   const stopEtaTimer = useCallback((): void => {
     if (etaTimer.current != null) {
@@ -180,9 +198,9 @@ export function useCollectData(options: UseCollectDataOptions): UseCollectDataRe
       }
       // 用户取消：不回调
       if (collectCancelled.current) return;
-      await collector(collected, { scope: "all", truncated, maxCount: max });
+      await collector(formatRows(collected), { scope: "all", truncated, maxCount: max });
     },
-    [maxCount, stopEtaTimer],
+    [maxCount, stopEtaTimer, formatRows],
   );
 
   /** 按范围收集：选中 / 当前页直接回调；所有数据走逐页拉取 */
@@ -201,14 +219,16 @@ export function useCollectData(options: UseCollectDataOptions): UseCollectDataRe
       const max = maxCount();
       const truncated = source.length > max;
       const rows = (truncated ? source.slice(0, max) : source).slice();
-      await collector(rows, { scope, truncated, maxCount: max });
+      await collector(formatRows(rows), { scope, truncated, maxCount: max });
     },
-    [collectAllStreaming, maxCount],
+    [collectAllStreaming, maxCount, formatRows],
   );
 
-  /** 点击收集入口：未传 collectorFunc 时空操作；只剩一个可用选项时跳过对话框 */
-  const onCollectClick = useCallback((): void => {
+  /** 点击收集入口：未传 collectorFunc 时空操作；只剩一个可用选项时跳过对话框。
+   *  options.format 控制是否按 formatter 格式化结果，默认 true */
+  const onCollectClick = useCallback((options?: CollectOpenOptions): void => {
     if (!optionsRef.current.props.collectorFunc) return;
+    formatValues.current = options?.format !== false;
     const enabled = collectOptions.filter((o) => !o.disabled);
     if (enabled.length === 1) {
       void doCollect(enabled[0]!.value);

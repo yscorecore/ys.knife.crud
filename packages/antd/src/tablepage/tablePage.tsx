@@ -9,6 +9,7 @@ import {
 } from "react";
 import type {
   Column,
+  CollectOpenOptions,
   CollectorFunc,
   EnumOptionsSource,
   ExportApiFunc,
@@ -308,8 +309,8 @@ export const YsTablePage = forwardRef<YsTablePageApi, YsTablePageProps>(
         openExportDialog: () => {
           currentTable()?.openExportDialog();
         },
-        openCollectDialog: () => {
-          currentTable()?.openCollectDialog();
+        openCollectDialog: (options?: CollectOpenOptions) => {
+          currentTable()?.openCollectDialog(options);
         },
       }),
       [currentTable],
