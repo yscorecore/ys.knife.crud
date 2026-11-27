@@ -151,7 +151,9 @@ function onReset(): void {
 /* ----------------------- 保存查询（预设） -----------------------
  * 内置「保存」能力：showSaveQuery 只管按钮显隐；
  * 保存/恢复逻辑始终挂载，外部可通过 expose 的 openSaveDialog / applySavedQuery 调用。
- * 数据模型：SavedQuery = { id, name, description, group(深拷贝), filterInfo(快照) }，
+ * 数据模型：SavedQuery = { id, name, description, group(深拷贝条件树) }，
+ * 只保存条件对象本身；FilterInfo 是带原型方法的类实例，不参与持久化，
+ * 点击/应用预设时按 group 现算。
  * 已存查询经 v-model:saved-queries 与外部（如 YsFilterPanel）共享，
  * 不传 prop 时 fallback 到内部 ref（standalone 用法）。
  * 深拷贝用 JSON.parse(JSON.stringify(...))：条件树是纯数据对象，无函数/循环引用。
@@ -196,7 +198,7 @@ function openSaveDialog(): void {
   saveDialogVisible.value = true;
 }
 
-/** 确认保存：检查报红→提示；深拷贝当前 rootGroup + filterInfo 快照，加入列表 */
+/** 确认保存：检查报红→提示；深拷贝当前 rootGroup 作为条件快照，加入列表 */
 function confirmSaveQuery(): void {
   const name = saveQueryName.value.trim();
   if (!name) return;
@@ -209,7 +211,6 @@ function confirmSaveQuery(): void {
     name,
     description: saveQueryDesc.value.trim(),
     group: snapshot,
-    filterInfo: filterInfo.value as unknown as SavedQuery["filterInfo"],
   };
   commitSavedQueries([...savedQueriesState.value, newQuery]);
   saveDialogVisible.value = false;

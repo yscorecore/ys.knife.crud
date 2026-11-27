@@ -6,7 +6,6 @@ import {
   type EnumOptionsSource,
   Operator,
   constData,
-  emptyFilter,
   type TableApi,
 } from "@ys-knife-crud/core";
 import {
@@ -42,28 +41,25 @@ const lastFilterString = ref<string>("");
  *  本 demo 开启 singleLine：折叠态不显示「高级查询」按钮（展开态才显示），
  *  预置 3 个标签用于演示「单行模式下快速查询独立成行」的布局效果；
  *  展开后可点「高级查询」进入高级面板保存更多预设。
- *  filterInfo 用 emptyFilter() 占位（点击标签触发空查询，对 constData 表格无影响）。 */
+ *  预设只保存条件对象 group，点击标签时由面板按 group 现算 FilterInfo。 */
 const quickQueries = ref<SavedQuery[]>([
   {
     id: "preset-active",
     name: "活跃用户",
     description: "状态 = Active",
     group: { id: "g-active", combinator: "and", children: [] },
-    filterInfo: emptyFilter() as unknown as SavedQuery["filterInfo"],
   },
   {
     id: "preset-recent",
     name: "近7天新增",
     description: "创建时间 最近7天",
     group: { id: "g-recent", combinator: "and", children: [] },
-    filterInfo: emptyFilter() as unknown as SavedQuery["filterInfo"],
   },
   {
     id: "preset-dev",
     name: "开发团队",
     description: "标签 = 开发",
     group: { id: "g-dev", combinator: "and", children: [] },
-    filterInfo: emptyFilter() as unknown as SavedQuery["filterInfo"],
   },
 ]);
 
@@ -76,7 +72,7 @@ function disabledDateFn(d: Date): boolean {
 }
 
 function onSearch(filter?: { toString(): string }): void {
-  // 优先用事件参数（快速查询标签点击时传的是 sq.filterInfo）；
+  // 优先用事件参数（快速查询标签点击时传的是按 group 现算的 FilterInfo）；
   // 无参数时（面板内回车/查询按钮）从 panelRef 读当前聚合 filter
   lastFilterString.value = (filter?.toString() ?? panelRef.value?.filter?.toString() ?? "") || "(empty)";
 }

@@ -27,15 +27,15 @@ import {
 } from "@ys-knife-crud/core";
 import { YsAdvancedFilterPanel } from "../advancedFilter/advancedFilterPanel";
 import type { AdvancedFilterPanelHandle } from "../advancedFilter/advancedFilterPanel";
-import type { FilterInfoSnapshot, SavedQuery } from "../advancedFilter/advancedFilterContext";
+import type { SavedQuery } from "../advancedFilter/advancedFilterContext";
 import { YsRootFilterPanel } from "./rootFilterPanel";
 import type { RootFilterPanelHandle } from "./rootFilterPanel";
 import "./filterPanel.css";
 
-/* --------------------- 按 group 重算 FilterInfo（快速查询加载用） --------------------- */
-/* SavedQuery 只持久化 group，filterInfo 需按 advancedColumns 重新聚合。
-   antd 版没有可独立驱动的 useAdvancedFilter 实例（React hook 只暴露状态只读视图），
-   这里复用与 @ys-knife-crud/react 相同的纯聚合规则完成换算。 */
+/* --------------------- 按 group 现算 FilterInfo（点击快速查询标签时用） --------------------- */
+/* SavedQuery 只保存条件对象 group，FilterInfo 不参与持久化（类实例经 JSON 往返会丢失
+   toString / isEmpty）。antd 版没有可独立驱动的 useAdvancedFilter 实例（React hook 只暴露
+   状态只读视图），这里复用与 @ys-knife-crud/react 相同的纯聚合规则完成换算。 */
 
 function makeFieldTypeOf(
   columns: Column[],
@@ -150,10 +150,10 @@ function recomputeFilterInfo(
   group: AdvancedConditionGroup,
   columns: Column[],
   optionSources?: Record<string, EnumOptionsSource>,
-): FilterInfoSnapshot {
+): FilterInfo {
   const fieldTypeOf = makeFieldTypeOf(columns, optionSources);
   const result = buildNodeFilter(group, fieldTypeOf);
-  return (result ?? emptyFilter()) as unknown as FilterInfoSnapshot;
+  return (result ?? emptyFilter()) as unknown as FilterInfo;
 }
 
 /* -------------------------------- 组件 props -------------------------------- */
@@ -294,7 +294,7 @@ export const YsFilterPanel = forwardRef<FilterPanelHandle, FilterPanelProps>(
       }
     };
 
-    // 挂载时自动加载已存查询；后端返回的 filterInfo 缺失时按 group 重算。
+    // 挂载时自动加载已存查询；回填只接收条件对象（group），FilterInfo 点击标签时现算。
     useEffect(() => {
       if (!props.loadQuickQueryFun) return;
       let cancelled = false;
@@ -302,14 +302,8 @@ export const YsFilterPanel = forwardRef<FilterPanelHandle, FilterPanelProps>(
         .loadQuickQueryFun()
         .then((loaded) => {
           if (cancelled) return;
-          const withFilterInfo = loaded.map((sq) => ({
-            ...sq,
-            filterInfo:
-              sq.filterInfo ??
-              recomputeFilterInfo(sq.group, advancedColumns, props.advancedOptionSources),
-          }));
-          setInternalQuickQueries(withFilterInfo);
-          props.onUpdateQuickQueries?.(withFilterInfo);
+          setInternalQuickQueries(loaded);
+          props.onUpdateQuickQueries?.(loaded);
         })
         .catch(() => {
           if (!cancelled) message.error("加载快速查询失败");
@@ -324,7 +318,10 @@ export const YsFilterPanel = forwardRef<FilterPanelHandle, FilterPanelProps>(
       if (mode === "advanced") {
         advancedRef.current?.applySavedQuery(sq);
       } else {
-        props.onSearch?.(sq.filterInfo as unknown as FilterInfo);
+        // 每次点击都按 group 现算 FilterInfo，不信任回填数据里的序列化快照
+        props.onSearch?.(
+          recomputeFilterInfo(sq.group, advancedColumns, props.advancedOptionSources),
+        );
       }
     };
 

@@ -179,7 +179,7 @@ export const YsAdvancedFilterPanel = forwardRef<
     setSaveDialogVisible(true);
   };
 
-  /** 确认保存：检查报红→提示；深拷贝当前 rootGroup + filterInfo 快照，加入列表 */
+  /** 确认保存：检查报红→提示；深拷贝当前 rootGroup 作为条件快照，加入列表 */
   const confirmSaveQuery = (): void => {
     const name = saveQueryName.trim();
     if (!name) return;
@@ -192,7 +192,6 @@ export const YsAdvancedFilterPanel = forwardRef<
       name,
       description: saveQueryDesc.trim(),
       group: snapshot,
-      filterInfo: filterInfo as unknown as SavedQuery["filterInfo"],
     };
     commitSavedQueries([...savedQueriesState, newQuery]);
     setSaveDialogVisible(false);

@@ -8,15 +8,6 @@ import type { UseAdvancedFilterResult } from "@ys-knife-crud/react";
 import "./advancedFilterContext.css";
 
 /**
- * FilterInfo 公共接口的子集类型。跨包 dts 时 FilterInfo 的 protected 字段会被剥离，
- * 导致结构比较失败。SavedQuery.filterInfo 只需要 toString / isEmpty。
- */
-export interface FilterInfoSnapshot {
-  toString(): string;
-  isEmpty(): boolean;
-}
-
-/**
  * YsAdvancedFilterPanel 顶层 provide 的共享上下文。
  * React 版用 createContext 替代 Vue 的 provide/inject，递归子组件用 useContext 取用。
  *
@@ -37,13 +28,14 @@ export interface AdvancedFilterContext {
 export const ADVANCED_FILTER_CONTEXT = createContext<AdvancedFilterContext | null>(null);
 
 /**
- * 已保存的查询预设：深拷贝的条件树快照 + 用户命名的名称/描述。
+ * 已保存的查询预设：只保存条件树快照（group）与名称/描述。
+ * FilterInfo 不参与持久化——它是带原型方法的类实例，JSON 往返后会丢失
+ * toString / isEmpty；因此点击标签时按 group 与当前 advancedColumns 现算，
+ * 后端只需存 group + name + description。
  */
 export interface SavedQuery {
   id: string;
   name: string;
   description: string;
   group: AdvancedConditionGroup;
-  /** 保存时的聚合 FilterInfo 快照，供简单模式直接 onSearch 用 */
-  filterInfo: FilterInfoSnapshot;
 }

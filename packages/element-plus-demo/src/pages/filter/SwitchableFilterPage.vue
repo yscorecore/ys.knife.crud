@@ -49,7 +49,7 @@ function disabledDateFn(d: Date): boolean {
 }
 
 function onSearch(filter?: { toString(): string }): void {
-  // 优先用事件参数（快速查询标签点击时传的是 sq.filterInfo）；
+  // 优先用事件参数（快速查询标签点击时传的是按 group 现算的 FilterInfo）；
   // 无参数时（面板内回车/查询按钮）从 panelRef 读当前聚合 filter
   lastFilterString.value = (filter?.toString() ?? panelRef.value?.filter?.toString() ?? "") || "(empty)";
 }

@@ -28,11 +28,12 @@ defineOptions({ name: "YsFilterPanel" });
  * - enableAdvancedFilter=true 时可切换到内置 YsAdvancedFilterPanel，两种模式经同一对
  *   search/reset 事件分发 FilterInfo，外部无感
  * - showQuickQuery=true 时，简单模式也显示「快速查询」标签（高级查询保存的预设），
- *   点击标签直接 emit('search', sq.filterInfo) 触发查询，无需切到高级模式；
+ *   点击标签时按 group 现算 FilterInfo 并 emit('search', ...)，无需切到高级模式；
  *   quickQueries（v-model）与高级面板的 saved-queries 共享，在两种模式间持久
  * - loadQuickQueryFun / saveQuickQueryFun 提供时，组件自动异步加载/持久化快速查询
  *   （参考 table.vue 的 metaFun / dataFun 模式）；后端只需存 group + name + description，
- *   filterInfo 由组件按 advancedColumns 重算
+ *   FilterInfo 是带原型方法的类实例、不参与持久化（JSON 往返会丢失 toString/isEmpty），
+ *   每次点击标签时按 advancedColumns 重算
  *
  * 通用逻辑下沉到 @ys-knife-crud/vue 的 useFilterPanel；本组件只负责视图编排与事件分发。
  */
@@ -190,8 +191,8 @@ async function onSavedQueriesUpdate(queries: SavedQuery[]): Promise<void> {
   }
 }
 
-/* ---- filterInfo 重算：后端返回的 SavedQuery 只存 group，filterInfo 需按
- * ---- advancedColumns 重新聚合。创建一个 useAdvancedFilter 实例做转换。 */
+/* ---- FilterInfo 现算：SavedQuery 只存条件树 group，FilterInfo 不参与持久化
+ * ---- （类实例经 JSON 往返会丢失 toString / isEmpty）。按 advancedColumns 聚合。 */
 let _converter: ReturnType<typeof useAdvancedFilter> | null = null;
 function getConverter(): ReturnType<typeof useAdvancedFilter> | null {
   if (!_converter && props.advancedColumns.length) {
@@ -203,11 +204,11 @@ function getConverter(): ReturnType<typeof useAdvancedFilter> | null {
   return _converter;
 }
 
-function recomputeFilterInfo(group: AdvancedConditionGroup): SavedQuery["filterInfo"] {
+function recomputeFilterInfo(group: AdvancedConditionGroup): FilterInfo {
   const api = getConverter();
-  if (!api) return { toString: () => "", isEmpty: () => true };
+  if (!api) return { toString: () => "", isEmpty: () => true } as unknown as FilterInfo;
   api.rootGroup.value = JSON.parse(JSON.stringify(group)) as AdvancedConditionGroup;
-  return api.filter.value as unknown as SavedQuery["filterInfo"];
+  return api.filter.value;
 }
 
 /* onMounted：若提供了 loadQuickQueryFun，异步加载已存查询并填充列表 */
@@ -215,13 +216,9 @@ onMounted(async () => {
   if (!props.loadQuickQueryFun) return;
   try {
     const loaded = await props.loadQuickQueryFun();
-    // 后端返回的 filterInfo 可能缺失或不可用，按 group 重算
-    const withFilterInfo = loaded.map((sq) => ({
-      ...sq,
-      filterInfo: sq.filterInfo ?? recomputeFilterInfo(sq.group),
-    }));
-    internalQuickQueries.value = withFilterInfo;
-    emit("update:quickQueries", withFilterInfo);
+    // 回填只接收条件对象（group）；FilterInfo 在点击标签时按 group 现算
+    internalQuickQueries.value = loaded;
+    emit("update:quickQueries", loaded);
   } catch {
     ElMessage.error("加载快速查询失败");
   }
@@ -301,7 +298,8 @@ function applyQuickQuery(sq: SavedQuery): void {
   if (mode.value === "advanced") {
     advancedPanelRef.value?.applySavedQuery(sq);
   } else {
-    emit("search", sq.filterInfo as unknown as FilterInfo);
+    // 每次点击都按 group 现算 FilterInfo，不信任回填数据里的序列化快照
+    emit("search", recomputeFilterInfo(sq.group));
   }
 }
 
