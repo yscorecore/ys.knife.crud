@@ -1,6 +1,6 @@
 {
   "name": "@ys-knife-crud/import-exceljs",
-  "version": "0.0.17",
+  "version": "0.0.18",
   "description": "ExcelJS implementation of the ys.knife.crud ImportParser contract (browser-friendly)",
   "type": "module",
   "main": "./dist/index.cjs",
