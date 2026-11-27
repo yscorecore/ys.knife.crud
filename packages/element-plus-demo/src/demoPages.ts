@@ -32,6 +32,7 @@ import FilterPanelPage from "./pages/filter/FilterPanelPage.vue";
 import AdvancedFilterPanelPage from "./pages/filter/AdvancedFilterPanelPage.vue";
 import SwitchableFilterPage from "./pages/filter/SwitchableFilterPage.vue";
 import SingleLineFilterPage from "./pages/filter/SingleLineFilterPage.vue";
+import MultiTextFilterPage from "./pages/filter/MultiTextFilterPage.vue";
 import TablePageDemo from "./pages/tablePage/TablePageDemo.vue";
 import TablePageFillHeightDemo from "./pages/tablePage/TablePageFillHeightDemo.vue";
 import TablePageFilterExtraDemo from "./pages/tablePage/TablePageFilterExtraDemo.vue";
@@ -190,6 +191,11 @@ export const demoPages = [
     id: "filter-single-line",
     label: "搜索面板单行模式（展开/折叠 + 全功能表格）",
     component: SingleLineFilterPage,
+  },
+  {
+    id: "filter-multi-text",
+    label: "多字段模糊查询（名称或代码）",
+    component: MultiTextFilterPage,
   },
   {
     id: "table-page",

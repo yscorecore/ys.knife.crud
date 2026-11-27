@@ -32,6 +32,7 @@ import FilterPanelPage from "./pages/filter/FilterPanelPage";
 import AdvancedFilterPage from "./pages/filter/AdvancedFilterPage";
 import SwitchableFilterPage from "./pages/filter/SwitchableFilterPage";
 import SingleLineFilterPage from "./pages/filter/SingleLineFilterPage";
+import MultiTextFilterPage from "./pages/filter/MultiTextFilterPage";
 import TablePageDemo from "./pages/tablePage/TablePageDemo";
 import TablePageFillHeightDemo from "./pages/tablePage/TablePageFillHeightDemo";
 import TablePageFilterExtraDemo from "./pages/tablePage/TablePageFilterExtraDemo";
@@ -196,6 +197,11 @@ export const demoPages = [
     id: "filter-single-line",
     label: "搜索面板单行模式（展开/折叠 + 全功能表格）",
     component: SingleLineFilterPage,
+  },
+  {
+    id: "filter-multi-text",
+    label: "多字段模糊查询（名称或代码）",
+    component: MultiTextFilterPage,
   },
   {
     id: "table-page",

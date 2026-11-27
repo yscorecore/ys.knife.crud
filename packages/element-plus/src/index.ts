@@ -6,6 +6,7 @@ import YsMainPanel from "./mainPanel/mainPanel.vue";
 import YsFilterPanel from "./filter/filterPanel.vue";
 import YsRootFilterPanel from "./filter/rootFilterPanel.vue";
 import YsTextFilterItem from "./filter/textFilterItem.vue";
+import YsMultiTextFilterItem from "./filter/multiTextFilterItem.vue";
 import YsDateFilterItem from "./filter/dateFilterItem.vue";
 import YsDateRangeFilterItem from "./filter/dateRangeFilterItem.vue";
 import YsEnumFilterItem from "./filter/enumFilterItem.vue";
@@ -30,6 +31,7 @@ export {
   YsImportExcel,
   YsInfiniteList,
   YsTextFilterItem,
+  YsMultiTextFilterItem,
   YsDateFilterItem,
   YsDateRangeFilterItem,
   YsEnumFilterItem,
@@ -66,6 +68,7 @@ export type YsMainPanelProps = InstanceType<typeof YsMainPanel>["$props"];
 export type YsFilterPanelProps = InstanceType<typeof YsFilterPanel>["$props"];
 export type YsRootFilterPanelProps = InstanceType<typeof YsRootFilterPanel>["$props"];
 export type YsTextFilterItemProps = InstanceType<typeof YsTextFilterItem>["$props"];
+export type YsMultiTextFilterItemProps = InstanceType<typeof YsMultiTextFilterItem>["$props"];
 export type YsDateFilterItemProps = InstanceType<typeof YsDateFilterItem>["$props"];
 export type YsDateRangeFilterItemProps = InstanceType<typeof YsDateRangeFilterItem>["$props"];
 export type YsEnumFilterItemProps = InstanceType<typeof YsEnumFilterItem>["$props"];
@@ -86,7 +89,7 @@ export type { TablePageDataFun } from "./tablepage/tablePageTypes";
 /**
  * Vue 插件：app.use(YsCrudElementPlus) 全局注册后，模板里可直接写
  * <ys-table> / <ys-main-panel> / <ys-filter-panel> / <ys-text-filter-item> /
- * <ys-date-filter-item> / <ys-date-range-filter-item>。
+ * <ys-multi-text-filter-item> / <ys-date-filter-item> / <ys-date-range-filter-item>。
  * 不想全局注册时，也可以按需 import 局部使用，
  * 模板中写作 <ys-table>（kebab）或 <YsTable>（Pascal）均可。
  */
@@ -101,6 +104,7 @@ const YsCrudElementPlus: Plugin = {
     app.component("YsFilterPanel", YsFilterPanel);
     app.component("YsRootFilterPanel", YsRootFilterPanel);
     app.component("YsTextFilterItem", YsTextFilterItem);
+    app.component("YsMultiTextFilterItem", YsMultiTextFilterItem);
     app.component("YsDateFilterItem", YsDateFilterItem);
     app.component("YsDateRangeFilterItem", YsDateRangeFilterItem);
     app.component("YsEnumFilterItem", YsEnumFilterItem);

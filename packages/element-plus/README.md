@@ -234,7 +234,30 @@ You normally don't need this — `actions` receive the `TableApi` automatically,
 
 ### Other components
 
-The package also exports the individual building blocks for when you need finer control than `YsTablePage`: `YsTable`, `YsFilterPanel` (+ `YsTextFilterItem` / `YsDateFilterItem` / `YsDateRangeFilterItem` / `YsEnumFilterItem` / `YsFilterItemLayout`), `YsRootFilterPanel`, `YsCommandBar`, `YsTableActionMenuButton`, `YsMainPanel`, and the advanced-filter trio (`YsAdvancedFilterPanel` / `YsAdvancedValueEditor` / `YsAdvancedConditionGroup`). `YsTablePage` is the recommended starting point; drop down to the primitives only when its fixed layout doesn't fit.
+The package also exports the individual building blocks for when you need finer control than `YsTablePage`: `YsTable`, `YsFilterPanel` (+ `YsTextFilterItem` / `YsMultiTextFilterItem` / `YsDateFilterItem` / `YsDateRangeFilterItem` / `YsEnumFilterItem` / `YsFilterItemLayout`), `YsRootFilterPanel`, `YsCommandBar`, `YsTableActionMenuButton`, `YsMainPanel`, and the advanced-filter trio (`YsAdvancedFilterPanel` / `YsAdvancedValueEditor` / `YsAdvancedConditionGroup`). `YsTablePage` is the recommended starting point; drop down to the primitives only when its fixed layout doesn't fit.
+
+#### `YsMultiTextFilterItem` — one input, several fields (OR)
+
+Fuzzy search across multiple fields with a single box ("请输入名称或代码"). Each `propertyPaths` entry becomes `contains` (overridable via `op`) and the parts are OR-ed with `FilterInfo.createOr`:
+
+```vue
+<YsFilterPanel @search="onSearch">
+  <YsMultiTextFilterItem
+    label="名称 / 代码"
+    :property-paths="['name', 'code']"
+    placeholder="请输入名称或代码"
+  />
+</YsFilterPanel>
+<!-- emits: name contains x OR code contains x -->
+```
+
+| Prop | Type | Default | Description |
+| --- | --- | --- | --- |
+| `label` | `string` | — | Label rendered above the control. |
+| `propertyPaths` | `string[]` | — | Fields to match; any hit satisfies (OR). |
+| `op` | `Operator` | `Operator.Contains` | Operator applied to every field. |
+| `defaultValue` | `string` | `""` | Initial value. |
+| `placeholder` | `string` | — | Input placeholder. |
 
 #### `YsRootFilterPanel` — UI-free registration & aggregation
 

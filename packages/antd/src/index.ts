@@ -13,6 +13,7 @@ import { YsMainPanel } from "./mainPanel/mainPanel";
 import { YsFilterPanel } from "./filter/filterPanel";
 import { YsRootFilterPanel } from "./filter/rootFilterPanel";
 import { YsTextFilterItem } from "./filter/textFilterItem";
+import { YsMultiTextFilterItem } from "./filter/multiTextFilterItem";
 import { YsDateFilterItem } from "./filter/dateFilterItem";
 import { YsDateRangeFilterItem } from "./filter/dateRangeFilterItem";
 import { YsEnumFilterItem } from "./filter/enumFilterItem";
@@ -34,6 +35,7 @@ export {
   YsFilterPanel,
   YsRootFilterPanel,
   YsTextFilterItem,
+  YsMultiTextFilterItem,
   YsDateFilterItem,
   YsDateRangeFilterItem,
   YsEnumFilterItem,
@@ -62,6 +64,7 @@ export type {
 } from "./filter/filterPanel";
 export type { RootFilterPanelProps, RootFilterPanelHandle } from "./filter/rootFilterPanel";
 export type { TextFilterItemProps } from "./filter/textFilterItem";
+export type { MultiTextFilterItemProps } from "./filter/multiTextFilterItem";
 export type { DateFilterItemProps } from "./filter/dateFilterItem";
 export type { DateRangeFilterItemProps } from "./filter/dateRangeFilterItem";
 export type { EnumFilterItemProps } from "./filter/enumFilterItem";
