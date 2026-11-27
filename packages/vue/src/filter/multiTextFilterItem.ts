@@ -1,6 +1,6 @@
 import { computed, ref } from "vue";
-import { FilterInfo, Operator, con, filter as filterFn } from "ys.knife.query.js";
-import type { FilterInfo as FilterInfoType } from "ys.knife.query.js";
+import { FilterInfo, Operator, con, filter as filterFn } from "@ys-knife-crud/core";
+import type { FilterInfo as FilterInfoType } from "@ys-knife-crud/core";
 
 /**
  * 文本多字段模糊查询逻辑：UI 库无关（与 React 版 useMultiTextFilterItem 对应）。

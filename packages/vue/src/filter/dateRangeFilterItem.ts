@@ -1,6 +1,6 @@
 import { computed, ref } from "vue";
-import { filter, con, Operator } from "ys.knife.query.js";
-import type { FilterInfo } from "ys.knife.query.js";
+import { filter, con, Operator } from "@ys-knife-crud/core";
+import type { FilterInfo } from "@ys-knife-crud/core";
 
 /**
  * 日期范围（daterange）单字段查询条件逻辑：UI 库无关。

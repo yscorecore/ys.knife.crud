@@ -1,6 +1,6 @@
 import { computed, ref } from "vue";
-import { filter, con } from "ys.knife.query.js";
-import type { FilterInfo, Operator } from "ys.knife.query.js";
+import { filter, con } from "@ys-knife-crud/core";
+import type { FilterInfo, Operator } from "@ys-knife-crud/core";
 
 /**
  * 文本（string）单字段查询条件逻辑：UI 库无关。

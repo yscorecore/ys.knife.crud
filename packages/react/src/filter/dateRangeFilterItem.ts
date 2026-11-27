@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
-import { filter as filterFn, con, Operator } from "ys.knife.query.js";
-import type { FilterInfo } from "ys.knife.query.js";
+import { filter as filterFn, con, Operator } from "@ys-knife-crud/core";
+import type { FilterInfo } from "@ys-knife-crud/core";
 
 /**
  * 日期范围（daterange）单字段查询条件逻辑：UI 库无关

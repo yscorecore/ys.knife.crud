@@ -1,5 +1,5 @@
 import { computed, ref, type InjectionKey } from "vue";
-import { FilterInfo, emptyFilter } from "ys.knife.query.js";
+import { FilterInfo, emptyFilter } from "@ys-knife-crud/core";
 import type { FilterItemApi } from "@ys-knife-crud/core";
 
 /**

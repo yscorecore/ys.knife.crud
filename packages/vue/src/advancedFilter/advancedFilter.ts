@@ -1,6 +1,6 @@
 import { computed, ref } from "vue";
-import { FilterInfo, Operator, con, emptyFilter, filter } from "ys.knife.query.js";
-import type { FilterInfo as FilterInfoType } from "ys.knife.query.js";
+import { FilterInfo, Operator, con, emptyFilter, filter } from "@ys-knife-crud/core";
+import type { FilterInfo as FilterInfoType } from "@ys-knife-crud/core";
 import type {
   AdvancedCombinator,
   AdvancedCondition,

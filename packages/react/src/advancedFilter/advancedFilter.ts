@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { FilterInfo, Operator, con, emptyFilter, filter as filterFn } from "ys.knife.query.js";
-import type { FilterInfo as FilterInfoType } from "ys.knife.query.js";
+import { FilterInfo, Operator, con, emptyFilter, filter as filterFn } from "@ys-knife-crud/core";
+import type { FilterInfo as FilterInfoType } from "@ys-knife-crud/core";
 import type {
   AdvancedCombinator,
   AdvancedCondition,

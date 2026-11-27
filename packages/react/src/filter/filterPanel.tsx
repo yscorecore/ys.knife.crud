@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { FilterInfo, emptyFilter } from "ys.knife.query.js";
+import { FilterInfo, emptyFilter } from "@ys-knife-crud/core";
 import type { FilterItemApi } from "@ys-knife-crud/core";
 
 /**
