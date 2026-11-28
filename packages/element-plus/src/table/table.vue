@@ -179,24 +179,26 @@ const configDialogRef = ref<{
 /** 最终显示列（已含 meta/customConfig 两层过滤与排序，customConfig 的 width 也写在 col.width 上），对话框挂载前为空 */
 const columns = computed(() => configDialogRef.value?.columns ?? []);
 
-/** 未配置列宽时的估算宽度（与 el-table-column 默认最小宽度一致） */
+/** 未配置列宽时的最小宽度（el-table-column 的 min-width，列多时据此产生横向滚动） */
 const DEFAULT_COLUMN_WIDTH = 120;
 
-/**
- * 表格最小宽度 = 数据列（未配置宽度按 120）+ 勾选列 48 + 操作列（按按钮数估算）。
- * 列多到放不下时由 .yk-table__view-area 横向滚动：el-table 的 body-wrapper 是
- * overflow:hidden，自身不会给出可用的横向滚动条，右侧列会被直接裁掉；
- * 因此把表格整体撑到最小宽度，交给外层滚动容器统一出横向滚动条。
- */
-const tableMinWidth = computed(() => {
-  const dataWidth = columns.value.reduce(
-    (sum, col) => sum + (Number(col.width) || DEFAULT_COLUMN_WIDTH),
-    0,
-  );
-  const actionCount = actions.value.length;
-  const actionsWidth = actionCount > 0 ? actionCount * 34 + (actionCount - 1) * 12 + 30 : 0;
-  return dataWidth + actionsWidth + (currentShowCheckbox.value ? 48 : 0);
-});
+/** 视图区引用：测量可用高度交给 el-table 的 height，让表体内部滚动 */
+const viewAreaEl = ref<HTMLElement | null>(null);
+/** el-table 高度（= view-area 高度）；未测量到或非表格视图时为 undefined（表格自然撑开） */
+const tableHeight = ref<number | undefined>(undefined);
+
+/** 重新测量：表格视图下把 view-area 的高度交给 el-table，由表格自己承担横竖滚动 */
+function measureTableHeight(): void {
+  const el = viewAreaEl.value;
+  if (!el || currentViewMode.value !== "table") {
+    tableHeight.value = undefined;
+    return;
+  }
+  const height = el.clientHeight;
+  tableHeight.value = height > 0 ? height : undefined;
+}
+
+let heightObserver: ResizeObserver | null = null;
 
 /**
  * 当前生效的每页条数：优先取 ColumnConfigDialog 暴露的 defaultPageSize
@@ -333,6 +335,21 @@ const currentViewMode = computed<ViewMode>({
 watch(currentViewMode, (mode) => {
   if (mode === "table") void restoreSelection();
 });
+
+// 表格视图用 el-table 内部滚动：挂载后测量 view-area 高度、随容器尺寸变化重新测量，
+// 切回表格视图时重新测量（卡片/列表视图不设 height，仍由 view-area 滚动）
+onMounted(() => {
+  measureTableHeight();
+  if (viewAreaEl.value) {
+    heightObserver = new ResizeObserver(() => measureTableHeight());
+    heightObserver.observe(viewAreaEl.value);
+  }
+});
+onBeforeUnmount(() => {
+  heightObserver?.disconnect();
+  heightObserver = null;
+});
+watch(currentViewMode, () => measureTableHeight());
 
 /**
  * 内部实际生效的选择列显隐，模式与 currentViewMode 一致：
@@ -588,39 +605,40 @@ const tableApi: TableApi = {
          列设置 / 导出对话框经 TableApi.openConfigDialog()/openExportDialog() 打开，
          视图切换经 v-model:view-mode 或 TableApi.setViewMode() 驱动。 -->
 
-    <!-- 视图区域：三视图二选一 + 统一加载遮罩。view-area 为遮罩提供定位上下文（position:relative） -->
-    <div class="yk-table__view-area">
+    <!-- 视图区域：三视图二选一 + 统一加载遮罩。view-area 为遮罩提供定位上下文（position:relative）
+         表格视图改用 el-table 内部滚动（height 模式），view-area 自身不再出滚动条 -->
+    <div ref="viewAreaEl" class="yk-table__view-area"
+      :class="{ 'yk-table__view-area--native-scroll': currentViewMode === 'table' }">
       <!-- 表格视图：v-if 与卡片视图二选一；切回本视图后由 useSelection.restoreSelection
            把跨页累计选中恢复到勾选列（选中状态以 rowKey Map 为准，不再用 reserve-selection） -->
       <div v-if="currentViewMode === 'table'" class="yk-table__table-wrap"
         :class="{ 'yk-table__table-wrap--sticky-header': currentStickyHeader }">
-        <!-- 最小宽度承载层：列多时撑开表格，由 view-area 横向滚动（el-table 自身不出横向滚动条） -->
-        <div class="yk-table__table-inner" :style="{ minWidth: `${tableMinWidth}px` }">
-          <el-table ref="tableEl" :data="rows"
-            :row-key="rowKey" border @selection-change="onSelectionChange" @header-dragend="onColumnResize">
-            <!-- 空数据提示：使用者经 #empty 插槽自定义（表格/卡片/列表三种视图共享，见下方两个视图分支）；
-                 仅在使用者提供了插槽时才声明，否则保留 el-table 默认的「暂无数据」空态 -->
-            <template v-if="$slots.empty" #empty>
-              <slot name="empty" />
+        <el-table ref="tableEl" :data="rows" :height="tableHeight"
+          :row-key="rowKey" border @selection-change="onSelectionChange" @header-dragend="onColumnResize">
+          <!-- 空数据提示：使用者经 #empty 插槽自定义（表格/卡片/列表三种视图共享，见下方两个视图分支）；
+               仅在使用者提供了插槽时才声明，否则保留 el-table 默认的「暂无数据」空态 -->
+          <template v-if="$slots.empty" #empty>
+            <slot name="empty" />
+          </template>
+          <!-- 勾选列：跨页保留由 useSelection 的 rowKey Map 受控维护，表头 checkbox 全选/取消全选当前页。
+               不绑 resizable——EP 对 type=selection 固定宽列默认不可拖，显式绑 true 反而会放开 -->
+          <el-table-column v-if="currentShowCheckbox" type="selection" width="48" />
+          <!-- 数据列：col.render 优先（返回字符串/VNode 均可，经函数式组件呈现），
+               缺省时退到 col.formatter / 全局默认 formatter 的文本值，
+               都没有则走默认的 propertyPath 取值显示。
+               resizable 跟随列宽拖动开关（el-table-column 默认 true，需显式透传才能关）。
+               未配置宽度的列给 min-width：列多到放不下时由 el-table 自己算出总宽并出横向滚动条 -->
+          <el-table-column v-for="col in columns" :key="col.propertyPath" :prop="col.propertyPath"
+            :label="col.displayName" :width="col.width" :min-width="col.width ? undefined : DEFAULT_COLUMN_WIDTH"
+            :resizable="currentColumnResizable" show-overflow-tooltip>
+            <template v-if="getCellRender(col) || col.formatter || getDefaultFormatter(col)" #default="{ row }">
+              <component :is="() => cellContent(col, row)" />
             </template>
-            <!-- 勾选列：跨页保留由 useSelection 的 rowKey Map 受控维护，表头 checkbox 全选/取消全选当前页。
-                 不绑 resizable——EP 对 type=selection 固定宽列默认不可拖，显式绑 true 反而会放开 -->
-            <el-table-column v-if="currentShowCheckbox" type="selection" width="48" />
-            <!-- 数据列：col.render 优先（返回字符串/VNode 均可，经函数式组件呈现），
-                 缺省时退到 col.formatter / 全局默认 formatter 的文本值，
-                 都没有则走默认的 propertyPath 取值显示。
-                 resizable 跟随列宽拖动开关（el-table-column 默认 true，需显式透传才能关） -->
-            <el-table-column v-for="col in columns" :key="col.propertyPath" :prop="col.propertyPath"
-              :label="col.displayName" :width="col.width" :resizable="currentColumnResizable" show-overflow-tooltip>
-              <template v-if="getCellRender(col) || col.formatter || getDefaultFormatter(col)" #default="{ row }">
-                <component :is="() => cellContent(col, row)" />
-              </template>
-            </el-table-column>
-            <!-- 行操作列：actions 状态归 Table 所有（视图切换往返不丢失；卡片右键菜单共用） -->
-            <RowActionsColumn v-if="props.rowActionsFunc" :actions="actions" :table="tableApi"
-              :resizable="currentColumnResizable" />
-          </el-table>
-        </div>
+          </el-table-column>
+          <!-- 行操作列：actions 状态归 Table 所有（视图切换往返不丢失；卡片右键菜单共用） -->
+          <RowActionsColumn v-if="props.rowActionsFunc" :actions="actions" :table="tableApi"
+            :resizable="currentColumnResizable" />
+        </el-table>
       </div>
 
       <!-- 卡片视图：渲染委托 CardView；#card / #empty 插槽透传，未提供时由子组件兜底。
@@ -732,29 +750,22 @@ const tableApi: TableApi = {
   overflow: auto;
 }
 
+/* 表格视图改用 el-table 内部滚动（height 模式）：滚动由表体承担，
+   view-area 不再滚动，避免出现「表格外面又加了一根滚动条」的观感 */
+.yk-table__view-area--native-scroll {
+  overflow: hidden;
+}
+
 /* 表格视图的外层包裹（仅表格视图用；卡片/列表视图的容器在其各自组件内） */
 .yk-table__table-wrap {
   position: relative;
 }
 
-/* 表头锁定：view-area 纵向滚动时表头粘在顶部始终可见。el-table 在 table-layout:fixed
-   下把 .el-table__header-wrapper 独立渲染，sticky 到最近的滚动祖先。
-   关键坑：Element Plus 自带 .el-table { overflow:hidden }，使 .el-table 成为 header-wrapper
-   的最近滚动祖先——但 .el-table 自身不滚动（height:fit-content），导致 sticky 被困在内部失效。
-   必须把 .el-table 的 overflow 改回 visible，sticky 才能向上逃到 .yk-table__view-area
-   （fill-height 场景下真正的滚动容器）。.el-table__body-wrapper 自身仍 overflow:hidden，
-   内部行内容不会因此溢出。补不透明背景避免滚动内容从表头后方透出；
-   z-index 低于加载遮罩（10），加载时遮罩盖住表头。
-   注意：本实现仅支持「表格占满固定高度容器、view-area 内部滚动」场景；
-   若表格随页面滚动（view-area 不滚动），需另行处理。 */
+/* 表头锁定：height 模式下 el-table 把 header-wrapper 与 body-wrapper 分开渲染，
+   表头天然固定在表体上方，滚动条从表头下方开始（不再需要 sticky hack）。
+   保留 el-table 的 overflow:visible，避免遮罩/阴影被裁切。 */
 .yk-table__table-wrap--sticky-header :deep(.el-table) {
   overflow: visible;
-}
-.yk-table__table-wrap--sticky-header :deep(.el-table__header-wrapper) {
-  position: sticky;
-  top: 0;
-  z-index: 3;
-  background: var(--el-table-header-bg-color, var(--el-fill-color-light, #f5f7fa));
 }
 
 .yk-table__loading-mask {

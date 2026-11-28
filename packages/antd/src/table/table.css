@@ -19,23 +19,15 @@
   overflow: auto;
 }
 
+/* 表格视图使用 antd 原生滚动（scroll.x / scroll.y）：滚动由表体自身承担，
+   view-area 不再滚动，避免出现「表格外面又加了一根滚动条」的观感 */
+.yk-table__view-area--native-scroll {
+  overflow: hidden;
+}
+
 /* 表格视图的外层包裹（仅表格视图用；卡片/列表视图的容器在其各自组件内） */
 .yk-table__table-wrap {
   position: relative;
-}
-
-/* ---------------- 表头锁定（sticky header） ---------------- */
-/* antd 5 的表头就是表格里的 thead > tr > th，直接对 th 设 position:sticky 即可；
-   需要把 antd 容器上可能存在的 overflow:hidden 放开，sticky 才能吸附到 view-area。
-   不透明背景由 antd 表头自带的 background 提供（滚动内容不会透出）。 */
-.yk-table__table-wrap--sticky-header .ant-table,
-.yk-table__table-wrap--sticky-header .ant-table-container {
-  overflow: visible;
-}
-.yk-table__table-wrap--sticky-header .ant-table-thead > tr > th {
-  position: sticky;
-  top: 0;
-  z-index: 3;
 }
 
 /* ---------------- 列宽拖拽手柄 ---------------- */

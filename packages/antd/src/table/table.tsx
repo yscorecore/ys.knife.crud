@@ -726,6 +726,36 @@ export const YsTable = forwardRef<TableApi, YsTableProps>(function YsTable(props
     actionsWidth +
     (currentShowCheckbox ? 48 : 0);
 
+  /** 视图区引用：用于测量可用高度，换算成 antd 表体高度（scroll.y） */
+  const viewAreaRef = useRef<HTMLDivElement | null>(null);
+  /** 表体高度（view-area 高度 - 表头高度）；未测量到时为 undefined（由表格自然撑开） */
+  const [tableBodyHeight, setTableBodyHeight] = useState<number | undefined>(undefined);
+
+  /**
+   * 表格视图改用 antd 原生滚动：scroll.x 撑开总宽、scroll.y 让表体在表头下方独立滚动。
+   * 这样横向滚动条属于表体底部、竖向滚动条从表头下方开始，看起来就是表格自带的滚动能力，
+   * 而不是外层容器（view-area）加出来的一根。表头因此恒固定（sticky-header 的期望形态）。
+   */
+  useEffect(() => {
+    if (currentViewMode !== "table") {
+      setTableBodyHeight(undefined);
+      return;
+    }
+    const el = viewAreaRef.current;
+    if (!el) return;
+    const measure = (): void => {
+      const header = el.querySelector<HTMLElement>(".ant-table-header");
+      const height = el.clientHeight - (header?.offsetHeight ?? 0);
+      const next = height > 0 ? height : undefined;
+      // 相等时跳过，避免 ResizeObserver 与 state 互相触发形成循环
+      setTableBodyHeight((prev) => (prev === next || (prev !== undefined && next !== undefined && Math.abs(prev - next) <= 1) ? prev : next));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [currentViewMode, tableBodyHeight, columns.length]);
+
   const rowSelection = currentShowCheckbox
     ? {
         selectedRowKeys: selectedRowKeys as Key[],
@@ -756,23 +786,22 @@ export const YsTable = forwardRef<TableApi, YsTableProps>(function YsTable(props
     <div className="yk-table">
       {props.selectionBar ? <div className="yk-table__selection-bar-slot">{props.selectionBar(selectionBarContext)}</div> : null}
 
-      <div className="yk-table__view-area">
+      <div
+        ref={viewAreaRef}
+        className={`yk-table__view-area${currentViewMode === "table" ? " yk-table__view-area--native-scroll" : ""}`}
+      >
         {currentViewMode === "table" ? (
-          <div
-            className={`yk-table__table-wrap${currentStickyHeader ? " yk-table__table-wrap--sticky-header" : ""}`}
-          >
-            {/* 最小宽度承载层：列多时撑开表格，由 view-area 横向滚动 */}
-            <div className="yk-table__table-inner" style={{ minWidth: tableMinWidth }}>
-              <Table<RowRecord>
-                columns={antdColumns}
-                dataSource={rows}
-                rowKey={rowKey}
-                bordered
-                pagination={false}
-                rowSelection={rowSelection}
-                locale={{ emptyText: props.empty ?? <Empty description="暂无数据" /> }}
-              />
-            </div>
+          <div className="yk-table__table-wrap">
+            <Table<RowRecord>
+              columns={antdColumns}
+              dataSource={rows}
+              rowKey={rowKey}
+              bordered
+              pagination={false}
+              rowSelection={rowSelection}
+              scroll={{ x: tableMinWidth, y: tableBodyHeight }}
+              locale={{ emptyText: props.empty ?? <Empty description="暂无数据" /> }}
+            />
           </div>
         ) : currentViewMode === "card" ? (
           <YsCardView
